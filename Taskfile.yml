@@ -1,0 +1,98 @@
+version: "3"
+
+vars:
+  BUN: bun
+
+dotenv: [".env"]
+
+tasks:
+  default:
+    desc: แสดงคำสั่งที่ใช้ได้
+    cmds:
+      - task --list
+
+  install:
+    desc: ติดตั้ง dependencies
+    cmds:
+      - "{{.BUN}} install"
+
+  dev:
+    desc: รัน dev server (http://localhost:3000)
+    cmds:
+      - "{{.BUN}} run dev"
+
+  build:
+    desc: build สำหรับ production
+    cmds:
+      - "{{.BUN}} run build"
+
+  typecheck:
+    desc: ตรวจ TypeScript
+    cmds:
+      - "{{.BUN}} run typecheck"
+
+  preview:
+    desc: preview build บนเครื่อง local
+    deps: [build]
+    cmds:
+      - "{{.BUN}} run preview"
+
+  check:
+    desc: typecheck + build (ใช้ก่อน commit)
+    cmds:
+      - task: typecheck
+      - task: build
+
+  deploy:
+    desc: build และ deploy ไป Cloudflare Pages
+    cmds:
+      - "{{.BUN}} run deploy"
+
+  deploy:preview:
+    desc: build และ preview ด้วย Wrangler (local)
+    deps: [build]
+    cmds:
+      - bunx wrangler pages dev dist
+
+  setup:
+    desc: setup ครั้งแรก — ติดตั้ง deps + สร้าง .env ถ้ายังไม่มี
+    cmds:
+      - task: install
+      - |
+        if [ ! -f .env ]; then
+          cp .env.example .env
+          echo "✓ สร้าง .env แล้ว — แก้ค่า SUPABASE_URL และ SUPABASE_KEY ก่อนรัน dev"
+        else
+          echo "✓ .env มีอยู่แล้ว"
+        fi
+
+  supabase:link:
+    desc: เชื่อม Supabase CLI กับ remote project
+    cmds:
+      - supabase link --project-ref {{.CLI_ARGS}}
+    silent: true
+
+  supabase:push:
+    desc: push database migrations ขึ้น Supabase
+    cmds:
+      - supabase db push
+
+  supabase:reset:
+    desc: reset database local (Supabase local dev)
+    cmds:
+      - supabase db reset
+
+  supabase:start:
+    desc: รัน Supabase local stack
+    cmds:
+      - supabase start
+
+  supabase:stop:
+    desc: หยุด Supabase local stack
+    cmds:
+      - supabase stop
+
+  clean:
+    desc: ลบ build cache และ output
+    cmds:
+      - rm -rf .nuxt .output dist node_modules/.cache

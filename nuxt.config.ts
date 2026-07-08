@@ -1,0 +1,84 @@
+import tailwindcss from "@tailwindcss/vite";
+
+export default defineNuxtConfig({
+  compatibilityDate: "2025-05-01",
+  devtools: { enabled: true },
+
+  modules: ["@nuxt/ui", "@nuxtjs/supabase"],
+
+  css: ["~/assets/css/main.css"],
+
+  vite: {
+    plugins: [tailwindcss()],
+  },
+
+  dir: {
+    app: "app",
+  },
+
+  future: {
+    compatibilityVersion: 4,
+  },
+
+  experimental: {
+    appManifest: false,
+  },
+
+  app: {
+    head: {
+      title: "Helm",
+      meta: [
+        { charset: "utf-8" },
+        {
+          name: "viewport",
+          content: "width=device-width, initial-scale=1",
+        },
+        { name: "description", content: "Project Management — steer the ship" },
+        { name: "theme-color", content: "#1e3a5f" },
+      ],
+      link: [
+        {
+          rel: "preconnect",
+          href: "https://fonts.googleapis.com",
+        },
+        {
+          rel: "preconnect",
+          href: "https://fonts.gstatic.com",
+          crossorigin: "",
+        },
+        {
+          rel: "stylesheet",
+          href: "https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap",
+        },
+      ],
+    },
+  },
+
+  devServer: {
+    port: Number(process.env.NUXT_DEV_PORT || 3000),
+  },
+
+  runtimeConfig: {
+    public: {
+      appUrl: process.env.NUXT_PUBLIC_APP_URL || "http://localhost:3000",
+    },
+  },
+
+  supabase: {
+    redirect: false,
+    types: "~/types/database",
+    redirectOptions: {
+      login: "/login",
+      callback: "/confirm",
+      exclude: ["/login", "/confirm"],
+    },
+  },
+
+  nitro: {
+    preset: "cloudflare_pages",
+  },
+
+  colorMode: {
+    preference: "light",
+  },
+});

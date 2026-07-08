@@ -1,0 +1,25 @@
+# Nuxt
+.nuxt
+.output
+dist
+.data
+*.log
+
+# Dependencies
+node_modules
+package-lock.json
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea
+.vscode
+*.swp
+.DS_Store
+
+# Wrangler
+.wrangler
+.dev.vars
