@@ -233,11 +233,16 @@ CREATE INDEX idx_notifications_user ON notifications(user_id, read);     -- ก�
 
 -- =============================================================================
 -- Trigger: สร้าง profile อัตโนมัติเมื่อ user สมัครผ่าน Supabase Auth
+-- ต้อง SECURITY DEFINER + search_path เพราะ Auth รันด้วย supabase_auth_admin
 -- =============================================================================
-CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
-  INSERT INTO profiles (id, email, full_name, avatar_url)
+  INSERT INTO public.profiles (id, email, full_name, avatar_url)
   VALUES (
     NEW.id,
     NEW.email,
@@ -246,26 +251,30 @@ BEGIN
   );
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- =============================================================================
 -- Trigger: สร้าง workspace + labels เริ่มต้นเมื่อมี profile ใหม่
 -- user คนแรกใน workspace จะเป็น admin
 -- =============================================================================
-CREATE OR REPLACE FUNCTION handle_new_profile()
-RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION public.handle_new_profile()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 DECLARE
   ws_id UUID;
 BEGIN
-  INSERT INTO workspaces (name) VALUES ('My Workspace') RETURNING id INTO ws_id;
-  INSERT INTO workspace_members (workspace_id, user_id, role) VALUES (ws_id, NEW.id, 'admin');
+  INSERT INTO public.workspaces (name) VALUES ('My Workspace') RETURNING id INTO ws_id;
+  INSERT INTO public.workspace_members (workspace_id, user_id, role) VALUES (ws_id, NEW.id, 'admin');
 
   -- labels เริ่มต้นสำหรับ workspace ใหม่
-  INSERT INTO labels (workspace_id, name, color) VALUES
+  INSERT INTO public.labels (workspace_id, name, color) VALUES
     (ws_id, 'Bug', '#dc2626'),
     (ws_id, 'Feature', '#2563eb'),
     (ws_id, 'Improvement', '#16a34a'),
@@ -273,11 +282,11 @@ BEGIN
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 CREATE TRIGGER on_profile_created
-  AFTER INSERT ON profiles
-  FOR EACH ROW EXECUTE FUNCTION handle_new_profile();
+  AFTER INSERT ON public.profiles
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_profile();
 
 -- =============================================================================
 -- Trigger: อัปเดต updated_at ทุกครั้งที่แก้ task

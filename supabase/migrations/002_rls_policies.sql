@@ -12,39 +12,59 @@
 -- ตรวจว่า user ปัจจุบันเป็นสมาชิกของ workspace นี้หรือไม่
 -- ใช้ใน policy เกือบทุกตาราง
 CREATE OR REPLACE FUNCTION is_workspace_member(ws_id UUID)
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
   SELECT EXISTS (
     SELECT 1 FROM workspace_members
     WHERE workspace_id = ws_id AND user_id = auth.uid()
   );
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+$$;
 
 -- ตรวจว่า user มีสิทธิ์เขียน (ไม่ใช่ viewer)
 -- admin, manager, member = เขียนได้ | viewer = อ่านอย่างเดียว
 CREATE OR REPLACE FUNCTION can_write_workspace(ws_id UUID)
-RETURNS BOOLEAN AS $$
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
   SELECT EXISTS (
     SELECT 1 FROM workspace_members
     WHERE workspace_id = ws_id
       AND user_id = auth.uid()
       AND role IN ('admin', 'manager', 'member')
   );
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+$$;
 
 -- หา workspace_id จาก project_id (ใช้ใน policy ของ tasks, milestones)
 CREATE OR REPLACE FUNCTION project_workspace_id(p_id UUID)
-RETURNS UUID AS $$
+RETURNS UUID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
   SELECT workspace_id FROM projects WHERE id = p_id;
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+$$;
 
 -- หา workspace_id จาก task_id (ใช้ใน policy ของ subtasks, comments, ฯลฯ)
 CREATE OR REPLACE FUNCTION task_workspace_id(t_id UUID)
-RETURNS UUID AS $$
+RETURNS UUID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
   SELECT p.workspace_id
   FROM tasks t
   JOIN projects p ON p.id = t.project_id
   WHERE t.id = t_id;
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+$$;
 
 -- =============================================================================
 -- profiles — โปรไฟล์ผู้ใช้
