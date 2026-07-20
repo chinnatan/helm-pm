@@ -192,17 +192,23 @@ export function useNotifications() {
   function subscribe() {
     if (!user.value) return () => {};
 
+    const uid = user.value.id;
+
+    // ไม่ใส่ filter บน user_id — Realtime จำกัด filter ตาม column privilege / replica identity
+    // อาศัย RLS + กรองฝั่ง client แทน
     const channel = supabase
-      .channel(`notifications:${user.value.id}`)
+      .channel(`notifications:${uid}`)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "notifications",
-          filter: `user_id=eq.${user.value.id}`,
         },
-        () => fetchNotifications(),
+        (payload) => {
+          const row = payload.new as { user_id?: string };
+          if (row.user_id === uid) fetchNotifications();
+        },
       )
       .subscribe();
 

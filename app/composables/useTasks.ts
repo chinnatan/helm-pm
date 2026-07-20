@@ -153,12 +153,17 @@ export function useTasks(projectId?: Ref<string | undefined>) {
   }
 
   function subscribeToProject(pid: string, onUpdate: () => void) {
+    // ไม่ใส่ filter บน project_id — กัน "invalid column for filter"
+    // กรองฝั่ง client จาก payload แทน
     const channel = supabase
       .channel(`tasks:${pid}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "tasks", filter: `project_id=eq.${pid}` },
-        () => onUpdate(),
+        { event: "*", schema: "public", table: "tasks" },
+        (payload) => {
+          const row = (payload.new ?? payload.old) as { project_id?: string };
+          if (row.project_id === pid) onUpdate();
+        },
       )
       .subscribe();
 
