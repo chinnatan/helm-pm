@@ -1,0 +1,2 @@
+-- Seed default labels (run after creating a workspace manually if needed)
+-- Labels are created per-workspace via the app on first use.
