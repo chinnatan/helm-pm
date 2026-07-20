@@ -56,15 +56,23 @@ bun install
 3. ตั้งชื่อ เช่น `helm-pm` เลือก region ใกล้ไทย (เช่น Singapore)
 4. ตั้งรหัสผ่าน Database แล้วรอจน project พร้อม (~2 นาที)
 
-### 2.2 คัดลอก API keys
+### 2.2 คัดลอก API keys (แบบใหม่)
 
-ไปที่ **Project Settings → API** แล้วจดค่าเหล่านี้:
+ไปที่ **Project Settings → API Keys** แล้วเลือกแท็บ **Publishable and secret API keys**
 
-| ค่า | ใช้ทำอะไร |
-|-----|-----------|
-| **Project URL** | `SUPABASE_URL` |
-| **anon public** | `SUPABASE_KEY` (ใช้ฝั่ง frontend) |
-| **service_role** | `SUPABASE_SERVICE_ROLE_KEY` (ใช้เฉพาะ server-side / migration — **ห้ามเปิดเผย**) |
+ถ้ายังไม่มี ให้กด **Create new API keys** ก่อน (สร้างคู่กับ `anon` / `service_role` แบบเก่าได้ ไม่กระทบของเดิม)
+
+| ค่าใน Dashboard | ใส่ใน `.env` | ใช้ทำอะไร |
+|-----------------|--------------|-----------|
+| **Project URL** | `SUPABASE_URL` | URL ของโปรเจกต์ |
+| **Publishable key** (`sb_publishable_...`) | `SUPABASE_KEY` | ฝั่ง frontend (ปลอดภัยพอที่จะเปิดเผย) |
+| **Secret key** (`sb_secret_...`) | `SUPABASE_SERVICE_KEY` | เฉพาะ server-side — **ห้ามเปิดเผย / ห้าม commit** |
+
+> ทำไมชื่อตัวแปรยังเป็น `SUPABASE_KEY`?  
+> เพราะ `@nuxtjs/supabase` อ่านชื่อนี้โดยตรง — ไม่ใช่เพราะต้องใช้ `anon` แบบเก่า  
+> แค่ใส่ค่าเป็น `sb_publishable_...` แทน JWT `eyJ...` ก็พอ
+
+อย่าใช้ `anon` / `service_role` (JWT) อีกแล้ว — จะถูก deprecate ในช่วงปลายปี 2026
 
 ### 2.3 ตั้งค่า environment
 
@@ -76,8 +84,8 @@ cp .env.example .env
 
 ```env
 SUPABASE_URL=https://xxxxxxxx.supabase.co
-SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_KEY=sb_publishable_xxxxxxxx
+SUPABASE_SERVICE_KEY=sb_secret_xxxxxxxx
 
 NUXT_PUBLIC_APP_URL=http://localhost:3000
 NUXT_DEV_PORT=3000
@@ -199,7 +207,7 @@ bun run deploy
 | Variable | ค่า |
 |----------|-----|
 | `SUPABASE_URL` | Project URL จาก Supabase |
-| `SUPABASE_KEY` | anon public key |
+| `SUPABASE_KEY` | Publishable key (`sb_publishable_...`) |
 | `NUXT_PUBLIC_APP_URL` | `https://helm.yourdomain.com` |
 
 อย่าลืมเพิ่ม production URL ใน Supabase **Redirect URLs** ด้วย
@@ -272,6 +280,33 @@ helm-pm/
 - ตรวจว่า `NUXT_PUBLIC_APP_URL` ตรงกับ URL ที่เปิดจริง
 - ตรวจ **Redirect URLs** ใน Supabase Auth settings
 
+### สมัครสมาชิกแล้วได้ `Database error saving new user`
+
+ข้อความนี้มาจาก **Supabase Auth** — มักหมายความว่า trigger บน `auth.users` (สร้าง `profiles` / workspace) ล้ม  
+Auth จะไม่บอก SQL error จริง ต้องไปดู log เอง:
+
+1. **Dashboard → Logs → Postgres Logs** — มองหา `handle_new_user` / `permission denied` / `relation ... does not exist`
+2. **Dashboard → Logs → Auth Logs** — จะเห็น `unexpected_failure` คู่กับ request signup
+3. **SQL Editor** รันเพื่อเช็ค trigger:
+
+```sql
+-- ดู trigger บน auth.users
+select tgname, pg_get_triggerdef(oid)
+from pg_trigger
+where tgrelid = 'auth.users'::regclass;
+
+-- ดู function
+select proname, prosecdef, proconfig
+from pg_proc
+where proname in ('handle_new_user', 'handle_new_profile');
+```
+
+แก้ด้วย migration `003_fix_signup_triggers.sql` แล้วรัน:
+
+```bash
+task supabase:push
+```
+
 ### ไม่เห็นข้อมูล / permission denied
 
 - ตรวจว่ารัน migration `002_rls_policies.sql` แล้ว
@@ -284,7 +319,8 @@ helm-pm/
 
 ### Build ล้มบน Cloudflare
 
-- ตั้ง env variables ครบ (`SUPABASE_URL`, `SUPABASE_KEY`)
+- ตั้ง env variables ครบ (`SUPABASE_URL`, `SUPABASE_KEY` เป็น publishable key)
+- อย่าใส่ secret key (`sb_secret_...`) ใน Cloudflare Pages public vars
 - เปิด **Node.js compatibility** ใน Cloudflare Pages settings ถ้าจำเป็น
 
 ---

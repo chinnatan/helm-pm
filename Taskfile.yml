@@ -61,7 +61,7 @@ tasks:
       - |
         if [ ! -f .env ]; then
           cp .env.example .env
-          echo "✓ สร้าง .env แล้ว — แก้ค่า SUPABASE_URL และ SUPABASE_KEY ก่อนรัน dev"
+          echo "✓ สร้าง .env แล้ว — ใส่ SUPABASE_URL + publishable key (sb_publishable_...) ใน SUPABASE_KEY"
         else
           echo "✓ .env มีอยู่แล้ว"
         fi

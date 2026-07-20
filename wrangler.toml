@@ -3,4 +3,4 @@ compatibility_date = "2025-05-01"
 pages_build_output_dir = "dist"
 
 [vars]
-# Set in Cloudflare dashboard: SUPABASE_URL, SUPABASE_KEY, NUXT_PUBLIC_APP_URL
+# Set in Cloudflare dashboard: SUPABASE_URL, SUPABASE_KEY (sb_publishable_...), NUXT_PUBLIC_APP_URL

@@ -21,9 +21,9 @@ jobs:
       - run: bun run typecheck
         env:
           SUPABASE_URL: https://placeholder.supabase.co
-          SUPABASE_KEY: placeholder-key
+          SUPABASE_KEY: sb_publishable_placeholder
 
       - run: bun run build
         env:
           SUPABASE_URL: https://placeholder.supabase.co
-          SUPABASE_KEY: placeholder-key
+          SUPABASE_KEY: sb_publishable_placeholder
