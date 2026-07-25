@@ -14,7 +14,7 @@ export function useProjects() {
 
     const { data } = await supabase
       .from("projects")
-      .select("*")
+      .select("*, customers:customer_id(id, name)")
       .eq("workspace_id", workspace.value.id)
       .is("archived_at", null)
       .order("created_at", { ascending: false });
@@ -23,7 +23,11 @@ export function useProjects() {
     loading.value = false;
   }
 
-  async function createProject(name: string, description?: string) {
+  async function createProject(
+    name: string,
+    description?: string,
+    customerId?: string | null,
+  ) {
     if (!workspace.value) return null;
 
     const color = PROJECT_COLORS[projects.value.length % PROJECT_COLORS.length];
@@ -35,8 +39,9 @@ export function useProjects() {
         name,
         description: description || null,
         color,
+        customer_id: customerId || null,
       })
-      .select()
+      .select("*, customers:customer_id(id, name)")
       .single();
 
     if (!error && data) {
@@ -45,12 +50,21 @@ export function useProjects() {
     return { data, error: error?.message };
   }
 
-  async function updateProject(id: string, updates: Partial<Project>) {
+  async function updateProject(
+    id: string,
+    updates: {
+      name?: string;
+      description?: string | null;
+      color?: string;
+      customer_id?: string | null;
+      archived_at?: string | null;
+    },
+  ) {
     const { data, error } = await supabase
       .from("projects")
       .update(updates)
       .eq("id", id)
-      .select()
+      .select("*, customers:customer_id(id, name)")
       .single();
 
     if (!error && data) {
@@ -61,7 +75,7 @@ export function useProjects() {
   }
 
   async function archiveProject(id: string) {
-    return updateProject(id, { archived_at: new Date().toISOString() } as Partial<Project>);
+    return updateProject(id, { archived_at: new Date().toISOString() });
   }
 
   function getProject(id: string) {

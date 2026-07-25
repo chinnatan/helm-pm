@@ -6,6 +6,9 @@ type TaskUpdate = Database["public"]["Tables"]["tasks"]["Update"];
 const TASK_SELECT = `
   *,
   profiles:assignee_id(id, email, full_name, avatar_url),
+  tester:tester_id(id, email, full_name, avatar_url),
+  milestones:milestone_id(id, title, date, start_date, due_date),
+  customers:customer_id(id, name),
   subtasks(*),
   task_labels(label_id, labels(*)),
   user_task_preferences(*)
@@ -50,11 +53,14 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     project_id: string;
     title: string;
     description?: string;
-    assignee_id?: string;
+    assignee_id?: string | null;
+    tester_id?: string | null;
+    milestone_id?: string | null;
+    customer_id?: string | null;
     status?: TaskStatus;
     priority?: TaskPriority;
-    due_date?: string;
-    start_date?: string;
+    due_date?: string | null;
+    start_date?: string | null;
   }) {
     const maxSort = tasks.value.reduce((max, t) => Math.max(max, t.sort_order), -1);
 
@@ -82,11 +88,16 @@ export function useTasks(projectId?: Ref<string | undefined>) {
       .select(TASK_SELECT)
       .single();
 
-    if (!error && data) {
+    if (error) {
+      console.error("updateTask failed:", error.message);
+      return { data: null, error: error.message };
+    }
+
+    if (data) {
       const idx = tasks.value.findIndex((t) => t.id === id);
       if (idx >= 0) tasks.value[idx] = data as Task;
     }
-    return { data: data as Task | null, error: error?.message };
+    return { data: data as Task | null, error: undefined };
   }
 
   async function deleteTask(id: string) {
@@ -181,11 +192,16 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     const grouped: Record<TaskStatus, Task[]> = {
       todo: [],
       in_progress: [],
+      ready_for_test: [],
+      testing: [],
       done: [],
-      blocked: [],
+      release: [],
+      cancelled: [],
     };
     for (const task of tasks.value) {
-      grouped[task.status].push(task);
+      const bucket = grouped[task.status];
+      if (bucket) bucket.push(task);
+      else grouped.todo.push(task);
     }
     for (const status of Object.keys(grouped) as TaskStatus[]) {
       grouped[status]?.sort((a, b) => a.sort_order - b.sort_order);

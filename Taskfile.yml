@@ -92,6 +92,23 @@ tasks:
     cmds:
       - supabase stop
 
+  supabase:status:
+    desc: แสดง URL / keys ของ Supabase local
+    cmds:
+      - supabase status
+
+  dev:local:
+    desc: เริ่ม Supabase local แล้วรัน Nuxt (ไม่กิน B/W cloud)
+    cmds:
+      - supabase start
+      - |
+        eval "$(supabase status -o env)"
+        export SUPABASE_URL="$API_URL"
+        export SUPABASE_KEY="$ANON_KEY"
+        export SUPABASE_SERVICE_KEY="$SERVICE_ROLE_KEY"
+        echo "✓ ใช้ Supabase local: $SUPABASE_URL"
+        {{.BUN}} run dev
+
   clean:
     desc: ลบ build cache และ output
     cmds:

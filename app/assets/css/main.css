@@ -1,11 +1,26 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
+@theme static {
+  --color-ocean-50: #f0f7f9;
+  --color-ocean-100: #d7ebf0;
+  --color-ocean-200: #b0d7e0;
+  --color-ocean-300: #7cbac8;
+  --color-ocean-400: #4499ab;
+  --color-ocean-500: #2a7f92;
+  --color-ocean-600: #1f6878;
+  --color-ocean-700: #0b6e7a;
+  --color-ocean-800: #085560;
+  --color-ocean-900: #064049;
+  --color-ocean-950: #042c33;
+}
+
 :root {
   --font-sans: "Noto Sans Thai", ui-sans-serif, system-ui, sans-serif;
+  --color-brand: var(--color-ocean-800);
 }
 
 body {
   font-family: var(--font-sans);
-  background-color: #f8fafc;
+  background-color: var(--color-ocean-50);
 }

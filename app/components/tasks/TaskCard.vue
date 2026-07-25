@@ -13,6 +13,7 @@ const emit = defineEmits<{
   pin: [task: Task, pinned: boolean];
 }>();
 
+const { t } = useI18n();
 const { dateFnsLocale } = useDateLocale();
 const { priorityMeta } = useTaskLabels();
 
@@ -29,10 +30,30 @@ const subtaskProgress = computed(() => {
   return `${done}/${subs.length}`;
 });
 
+const visibleSubtasks = computed(() => {
+  const subs = [...(props.task.subtasks ?? [])].sort(
+    (a, b) => a.sort_order - b.sort_order,
+  );
+  return subs.slice(0, 3);
+});
+
+const hiddenSubtaskCount = computed(() => {
+  const total = props.task.subtasks?.length ?? 0;
+  return Math.max(0, total - 3);
+});
+
 const dueDateLabel = computed(() => {
   if (!props.task.due_date) return null;
   return format(parseISO(props.task.due_date), "d MMM", { locale: dateFnsLocale.value });
 });
+
+function personInitial(profile?: { full_name?: string | null; email?: string } | null) {
+  return (profile?.full_name || profile?.email)?.[0]?.toUpperCase() ?? "?";
+}
+
+function personName(profile?: { full_name?: string | null; email?: string } | null) {
+  return profile?.full_name || profile?.email || "";
+}
 </script>
 
 <template>
@@ -75,6 +96,15 @@ const dueDateLabel = computed(() => {
       </span>
 
       <UBadge
+        v-if="task.milestones"
+        color="warning"
+        variant="subtle"
+        size="xs"
+      >
+        {{ task.milestones.title }}
+      </UBadge>
+
+      <UBadge
         v-for="tl in task.task_labels"
         :key="tl.labels?.id"
         variant="subtle"
@@ -85,15 +115,59 @@ const dueDateLabel = computed(() => {
       </UBadge>
     </div>
 
-    <div v-if="task.profiles" class="mt-2 flex items-center gap-1.5">
+    <div
+      v-if="visibleSubtasks.length"
+      class="mt-2 space-y-1 border-t border-slate-100 pt-2"
+    >
       <div
-        class="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[10px] font-medium text-slate-600"
+        v-for="sub in visibleSubtasks"
+        :key="sub.id"
+        class="flex items-start gap-1.5 text-xs"
       >
-        {{ (task.profiles.full_name || task.profiles.email)?.[0]?.toUpperCase() }}
+        <span
+          class="mt-0.5 shrink-0"
+          :class="sub.completed ? 'text-green-500' : 'text-slate-300'"
+        >
+          {{ sub.completed ? "✓" : "○" }}
+        </span>
+        <span
+          class="leading-snug"
+          :class="sub.completed ? 'text-slate-400 line-through' : 'text-slate-600'"
+        >
+          {{ sub.title }}
+        </span>
       </div>
-      <span class="text-xs text-slate-500">
-        {{ task.profiles.full_name || task.profiles.email }}
-      </span>
+      <p v-if="hiddenSubtaskCount > 0" class="text-[11px] text-slate-400">
+        {{ t("tasks.moreSubtasks", { n: hiddenSubtaskCount }) }}
+      </p>
+    </div>
+
+    <div
+      v-if="task.profiles || task.tester"
+      class="mt-2 flex flex-wrap items-center gap-2"
+    >
+      <div v-if="task.profiles" class="flex items-center gap-1.5" :title="t('tasks.assignee')">
+        <div
+          class="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[10px] font-medium text-slate-600"
+        >
+          {{ personInitial(task.profiles) }}
+        </div>
+        <span class="text-xs text-slate-500">
+          <span class="text-slate-400">{{ t("tasks.devShort") }}</span>
+          {{ personName(task.profiles) }}
+        </span>
+      </div>
+      <div v-if="task.tester" class="flex items-center gap-1.5" :title="t('tasks.tester')">
+        <div
+          class="flex h-5 w-5 items-center justify-center rounded-full bg-amber-100 text-[10px] font-medium text-amber-700"
+        >
+          {{ personInitial(task.tester) }}
+        </div>
+        <span class="text-xs text-slate-500">
+          <span class="text-slate-400">{{ t("tasks.testerShort") }}</span>
+          {{ personName(task.tester) }}
+        </span>
+      </div>
     </div>
   </div>
 </template>

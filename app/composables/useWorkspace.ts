@@ -1,4 +1,4 @@
-import type { Workspace, WorkspaceMember } from "~/types";
+import type { Workspace, WorkspaceMember, JobRole, MemberRole } from "~/types";
 
 export function useWorkspace() {
   const supabase = useSupabaseClient();
@@ -6,6 +6,15 @@ export function useWorkspace() {
 
   const workspace = useState<Workspace | null>("workspace", () => null);
   const members = useState<WorkspaceMember[]>("workspaceMembers", () => []);
+
+  const myMembership = computed(() =>
+    members.value.find((m) => m.user_id === user.value?.id) ?? null,
+  );
+
+  const canManageMembers = computed(() => {
+    const role = myMembership.value?.role;
+    return role === "admin" || role === "manager";
+  });
 
   async function fetchWorkspace() {
     if (!user.value) return;
@@ -39,7 +48,11 @@ export function useWorkspace() {
     members.value = (data ?? []) as WorkspaceMember[];
   }
 
-  async function inviteMember(email: string, role: string = "member") {
+  async function inviteMember(
+    email: string,
+    role: string = "member",
+    jobRole: JobRole | null = null,
+  ) {
     const { t } = useI18n();
 
     if (!workspace.value) return { error: t("team.noWorkspace") };
@@ -58,17 +71,39 @@ export function useWorkspace() {
       workspace_id: workspace.value.id,
       user_id: profile.id,
       role,
+      job_role: jobRole,
     });
 
     if (!error) await fetchMembers();
     return { error: error?.message };
   }
 
+  async function updateMember(
+    id: string,
+    updates: { role?: MemberRole; job_role?: JobRole | null },
+  ) {
+    const { data, error } = await supabase
+      .from("workspace_members")
+      .update(updates)
+      .eq("id", id)
+      .select("*, profiles(*)")
+      .single();
+
+    if (!error && data) {
+      const idx = members.value.findIndex((m) => m.id === id);
+      if (idx >= 0) members.value[idx] = data as WorkspaceMember;
+    }
+    return { error: error?.message };
+  }
+
   return {
     workspace,
     members,
+    myMembership,
+    canManageMembers,
     fetchWorkspace,
     fetchMembers,
     inviteMember,
+    updateMember,
   };
 }

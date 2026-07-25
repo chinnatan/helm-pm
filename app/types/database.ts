@@ -39,6 +39,7 @@ export interface Database {
           workspace_id: string;
           user_id: string;
           role: string;
+          job_role: string | null;
           created_at: string;
         };
         Insert: {
@@ -46,6 +47,7 @@ export interface Database {
           workspace_id: string;
           user_id: string;
           role?: string;
+          job_role?: string | null;
           created_at?: string;
         };
         Update: {
@@ -53,6 +55,7 @@ export interface Database {
           workspace_id?: string;
           user_id?: string;
           role?: string;
+          job_role?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -64,6 +67,7 @@ export interface Database {
           name: string;
           description: string | null;
           color: string;
+          customer_id: string | null;
           created_at: string;
           archived_at: string | null;
         };
@@ -73,6 +77,7 @@ export interface Database {
           name: string;
           description?: string | null;
           color?: string;
+          customer_id?: string | null;
           created_at?: string;
           archived_at?: string | null;
         };
@@ -82,8 +87,111 @@ export interface Database {
           name?: string;
           description?: string | null;
           color?: string;
+          customer_id?: string | null;
           created_at?: string;
           archived_at?: string | null;
+        };
+        Relationships: [];
+      };
+      customers: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          name: string;
+          company: string | null;
+          contact_email: string | null;
+          notes: string | null;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          name: string;
+          company?: string | null;
+          contact_email?: string | null;
+          notes?: string | null;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          workspace_id?: string;
+          name?: string;
+          company?: string | null;
+          contact_email?: string | null;
+          notes?: string | null;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      meetings: {
+        Row: {
+          id: string;
+          customer_id: string;
+          title: string;
+          met_at: string;
+          summary: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          customer_id: string;
+          title: string;
+          met_at?: string;
+          summary?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          customer_id?: string;
+          title?: string;
+          met_at?: string;
+          summary?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      requirements: {
+        Row: {
+          id: string;
+          customer_id: string;
+          meeting_id: string | null;
+          title: string;
+          description: string | null;
+          status: string;
+          task_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          customer_id: string;
+          meeting_id?: string | null;
+          title: string;
+          description?: string | null;
+          status?: string;
+          task_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          customer_id?: string;
+          meeting_id?: string | null;
+          title?: string;
+          description?: string | null;
+          status?: string;
+          task_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
         };
         Relationships: [];
       };
@@ -116,6 +224,9 @@ export interface Database {
           id: string;
           project_id: string;
           assignee_id: string | null;
+          tester_id: string | null;
+          milestone_id: string | null;
+          customer_id: string | null;
           created_by: string | null;
           title: string;
           description: string | null;
@@ -131,6 +242,9 @@ export interface Database {
           id?: string;
           project_id: string;
           assignee_id?: string | null;
+          tester_id?: string | null;
+          milestone_id?: string | null;
+          customer_id?: string | null;
           created_by?: string | null;
           title: string;
           description?: string | null;
@@ -146,6 +260,9 @@ export interface Database {
           id?: string;
           project_id?: string;
           assignee_id?: string | null;
+          tester_id?: string | null;
+          milestone_id?: string | null;
+          customer_id?: string | null;
           created_by?: string | null;
           title?: string;
           description?: string | null;
@@ -300,13 +417,17 @@ export interface Database {
           project_id: string;
           title: string;
           date: string;
+          start_date: string;
+          due_date: string;
           created_at: string;
         };
         Insert: {
           id?: string;
           project_id: string;
           title: string;
-          date: string;
+          date?: string;
+          start_date: string;
+          due_date: string;
           created_at?: string;
         };
         Update: {
@@ -314,6 +435,8 @@ export interface Database {
           project_id?: string;
           title?: string;
           date?: string;
+          start_date?: string;
+          due_date?: string;
           created_at?: string;
         };
         Relationships: [];

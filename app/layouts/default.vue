@@ -5,7 +5,9 @@ const route = useRoute();
 const { t, locale, setLocale } = useI18n();
 
 const menuOpen = ref(false);
-const isDesktop = ref(false);
+const isDesktop = ref(
+  import.meta.client ? window.matchMedia("(min-width: 768px)").matches : false,
+);
 let desktopMq: MediaQueryList | null = null;
 
 function updateIsDesktop() {
@@ -23,10 +25,18 @@ onUnmounted(() => {
   desktopMq = null;
 });
 
+const { projectsHomePath } = useLastProject();
+
 const navItems = computed(() => [
-  { label: t("nav.planner"), to: "/planner", icon: "i-lucide-calendar-days" },
-  { label: t("nav.projects"), to: "/projects", icon: "i-lucide-folder-kanban" },
-  { label: t("nav.team"), to: "/team", icon: "i-lucide-users" },
+  { label: t("nav.planner"), to: "/planner", match: "/planner", icon: "i-lucide-calendar-days" },
+  {
+    label: t("nav.projects"),
+    to: projectsHomePath.value,
+    match: "/projects",
+    icon: "i-lucide-folder-kanban",
+  },
+  { label: t("nav.customers"), to: "/customers", match: "/customers", icon: "i-lucide-building-2" },
+  { label: t("nav.team"), to: "/team", match: "/team", icon: "i-lucide-users" },
 ]);
 
 async function signOut() {
@@ -34,8 +44,8 @@ async function signOut() {
   navigateTo("/login");
 }
 
-function isActive(path: string) {
-  return route.path === path || route.path.startsWith(`${path}/`);
+function isActive(match: string) {
+  return route.path === match || route.path.startsWith(`${match}/`);
 }
 
 async function switchLocale(code: "th" | "en") {
@@ -56,7 +66,7 @@ watch(
 </script>
 
 <template>
-  <div class="flex min-h-screen bg-slate-50">
+  <div class="flex min-h-screen bg-ocean-50">
     <!-- Desktop sidebar -->
     <aside
       class="hidden w-60 shrink-0 flex-col border-r border-slate-200 bg-white md:flex"
@@ -64,30 +74,34 @@ watch(
       <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
         <div class="flex items-center gap-2">
           <div
-            class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-800 text-sm font-bold text-white"
+            class="flex h-8 w-8 items-center justify-center rounded-lg bg-ocean-800 text-sm font-bold text-white"
           >
             H
           </div>
-          <span class="text-lg font-semibold text-slate-800">Helm</span>
+          <span class="text-lg font-semibold text-ocean-900">Helm</span>
         </div>
         <LayoutNotificationBell v-if="isDesktop" />
       </div>
 
-      <nav class="flex-1 space-y-1 p-3">
+      <nav class="flex-1 space-y-1 overflow-y-auto p-3">
         <NuxtLink
           v-for="item in navItems"
-          :key="item.to"
+          :key="item.match"
           :to="item.to"
           class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
           :class="
-            isActive(item.to)
-              ? 'bg-slate-100 text-slate-900'
-              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+            isActive(item.match)
+              ? 'bg-ocean-100 text-ocean-900'
+              : 'text-slate-600 hover:bg-ocean-50 hover:text-ocean-900'
           "
         >
           <UIcon :name="item.icon" class="h-4 w-4" />
           {{ item.label }}
         </NuxtLink>
+
+        <div class="pt-3">
+          <LayoutProjectSwitcher />
+        </div>
       </nav>
 
       <div class="border-t border-slate-200 p-3">
@@ -143,11 +157,11 @@ watch(
           />
           <div class="flex items-center gap-2">
             <div
-              class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800 text-xs font-bold text-white"
+              class="flex h-7 w-7 items-center justify-center rounded-lg bg-ocean-800 text-xs font-bold text-white"
             >
               H
             </div>
-            <span class="text-base font-semibold text-slate-800">Helm</span>
+            <span class="text-base font-semibold text-ocean-900">Helm</span>
           </div>
         </div>
         <LayoutNotificationBell v-if="!isDesktop" />
@@ -169,19 +183,23 @@ watch(
         <nav class="space-y-1">
           <button
             v-for="item in navItems"
-            :key="item.to"
+            :key="item.match"
             type="button"
             class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors"
             :class="
-              isActive(item.to)
-                ? 'bg-slate-100 text-slate-900'
-                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+              isActive(item.match)
+                ? 'bg-ocean-100 text-ocean-900'
+                : 'text-slate-600 hover:bg-ocean-50 hover:text-ocean-900'
             "
             @click="navigateAndClose(item.to)"
           >
             <UIcon :name="item.icon" class="h-4 w-4" />
             {{ item.label }}
           </button>
+
+          <div class="pt-3">
+            <LayoutProjectSwitcher @navigated="menuOpen = false" />
+          </div>
         </nav>
 
         <div class="mt-6 border-t border-slate-200 pt-4">

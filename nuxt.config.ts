@@ -61,7 +61,7 @@ export default defineNuxtConfig({
           content: "width=device-width, initial-scale=1",
         },
         { name: "description", content: "Project Management — steer the ship" },
-        { name: "theme-color", content: "#1e3a5f" },
+        { name: "theme-color", content: "#0B6E7A" },
       ],
       link: [
         {

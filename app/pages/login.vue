@@ -72,11 +72,11 @@ async function handleGoogleAuth() {
 
     <div class="mb-8 text-center">
       <div
-        class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-800 text-lg font-bold text-white"
+        class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-ocean-800 text-lg font-bold text-white"
       >
         H
       </div>
-      <h1 class="text-2xl font-bold text-slate-900">Helm</h1>
+      <h1 class="text-2xl font-bold text-ocean-900">Helm</h1>
       <p class="mt-1 text-sm text-slate-500">{{ t("auth.tagline") }}</p>
     </div>
 
@@ -116,7 +116,7 @@ async function handleGoogleAuth() {
     <p class="mt-6 text-center text-sm text-slate-500">
       <button
         type="button"
-        class="text-slate-700 underline hover:text-slate-900"
+        class="text-ocean-800 underline hover:text-ocean-900"
         @click="isSignUp = !isSignUp"
       >
         {{ isSignUp ? t("auth.haveAccount") : t("auth.noAccount") }}
