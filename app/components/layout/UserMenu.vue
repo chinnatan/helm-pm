@@ -1,0 +1,321 @@
+<script setup lang="ts">
+const emit = defineEmits<{
+  "sign-out": [];
+}>();
+
+const { t } = useI18n();
+const user = useSupabaseUser();
+const {
+  profile,
+  displayName,
+  initials,
+  fetchMyProfile,
+  updateProfile,
+  uploadAvatar,
+  changePassword,
+} = useProfile();
+
+const open = ref(false);
+const saving = ref(false);
+const savingPassword = ref(false);
+const error = ref("");
+const passwordError = ref("");
+const passwordSuccess = ref("");
+
+const form = reactive({
+  first_name: "",
+  last_name: "",
+});
+
+const passwordForm = reactive({
+  current: "",
+  next: "",
+  confirm: "",
+});
+
+const avatarFile = ref<File | null>(null);
+const avatarPreview = ref<string | null>(null);
+
+const shownAvatar = computed(
+  () => avatarPreview.value || profile.value?.avatar_url || null,
+);
+
+function openModal() {
+  error.value = "";
+  passwordError.value = "";
+  passwordSuccess.value = "";
+  form.first_name = profile.value?.first_name ?? "";
+  form.last_name = profile.value?.last_name ?? "";
+  passwordForm.current = "";
+  passwordForm.next = "";
+  passwordForm.confirm = "";
+  clearAvatarPick();
+  open.value = true;
+}
+
+function onAvatarChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0] ?? null;
+  if (avatarPreview.value) URL.revokeObjectURL(avatarPreview.value);
+  avatarFile.value = file;
+  avatarPreview.value = file ? URL.createObjectURL(file) : null;
+}
+
+function clearAvatarPick() {
+  if (avatarPreview.value) URL.revokeObjectURL(avatarPreview.value);
+  avatarFile.value = null;
+  avatarPreview.value = null;
+}
+
+async function saveProfile() {
+  error.value = "";
+  if (!form.first_name.trim() || !form.last_name.trim()) {
+    error.value = t("auth.nameRequired");
+    return;
+  }
+
+  saving.value = true;
+
+  const { error: updateError } = await updateProfile({
+    first_name: form.first_name,
+    last_name: form.last_name,
+  });
+
+  if (updateError) {
+    saving.value = false;
+    error.value = updateError === "name_required" ? t("auth.nameRequired") : updateError;
+    return;
+  }
+
+  if (avatarFile.value) {
+    const { error: avatarError } = await uploadAvatar(avatarFile.value);
+    if (avatarError) {
+      saving.value = false;
+      error.value = avatarError;
+      return;
+    }
+  }
+
+  saving.value = false;
+  clearAvatarPick();
+  open.value = false;
+}
+
+async function savePassword() {
+  passwordError.value = "";
+  passwordSuccess.value = "";
+
+  if (!passwordForm.current || !passwordForm.next || !passwordForm.confirm) {
+    passwordError.value = t("profile.passwordFieldsRequired");
+    return;
+  }
+  if (passwordForm.next.length < 6) {
+    passwordError.value = t("profile.passwordTooShort");
+    return;
+  }
+  if (passwordForm.next !== passwordForm.confirm) {
+    passwordError.value = t("profile.passwordMismatch");
+    return;
+  }
+
+  savingPassword.value = true;
+  const { error: pwError } = await changePassword(
+    passwordForm.current,
+    passwordForm.next,
+  );
+  savingPassword.value = false;
+
+  if (pwError === "current_password_invalid") {
+    passwordError.value = t("profile.currentPasswordInvalid");
+    return;
+  }
+  if (pwError) {
+    passwordError.value = pwError;
+    return;
+  }
+
+  passwordForm.current = "";
+  passwordForm.next = "";
+  passwordForm.confirm = "";
+  passwordSuccess.value = t("profile.passwordChanged");
+}
+
+onMounted(() => {
+  fetchMyProfile();
+});
+
+watch(
+  () => user.value?.id,
+  () => {
+    fetchMyProfile();
+  },
+);
+
+onUnmounted(() => {
+  clearAvatarPick();
+});
+</script>
+
+<template>
+  <div>
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        class="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-2 text-left transition-colors hover:bg-ocean-50"
+        :aria-label="t('profile.edit')"
+        @click="openModal"
+      >
+        <span
+          class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-ocean-100 text-xs font-semibold text-ocean-900"
+        >
+          <img
+            v-if="profile?.avatar_url"
+            :src="profile.avatar_url"
+            alt=""
+            class="h-full w-full object-cover"
+          >
+          <span v-else>{{ initials }}</span>
+        </span>
+        <span class="min-w-0 flex-1">
+          <span class="block truncate text-sm font-medium text-slate-800">
+            {{ displayName }}
+          </span>
+          <span class="block truncate text-xs text-slate-400">
+            {{ profile?.email || user?.email }}
+          </span>
+        </span>
+        <UIcon name="i-lucide-pencil" class="h-3.5 w-3.5 shrink-0 text-slate-400" />
+      </button>
+
+      <UButton
+        icon="i-lucide-log-out"
+        variant="ghost"
+        color="neutral"
+        size="xs"
+        :aria-label="t('common.signOut')"
+        @click="emit('sign-out')"
+      />
+    </div>
+
+    <UModal v-model:open="open" :title="t('profile.edit')">
+      <template #body>
+        <div class="space-y-5">
+          <UAlert v-if="error" color="error" variant="subtle" :title="error" />
+
+          <UFormField :label="t('auth.avatar')">
+            <div class="flex items-center gap-3">
+              <div
+                class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-sm font-semibold text-slate-500"
+              >
+                <img
+                  v-if="shownAvatar"
+                  :src="shownAvatar"
+                  alt=""
+                  class="h-full w-full object-cover"
+                >
+                <span v-else>{{ initials }}</span>
+              </div>
+              <div class="min-w-0 flex-1 space-y-1">
+                <input
+                  type="file"
+                  accept="image/*"
+                  class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-ocean-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-ocean-900 hover:file:bg-ocean-200"
+                  @change="onAvatarChange"
+                >
+                <button
+                  v-if="avatarFile"
+                  type="button"
+                  class="text-xs text-slate-500 underline hover:text-slate-700"
+                  @click="clearAvatarPick"
+                >
+                  {{ t("auth.removeAvatar") }}
+                </button>
+              </div>
+            </div>
+          </UFormField>
+
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <UFormField :label="t('auth.firstName')" required>
+              <UInput v-model="form.first_name" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('auth.lastName')" required>
+              <UInput v-model="form.last_name" class="w-full" />
+            </UFormField>
+          </div>
+
+          <UFormField :label="t('auth.email')" :hint="t('profile.emailReadonly')">
+            <UInput
+              :model-value="profile?.email || user?.email || ''"
+              disabled
+              class="w-full"
+            />
+          </UFormField>
+
+          <div class="border-t border-slate-100 pt-4">
+            <h3 class="mb-3 text-sm font-semibold text-slate-800">
+              {{ t("profile.changePassword") }}
+            </h3>
+            <UAlert
+              v-if="passwordError"
+              color="error"
+              variant="subtle"
+              class="mb-3"
+              :title="passwordError"
+            />
+            <UAlert
+              v-if="passwordSuccess"
+              color="success"
+              variant="subtle"
+              class="mb-3"
+              :title="passwordSuccess"
+            />
+            <div class="space-y-3">
+              <UFormField :label="t('profile.currentPassword')">
+                <UInput
+                  v-model="passwordForm.current"
+                  type="password"
+                  autocomplete="current-password"
+                  class="w-full"
+                />
+              </UFormField>
+              <UFormField :label="t('profile.newPassword')">
+                <UInput
+                  v-model="passwordForm.next"
+                  type="password"
+                  autocomplete="new-password"
+                  class="w-full"
+                />
+              </UFormField>
+              <UFormField :label="t('profile.confirmPassword')">
+                <UInput
+                  v-model="passwordForm.confirm"
+                  type="password"
+                  autocomplete="new-password"
+                  class="w-full"
+                />
+              </UFormField>
+              <UButton
+                variant="outline"
+                color="neutral"
+                :loading="savingPassword"
+                @click="savePassword"
+              >
+                {{ t("profile.updatePassword") }}
+              </UButton>
+            </div>
+          </div>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UButton variant="ghost" color="neutral" @click="open = false">
+            {{ t("common.cancel") }}
+          </UButton>
+          <UButton :loading="saving" @click="saveProfile">
+            {{ t("common.save") }}
+          </UButton>
+        </div>
+      </template>
+    </UModal>
+  </div>
+</template>
