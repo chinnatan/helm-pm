@@ -65,6 +65,8 @@
     "ganttSuffix": "Gantt",
     "calendarSuffix": "Calendar",
     "addTask": "Add Task",
+    "myTasks": "My tasks",
+    "allTasks": "All tasks",
     "addMilestone": "Add Milestone",
     "editMilestone": "Edit Milestone",
     "milestoneTitle": "Title",
@@ -142,6 +144,7 @@
     "selectLabels": "Select labels",
     "subtasks": "Subtasks",
     "addSubtask": "Add subtask...",
+    "moreSubtasks": "+{n} more",
     "fields": {
       "assignee_id": "Developer",
       "tester_id": "Tester",

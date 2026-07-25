@@ -30,6 +30,18 @@ const subtaskProgress = computed(() => {
   return `${done}/${subs.length}`;
 });
 
+const visibleSubtasks = computed(() => {
+  const subs = [...(props.task.subtasks ?? [])].sort(
+    (a, b) => a.sort_order - b.sort_order,
+  );
+  return subs.slice(0, 3);
+});
+
+const hiddenSubtaskCount = computed(() => {
+  const total = props.task.subtasks?.length ?? 0;
+  return Math.max(0, total - 3);
+});
+
 const dueDateLabel = computed(() => {
   if (!props.task.due_date) return null;
   return format(parseISO(props.task.due_date), "d MMM", { locale: dateFnsLocale.value });
@@ -101,6 +113,33 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
       >
         {{ tl.labels?.name }}
       </UBadge>
+    </div>
+
+    <div
+      v-if="visibleSubtasks.length"
+      class="mt-2 space-y-1 border-t border-slate-100 pt-2"
+    >
+      <div
+        v-for="sub in visibleSubtasks"
+        :key="sub.id"
+        class="flex items-start gap-1.5 text-xs"
+      >
+        <span
+          class="mt-0.5 shrink-0"
+          :class="sub.completed ? 'text-green-500' : 'text-slate-300'"
+        >
+          {{ sub.completed ? "✓" : "○" }}
+        </span>
+        <span
+          class="leading-snug"
+          :class="sub.completed ? 'text-slate-400 line-through' : 'text-slate-600'"
+        >
+          {{ sub.title }}
+        </span>
+      </div>
+      <p v-if="hiddenSubtaskCount > 0" class="text-[11px] text-slate-400">
+        {{ t("tasks.moreSubtasks", { n: hiddenSubtaskCount }) }}
+      </p>
     </div>
 
     <div

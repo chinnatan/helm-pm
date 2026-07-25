@@ -3,9 +3,13 @@ import type { Task, TaskStatus } from "~/types";
 import { TASK_STATUS_VALUES } from "~/types";
 import { VueDraggable } from "vue-draggable-plus";
 
-const props = defineProps<{ projectId: string }>();
+const props = defineProps<{
+  projectId: string;
+  mineOnly?: boolean;
+}>();
 
 const { statuses } = useTaskLabels();
+const user = useSupabaseUser();
 const { tasksByStatus, updateTaskStatus, subscribeToProject, fetchTasks } = useTasks(
   toRef(props, "projectId"),
 );
@@ -33,10 +37,17 @@ function emptyColumns(): Record<TaskStatus, Task[]> {
 
 const localColumns = ref<Record<TaskStatus, Task[]>>(emptyColumns());
 
+function filterMine(tasks: Task[]) {
+  if (!props.mineOnly) return tasks;
+  const uid = user.value?.id;
+  if (!uid) return [];
+  return tasks.filter((t) => t.assignee_id === uid || t.tester_id === uid);
+}
+
 function syncFromServer(val: Record<TaskStatus, Task[]>) {
   for (const status of TASK_STATUS_VALUES) {
     const target = localColumns.value[status];
-    const source = val[status] ?? [];
+    const source = filterMine(val[status] ?? []);
     target.splice(0, target.length, ...source);
   }
 }
@@ -48,6 +59,13 @@ watch(
     syncFromServer(val);
   },
   { immediate: true, deep: true },
+);
+
+watch(
+  () => props.mineOnly,
+  () => {
+    if (!isDragging.value) syncFromServer(tasksByStatus.value);
+  },
 );
 
 function onDragStart() {

@@ -16,6 +16,7 @@ const project = computed(() => getProject(projectId.value));
 const showModal = ref(false);
 const selectedTask = ref<Task | null>(null);
 const defaultStatus = ref<TaskStatus | undefined>(undefined);
+const mineOnly = ref(false);
 
 onMounted(async () => {
   await fetchWorkspace();
@@ -51,10 +52,33 @@ async function onSaved() {
       </template>
     </LayoutProjectHeader>
 
-    <LayoutProjectNav class="mb-6" />
+    <LayoutProjectNav class="mb-4" />
+
+    <div class="mb-3 flex items-center gap-2">
+      <div class="inline-flex rounded-lg border border-slate-200 bg-white p-0.5">
+        <UButton
+          size="xs"
+          :variant="!mineOnly ? 'soft' : 'ghost'"
+          color="neutral"
+          @click="mineOnly = false"
+        >
+          {{ t("projects.allTasks") }}
+        </UButton>
+        <UButton
+          size="xs"
+          icon="i-lucide-user"
+          :variant="mineOnly ? 'soft' : 'ghost'"
+          color="neutral"
+          @click="mineOnly = true"
+        >
+          {{ t("projects.myTasks") }}
+        </UButton>
+      </div>
+    </div>
 
     <KanbanBoard
       :project-id="projectId"
+      :mine-only="mineOnly"
       @task-click="openTask"
       @add-task="openNewTask"
     />
