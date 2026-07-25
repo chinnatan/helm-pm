@@ -309,13 +309,17 @@ export interface Database {
           project_id: string;
           title: string;
           date: string;
+          start_date: string;
+          due_date: string;
           created_at: string;
         };
         Insert: {
           id?: string;
           project_id: string;
           title: string;
-          date: string;
+          date?: string;
+          start_date: string;
+          due_date: string;
           created_at?: string;
         };
         Update: {
@@ -323,6 +327,8 @@ export interface Database {
           project_id?: string;
           title?: string;
           date?: string;
+          start_date?: string;
+          due_date?: string;
           created_at?: string;
         };
         Relationships: [];

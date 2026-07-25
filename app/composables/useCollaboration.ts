@@ -69,17 +69,23 @@ export function useMilestones(projectId: Ref<string | undefined>) {
       .from("milestones")
       .select("*")
       .eq("project_id", projectId.value)
-      .order("date");
+      .order("start_date");
 
     milestones.value = (data ?? []) as Milestone[];
   }
 
-  async function createMilestone(title: string, date: string) {
+  async function createMilestone(title: string, startDate: string, dueDate: string) {
     if (!projectId.value) return;
 
     const { data, error } = await supabase
       .from("milestones")
-      .insert({ project_id: projectId.value, title, date })
+      .insert({
+        project_id: projectId.value,
+        title,
+        start_date: startDate,
+        due_date: dueDate,
+        date: dueDate,
+      })
       .select()
       .single();
 
@@ -87,10 +93,18 @@ export function useMilestones(projectId: Ref<string | undefined>) {
     return { data, error: error?.message };
   }
 
-  async function updateMilestone(id: string, updates: { title?: string; date?: string }) {
+  async function updateMilestone(
+    id: string,
+    updates: { title?: string; start_date?: string; due_date?: string },
+  ) {
+    const payload = {
+      ...updates,
+      ...(updates.due_date ? { date: updates.due_date } : {}),
+    };
+
     const { data, error } = await supabase
       .from("milestones")
-      .update(updates)
+      .update(payload)
       .eq("id", id)
       .select()
       .single();

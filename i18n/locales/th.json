@@ -71,6 +71,10 @@
     "editMilestone": "แก้ไขไมล์สโตน",
     "milestoneTitle": "ชื่อ",
     "milestoneDate": "วันที่",
+    "milestoneStart": "วันเริ่ม",
+    "milestoneDue": "วันสิ้นสุด",
+    "linkedTasks": "งานที่ผูก",
+    "noLinkedTasks": "ยังไม่มีงานผูกกับไมล์สโตนนี้",
     "milestone": "ไมล์สโตน",
     "selectMilestone": "เลือกไมล์สโตน",
     "overdueTasks": "เกินกำหนด",
@@ -92,7 +96,13 @@
     "colMilestone": "ไมล์สโตน",
     "colDueDate": "วันครบกำหนด",
     "noTasksFound": "ไม่พบงาน",
-    "ganttEmpty": "เพิ่มวันเริ่มและวันครบกำหนดให้งานเพื่อแสดงบนไทม์ไลน์"
+    "ganttEmpty": "เพิ่มวันเริ่มและวันครบกำหนดให้งานเพื่อแสดงบนไทม์ไลน์",
+    "ganttNoMilestone": "ไม่มีไมล์สโตน",
+    "ganttColWork": "งาน",
+    "ganttColStatus": "สถานะ",
+    "ganttColDates": "วันที่",
+    "ganttTasksCount": "งาน",
+    "ganttToggleGroup": "ขยายหรือย่อกลุ่ม"
   },
   "team": {
     "title": "ทีม",

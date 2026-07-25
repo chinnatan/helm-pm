@@ -82,6 +82,8 @@ export interface Milestone {
   project_id: string;
   title: string;
   date: string;
+  start_date: string;
+  due_date: string;
   created_at: string;
 }
 
@@ -103,7 +105,7 @@ export interface Task {
   updated_at: string;
   profiles?: Profile;
   tester?: Profile;
-  milestones?: Pick<Milestone, "id" | "title" | "date"> | null;
+  milestones?: Pick<Milestone, "id" | "title" | "date" | "start_date" | "due_date"> | null;
   projects?: Project;
   subtasks?: Subtask[];
   task_labels?: { labels: Label }[];

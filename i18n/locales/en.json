@@ -71,6 +71,10 @@
     "editMilestone": "Edit Milestone",
     "milestoneTitle": "Title",
     "milestoneDate": "Date",
+    "milestoneStart": "Start date",
+    "milestoneDue": "Due date",
+    "linkedTasks": "Linked tasks",
+    "noLinkedTasks": "No tasks linked to this milestone",
     "milestone": "Milestone",
     "selectMilestone": "Select milestone",
     "overdueTasks": "Overdue",
@@ -92,7 +96,13 @@
     "colMilestone": "Milestone",
     "colDueDate": "Due Date",
     "noTasksFound": "No tasks found",
-    "ganttEmpty": "Add start and due dates to tasks to see them on the timeline"
+    "ganttEmpty": "Add start and due dates to tasks to see them on the timeline",
+    "ganttNoMilestone": "No milestone",
+    "ganttColWork": "Work",
+    "ganttColStatus": "Status",
+    "ganttColDates": "Dates",
+    "ganttTasksCount": "tasks",
+    "ganttToggleGroup": "Expand or collapse group"
   },
   "team": {
     "title": "Team",

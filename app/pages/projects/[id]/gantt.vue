@@ -26,8 +26,14 @@ const selectedTask = ref<Task | null>(null);
 const showMilestone = ref(false);
 const editingMilestone = ref<Milestone | null>(null);
 const milestoneTitle = ref("");
-const milestoneDate = ref("");
+const milestoneStart = ref("");
+const milestoneDue = ref("");
 const savingMilestone = ref(false);
+
+const linkedTasks = computed(() => {
+  if (!editingMilestone.value) return [];
+  return tasks.value.filter((t) => t.milestone_id === editingMilestone.value!.id);
+});
 
 onMounted(async () => {
   await fetchWorkspace();
@@ -53,35 +59,39 @@ function openNewTask() {
 function openCreateMilestone() {
   editingMilestone.value = null;
   milestoneTitle.value = "";
-  milestoneDate.value = "";
+  milestoneStart.value = "";
+  milestoneDue.value = "";
   showMilestone.value = true;
 }
 
-function openEditMilestone(ms: { id: string; title: string; date: string }) {
-  editingMilestone.value = ms as Milestone;
+function openEditMilestone(ms: Milestone) {
+  editingMilestone.value = ms;
   milestoneTitle.value = ms.title;
-  milestoneDate.value = ms.date;
+  milestoneStart.value = ms.start_date || ms.date;
+  milestoneDue.value = ms.due_date || ms.date;
   showMilestone.value = true;
 }
 
 async function handleSaveMilestone() {
-  if (!milestoneTitle.value || !milestoneDate.value) return;
+  if (!milestoneTitle.value || !milestoneStart.value || !milestoneDue.value) return;
   savingMilestone.value = true;
 
   if (editingMilestone.value) {
     await updateMilestone(editingMilestone.value.id, {
       title: milestoneTitle.value,
-      date: milestoneDate.value,
+      start_date: milestoneStart.value,
+      due_date: milestoneDue.value,
     });
   } else {
-    await createMilestone(milestoneTitle.value, milestoneDate.value);
+    await createMilestone(milestoneTitle.value, milestoneStart.value, milestoneDue.value);
   }
 
   savingMilestone.value = false;
   showMilestone.value = false;
   editingMilestone.value = null;
   milestoneTitle.value = "";
-  milestoneDate.value = "";
+  milestoneStart.value = "";
+  milestoneDue.value = "";
 }
 
 function closeMilestoneModal() {
@@ -147,9 +157,28 @@ async function handleDeleteMilestone() {
           <UFormField :label="t('projects.milestoneTitle')">
             <UInput v-model="milestoneTitle" class="w-full" />
           </UFormField>
-          <UFormField :label="t('projects.milestoneDate')">
-            <UInput v-model="milestoneDate" type="date" class="w-full" />
-          </UFormField>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <UFormField :label="t('projects.milestoneStart')">
+              <UInput v-model="milestoneStart" type="date" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('projects.milestoneDue')">
+              <UInput v-model="milestoneDue" type="date" class="w-full" />
+            </UFormField>
+          </div>
+          <div v-if="editingMilestone" class="space-y-2">
+            <p class="text-sm font-medium text-slate-700">{{ t("projects.linkedTasks") }}</p>
+            <ul v-if="linkedTasks.length" class="space-y-1">
+              <li
+                v-for="task in linkedTasks"
+                :key="task.id"
+                class="cursor-pointer rounded-lg px-2 py-1.5 text-sm text-slate-700 hover:bg-ocean-50"
+                @click="showMilestone = false; openTask(task)"
+              >
+                {{ task.title }}
+              </li>
+            </ul>
+            <p v-else class="text-sm text-slate-400">{{ t("projects.noLinkedTasks") }}</p>
+          </div>
         </div>
       </template>
       <template #footer>
@@ -170,7 +199,7 @@ async function handleDeleteMilestone() {
             </UButton>
             <UButton
               :loading="savingMilestone"
-              :disabled="!milestoneTitle || !milestoneDate"
+              :disabled="!milestoneTitle || !milestoneStart || !milestoneDue"
               @click="handleSaveMilestone"
             >
               {{ editingMilestone ? t("common.save") : t("common.create") }}
