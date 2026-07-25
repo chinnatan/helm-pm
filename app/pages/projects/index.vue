@@ -4,25 +4,35 @@ definePageMeta({ middleware: "auth" });
 const { t } = useI18n();
 const { projects, loading, fetchProjects, createProject } = useProjects();
 const { fetchWorkspace } = useWorkspace();
+const { customers, fetchCustomers } = useCustomers();
 
 const showCreate = ref(false);
 const newName = ref("");
 const newDescription = ref("");
+const newCustomerId = ref<string | null>(null);
 const creating = ref(false);
+
+const customerItems = computed(() => [
+  { label: t("common.none"), value: null },
+  ...customers.value
+    .filter((c) => c.status === "active")
+    .map((c) => ({ label: c.name, value: c.id })),
+]);
 
 onMounted(async () => {
   await fetchWorkspace();
-  await fetchProjects();
+  await Promise.all([fetchProjects(), fetchCustomers()]);
 });
 
 async function handleCreate() {
   if (!newName.value.trim()) return;
   creating.value = true;
-  await createProject(newName.value.trim(), newDescription.value.trim());
+  await createProject(newName.value.trim(), newDescription.value.trim(), newCustomerId.value);
   creating.value = false;
   showCreate.value = false;
   newName.value = "";
   newDescription.value = "";
+  newCustomerId.value = null;
 }
 </script>
 
@@ -64,7 +74,10 @@ async function handleCreate() {
           </div>
           <div class="min-w-0">
             <h3 class="font-semibold text-slate-900 group-hover:text-slate-700">{{ project.name }}</h3>
-            <p v-if="project.description" class="text-xs text-slate-500 line-clamp-1">
+            <p v-if="project.customers" class="text-xs text-ocean-800">
+              {{ project.customers.name }}
+            </p>
+            <p v-else-if="project.description" class="text-xs text-slate-500 line-clamp-1">
               {{ project.description }}
             </p>
           </div>
@@ -80,6 +93,14 @@ async function handleCreate() {
           </UFormField>
           <UFormField :label="t('projects.description')">
             <UTextarea v-model="newDescription" :placeholder="t('projects.descriptionPlaceholder')" :rows="2" class="w-full" />
+          </UFormField>
+          <UFormField :label="t('projects.customer')">
+            <USelect
+              v-model="newCustomerId"
+              :items="customerItems"
+              :placeholder="t('projects.selectCustomer')"
+              class="w-full"
+            />
           </UFormField>
         </div>
       </template>

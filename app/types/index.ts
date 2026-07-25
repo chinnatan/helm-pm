@@ -10,6 +10,8 @@ export type TaskPriority = "low" | "medium" | "high" | "urgent";
 export type MemberRole = "admin" | "manager" | "member" | "viewer";
 export type JobRole = "developer" | "tester" | "designer" | "pm" | "other";
 export type PlannerTab = "today" | "week" | "inbox" | "focus";
+export type CustomerStatus = "active" | "archived";
+export type RequirementStatus = "open" | "in_progress" | "done" | "cancelled";
 
 export const JOB_ROLE_VALUES: JobRole[] = [
   "developer",
@@ -36,6 +38,13 @@ export function isTaskClosed(status: TaskStatus) {
   return TASK_CLOSED_STATUSES.includes(status);
 }
 
+export const REQUIREMENT_STATUS_VALUES: RequirementStatus[] = [
+  "open",
+  "in_progress",
+  "done",
+  "cancelled",
+];
+
 export interface Profile {
   id: string;
   email: string;
@@ -60,14 +69,28 @@ export interface WorkspaceMember {
   profiles?: Profile;
 }
 
+export interface Customer {
+  id: string;
+  workspace_id: string;
+  name: string;
+  company: string | null;
+  contact_email: string | null;
+  notes: string | null;
+  status: CustomerStatus;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Project {
   id: string;
   workspace_id: string;
   name: string;
   description: string | null;
   color: string;
+  customer_id: string | null;
   created_at: string;
   archived_at: string | null;
+  customers?: Pick<Customer, "id" | "name"> | null;
 }
 
 export interface Label {
@@ -93,6 +116,7 @@ export interface Task {
   assignee_id: string | null;
   tester_id: string | null;
   milestone_id: string | null;
+  customer_id: string | null;
   created_by: string | null;
   title: string;
   description: string | null;
@@ -106,6 +130,7 @@ export interface Task {
   profiles?: Profile;
   tester?: Profile;
   milestones?: Pick<Milestone, "id" | "title" | "date" | "start_date" | "due_date"> | null;
+  customers?: Pick<Customer, "id" | "name"> | null;
   projects?: Project;
   subtasks?: Subtask[];
   task_labels?: { labels: Label }[];
@@ -153,6 +178,29 @@ export interface TaskDependency {
   id: string;
   task_id: string;
   depends_on_task_id: string;
+}
+
+export interface Meeting {
+  id: string;
+  customer_id: string;
+  title: string;
+  met_at: string;
+  summary: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface Requirement {
+  id: string;
+  customer_id: string;
+  meeting_id: string | null;
+  title: string;
+  description: string | null;
+  status: RequirementStatus;
+  task_id: string | null;
+  created_at: string;
+  updated_at: string;
+  meetings?: Pick<Meeting, "id" | "title" | "met_at"> | null;
 }
 
 export interface Notification {

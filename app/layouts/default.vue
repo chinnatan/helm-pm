@@ -26,6 +26,7 @@ onUnmounted(() => {
 const navItems = computed(() => [
   { label: t("nav.planner"), to: "/planner", icon: "i-lucide-calendar-days" },
   { label: t("nav.projects"), to: "/projects", icon: "i-lucide-folder-kanban" },
+  { label: t("nav.customers"), to: "/customers", icon: "i-lucide-building-2" },
   { label: t("nav.team"), to: "/team", icon: "i-lucide-users" },
 ]);
 

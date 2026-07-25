@@ -10,19 +10,35 @@ const { dateFnsLocale } = useDateLocale();
 const route = useRoute();
 const projectId = computed(() => route.params.id as string);
 
-const { getProject, fetchProjects } = useProjects();
+const { getProject, fetchProjects, updateProject } = useProjects();
 const { tasks, fetchTasks } = useTasks(projectId);
 const { fetchWorkspace } = useWorkspace();
+const { customers, fetchCustomers } = useCustomers();
 
 const project = computed(() => getProject(projectId.value));
 const showModal = ref(false);
 const selectedTask = ref<Task | null>(null);
+const savingCustomer = ref(false);
+
+const customerItems = computed(() => [
+  { label: t("common.none"), value: null },
+  ...customers.value
+    .filter((c) => c.status === "active")
+    .map((c) => ({ label: c.name, value: c.id })),
+]);
 
 onMounted(async () => {
   await fetchWorkspace();
-  await fetchProjects();
+  await Promise.all([fetchProjects(), fetchCustomers()]);
   await fetchTasks(projectId.value);
 });
+
+async function handleCustomerChange(value: string | null) {
+  if (!project.value) return;
+  savingCustomer.value = true;
+  await updateProject(project.value.id, { customer_id: value });
+  savingCustomer.value = false;
+}
 
 const stats = computed(() => ({
   total: tasks.value.length,
@@ -86,6 +102,19 @@ function formatDue(date: string) {
     >
       {{ project.description }}
     </p>
+
+    <div v-if="project" class="mb-4 max-w-xs">
+      <UFormField :label="t('projects.customer')">
+        <USelect
+          :model-value="project.customer_id"
+          :items="customerItems"
+          :placeholder="t('projects.selectCustomer')"
+          :disabled="savingCustomer"
+          class="w-full"
+          @update:model-value="(v) => handleCustomerChange(v as string | null)"
+        />
+      </UFormField>
+    </div>
 
     <LayoutProjectNav class="mb-6" />
 

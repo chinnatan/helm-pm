@@ -23,6 +23,8 @@ const { members } = useWorkspace();
 const { labels, fetchLabels } = useLabels();
 const projectIdRef = toRef(() => props.projectId);
 const { milestones, fetchMilestones } = useMilestones(projectIdRef);
+const { customers, fetchCustomers } = useCustomers();
+const { getProject, fetchProjects } = useProjects();
 
 const form = reactive({
   title: "",
@@ -30,6 +32,7 @@ const form = reactive({
   assignee_id: null as string | null,
   tester_id: null as string | null,
   milestone_id: null as string | null,
+  customer_id: null as string | null,
   status: "todo" as TaskStatus,
   priority: "medium" as TaskPriority,
   due_date: "",
@@ -109,7 +112,7 @@ watch(
   async (open) => {
     if (!open) return;
 
-    await Promise.all([fetchLabels(), fetchMilestones()]);
+    await Promise.all([fetchLabels(), fetchMilestones(), fetchCustomers(), fetchProjects()]);
 
     if (props.task) {
       form.title = props.task.title;
@@ -117,6 +120,8 @@ watch(
       form.assignee_id = props.task.assignee_id;
       form.tester_id = props.task.tester_id;
       form.milestone_id = props.task.milestone_id;
+      form.customer_id =
+        props.task.customer_id ?? getProject(props.projectId)?.customer_id ?? null;
       form.status = props.task.status;
       form.priority = props.task.priority;
       form.due_date = props.task.due_date ?? "";
@@ -130,6 +135,7 @@ watch(
       form.assignee_id = null;
       form.tester_id = null;
       form.milestone_id = null;
+      form.customer_id = getProject(props.projectId)?.customer_id ?? null;
       form.status = props.defaultStatus ?? "todo";
       form.priority = "medium";
       form.due_date = props.defaultDueDate ?? "";
@@ -150,6 +156,7 @@ async function save() {
     assignee_id: form.assignee_id || null,
     tester_id: form.tester_id || null,
     milestone_id: form.milestone_id || null,
+    customer_id: form.customer_id || null,
     status: form.status,
     priority: form.priority,
     due_date: form.due_date || null,
@@ -238,9 +245,16 @@ const testerItems = computed(() => [
 const milestoneItems = computed(() => [
   { label: t("common.none"), value: null },
   ...milestones.value.map((m) => ({
-    label: `${m.title} (${m.date})`,
+    label: `${m.title} (${m.start_date || m.date} → ${m.due_date || m.date})`,
     value: m.id,
   })),
+]);
+
+const customerItems = computed(() => [
+  { label: t("common.none"), value: null },
+  ...customers.value
+    .filter((c) => c.status === "active")
+    .map((c) => ({ label: c.name, value: c.id })),
 ]);
 </script>
 
@@ -331,6 +345,15 @@ const milestoneItems = computed(() => [
               v-model="form.milestone_id"
               :items="milestoneItems"
               :placeholder="t('projects.selectMilestone')"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField :label="t('projects.customer')">
+            <USelect
+              v-model="form.customer_id"
+              :items="customerItems"
+              :placeholder="t('projects.selectCustomer')"
               class="w-full"
             />
           </UFormField>

@@ -7,7 +7,8 @@ const TASK_SELECT = `
   *,
   profiles:assignee_id(id, email, full_name, avatar_url),
   tester:tester_id(id, email, full_name, avatar_url),
-  milestones:milestone_id(id, title, date),
+  milestones:milestone_id(id, title, date, start_date, due_date),
+  customers:customer_id(id, name),
   subtasks(*),
   task_labels(label_id, labels(*)),
   user_task_preferences(*)
@@ -55,6 +56,7 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     assignee_id?: string | null;
     tester_id?: string | null;
     milestone_id?: string | null;
+    customer_id?: string | null;
     status?: TaskStatus;
     priority?: TaskPriority;
     due_date?: string | null;
