@@ -3,6 +3,8 @@ import type { Task } from "~/types";
 import {
   startOfMonth,
   endOfMonth,
+  startOfWeek,
+  endOfWeek,
   eachDayOfInterval,
   format,
   parseISO,
@@ -27,6 +29,7 @@ const project = computed(() => getProject(projectId.value));
 const currentMonth = ref(new Date());
 const showModal = ref(false);
 const selectedTask = ref<Task | null>(null);
+const defaultDueDate = ref<string | undefined>(undefined);
 
 const weekdayKeys = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
@@ -37,8 +40,10 @@ onMounted(async () => {
 });
 
 const calendarDays = computed(() => {
-  const start = startOfMonth(currentMonth.value);
-  const end = endOfMonth(currentMonth.value);
+  const monthStart = startOfMonth(currentMonth.value);
+  const monthEnd = endOfMonth(currentMonth.value);
+  const start = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const end = endOfWeek(monthEnd, { weekStartsOn: 1 });
   return eachDayOfInterval({ start, end });
 });
 
@@ -55,7 +60,18 @@ function tasksForDay(day: Date) {
 
 function openTask(task: Task) {
   selectedTask.value = task;
+  defaultDueDate.value = undefined;
   showModal.value = true;
+}
+
+function openNewTask(dueDate?: string) {
+  selectedTask.value = null;
+  defaultDueDate.value = dueDate;
+  showModal.value = true;
+}
+
+function openNewForDay(day: Date) {
+  openNewTask(format(day, "yyyy-MM-dd"));
 }
 
 const agendaDays = computed(() => {
@@ -71,11 +87,13 @@ const agendaDays = computed(() => {
 
 <template>
   <div class="p-4 md:p-6">
-    <div v-if="project" class="mb-4">
-      <h1 class="text-xl font-bold text-slate-900">
-        {{ project.name }} — {{ t("projects.calendarSuffix") }}
-      </h1>
-    </div>
+    <LayoutProjectHeader v-if="project" :project="project" :subtitle="t('projects.calendarSuffix')">
+      <template #actions>
+        <UButton icon="i-lucide-plus" size="sm" class="shrink-0" @click="openNewTask()">
+          {{ t("projects.addTask") }}
+        </UButton>
+      </template>
+    </LayoutProjectHeader>
 
     <LayoutProjectNav class="mb-6" />
 
@@ -85,7 +103,6 @@ const agendaDays = computed(() => {
       <UButton icon="i-lucide-chevron-right" variant="ghost" color="neutral" @click="currentMonth = addMonths(currentMonth, 1)" />
     </div>
 
-    <!-- Mobile agenda -->
     <div class="space-y-4 md:hidden">
       <p v-if="agendaDays.length === 0" class="py-8 text-center text-slate-400">
         {{ t("calendar.noTasksThisMonth") }}
@@ -111,7 +128,6 @@ const agendaDays = computed(() => {
       </div>
     </div>
 
-    <!-- Desktop month grid -->
     <div class="hidden grid-cols-7 gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200 md:grid">
       <div
         v-for="day in weekdayKeys"
@@ -121,29 +137,38 @@ const agendaDays = computed(() => {
         {{ t(`calendar.weekdays.${day}`) }}
       </div>
 
-      <div
+      <button
         v-for="day in calendarDays"
         :key="day.toISOString()"
-        class="min-h-24 bg-white p-2"
+        type="button"
+        class="min-h-24 bg-white p-2 text-left transition-colors hover:bg-slate-50"
         :class="!isSameMonth(day, currentMonth) ? 'opacity-40' : ''"
+        @click="openNewForDay(day)"
       >
         <p class="mb-1 text-xs font-medium text-slate-500">{{ format(day, "d") }}</p>
         <div
-          v-for="task in tasksForDay(day)"
+          v-for="task in tasksForDay(day).slice(0, 3)"
           :key="task.id"
           class="mb-1 cursor-pointer truncate rounded px-1 py-0.5 text-xs text-white"
           :style="{ backgroundColor: project?.color || '#1e3a5f' }"
-          @click="openTask(task)"
+          @click.stop="openTask(task)"
         >
           {{ task.title }}
         </div>
-      </div>
+        <p
+          v-if="tasksForDay(day).length > 3"
+          class="text-[10px] text-slate-400"
+        >
+          +{{ tasksForDay(day).length - 3 }}
+        </p>
+      </button>
     </div>
 
     <TasksTaskModal
       :task="selectedTask"
       :project-id="projectId"
       :open="showModal"
+      :default-due-date="defaultDueDate"
       @update:open="showModal = $event"
       @saved="fetchTasks(projectId)"
     />

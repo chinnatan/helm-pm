@@ -11,6 +11,7 @@ const { tasksByStatus, updateTaskStatus, subscribeToProject, fetchTasks } = useT
 
 const emit = defineEmits<{
   "task-click": [task: Task];
+  "add-task": [status: TaskStatus];
 }>();
 
 const columns = statuses;
@@ -18,8 +19,11 @@ const columns = statuses;
 const localColumns = ref<Record<TaskStatus, Task[]>>({
   todo: [],
   in_progress: [],
+  ready_for_test: [],
+  testing: [],
   done: [],
-  blocked: [],
+  release: [],
+  cancelled: [],
 });
 
 watch(
@@ -67,11 +71,20 @@ onUnmounted(() => {
       :key="`${projectId}-${col.value}`"
       class="flex w-[min(18rem,85vw)] shrink-0 snap-start flex-col rounded-xl bg-slate-100 p-3"
     >
-      <div class="mb-3 flex items-center justify-between">
+      <div class="mb-3 flex items-center justify-between gap-2">
         <h3 class="text-sm font-semibold text-slate-700">{{ col.label }}</h3>
-        <UBadge color="neutral" variant="subtle" size="xs">
-          {{ localColumns[col.value]?.length ?? 0 }}
-        </UBadge>
+        <div class="flex items-center gap-1">
+          <UBadge color="neutral" variant="subtle" size="xs">
+            {{ localColumns[col.value]?.length ?? 0 }}
+          </UBadge>
+          <UButton
+            icon="i-lucide-plus"
+            variant="ghost"
+            color="neutral"
+            size="xs"
+            @click="emit('add-task', col.value)"
+          />
+        </div>
       </div>
 
       <VueDraggable

@@ -6,6 +6,8 @@ type TaskUpdate = Database["public"]["Tables"]["tasks"]["Update"];
 const TASK_SELECT = `
   *,
   profiles:assignee_id(id, email, full_name, avatar_url),
+  tester:tester_id(id, email, full_name, avatar_url),
+  milestones:milestone_id(id, title, date),
   subtasks(*),
   task_labels(label_id, labels(*)),
   user_task_preferences(*)
@@ -50,11 +52,13 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     project_id: string;
     title: string;
     description?: string;
-    assignee_id?: string;
+    assignee_id?: string | null;
+    tester_id?: string | null;
+    milestone_id?: string | null;
     status?: TaskStatus;
     priority?: TaskPriority;
-    due_date?: string;
-    start_date?: string;
+    due_date?: string | null;
+    start_date?: string | null;
   }) {
     const maxSort = tasks.value.reduce((max, t) => Math.max(max, t.sort_order), -1);
 
@@ -181,8 +185,11 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     const grouped: Record<TaskStatus, Task[]> = {
       todo: [],
       in_progress: [],
+      ready_for_test: [],
+      testing: [],
       done: [],
-      blocked: [],
+      release: [],
+      cancelled: [],
     };
     for (const task of tasks.value) {
       grouped[task.status].push(task);

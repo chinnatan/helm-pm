@@ -9,7 +9,10 @@
     "loading": "Loading...",
     "signOut": "Sign out",
     "system": "System",
-    "emDash": "—"
+    "emDash": "—",
+    "none": "None",
+    "created": "created",
+    "updated": "updated"
   },
   "nav": {
     "planner": "My Planner",
@@ -63,17 +66,28 @@
     "calendarSuffix": "Calendar",
     "addTask": "Add Task",
     "addMilestone": "Add Milestone",
+    "editMilestone": "Edit Milestone",
     "milestoneTitle": "Title",
     "milestoneDate": "Date",
+    "milestone": "Milestone",
+    "selectMilestone": "Select milestone",
+    "overdueTasks": "Overdue",
+    "recentTasks": "Recent tasks",
+    "noOverdue": "No overdue tasks",
     "statsTotal": "Total",
     "searchPlaceholder": "Search tasks...",
     "allStatus": "All Status",
     "allPriority": "All Priority",
     "allAssignees": "All Assignees",
+    "filterStatus": "Status",
+    "filterPriority": "Priority",
+    "filterAssignee": "Assignee",
     "colTitle": "Title",
     "colStatus": "Status",
     "colPriority": "Priority",
-    "colAssignee": "Assignee",
+    "colAssignee": "Developer",
+    "colTester": "Tester",
+    "colMilestone": "Milestone",
     "colDueDate": "Due Date",
     "noTasksFound": "No tasks found",
     "ganttEmpty": "Add start and due dates to tasks to see them on the timeline"
@@ -84,6 +98,10 @@
     "inviteMember": "Invite Member",
     "invite": "Invite",
     "inviteHint": "User must sign up first before they can be invited",
+    "email": "Email",
+    "permissionRole": "Permission",
+    "jobRole": "Job role",
+    "jobRoleNone": "Not set",
     "activeTasks": "Active tasks",
     "overdue": "Overdue",
     "noWorkspace": "No workspace",
@@ -93,6 +111,13 @@
       "manager": "Manager",
       "viewer": "Viewer",
       "admin": "Admin"
+    },
+    "jobRoles": {
+      "developer": "Developer",
+      "tester": "Tester",
+      "designer": "Designer",
+      "pm": "PM",
+      "other": "Other"
     }
   },
   "tasks": {
@@ -102,9 +127,13 @@
     "titlePlaceholder": "Task title",
     "description": "Description",
     "descriptionPlaceholder": "Description...",
-    "assignee": "Assignee",
+    "assignee": "Developer",
+    "tester": "Tester",
     "unassigned": "Unassigned",
-    "selectAssignee": "Select assignee",
+    "selectAssignee": "Select developer",
+    "selectTester": "Select tester",
+    "devShort": "Dev",
+    "testerShort": "QA",
     "status": "Status",
     "priority": "Priority",
     "dueDate": "Due Date",
@@ -113,6 +142,14 @@
     "selectLabels": "Select labels",
     "subtasks": "Subtasks",
     "addSubtask": "Add subtask...",
+    "fields": {
+      "assignee_id": "Developer",
+      "tester_id": "Tester",
+      "milestone_id": "Milestone",
+      "status": "Status",
+      "due_date": "Due date",
+      "priority": "Priority"
+    },
     "tabs": {
       "details": "Details",
       "comments": "Comments",
@@ -135,8 +172,12 @@
   "status": {
     "todo": "To Do",
     "in_progress": "In Progress",
+    "ready_for_test": "Ready for Test",
+    "testing": "Testing",
     "done": "Done",
-    "blocked": "Blocked"
+    "release": "Release",
+    "cancelled": "Cancelled",
+    "blocked": "Cancelled"
   },
   "priority": {
     "low": "Low",

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Task } from "~/types";
+import type { Task, TaskStatus } from "~/types";
 
 definePageMeta({ middleware: "auth" });
 
@@ -15,6 +15,7 @@ const { fetchLabels } = useLabels();
 const project = computed(() => getProject(projectId.value));
 const showModal = ref(false);
 const selectedTask = ref<Task | null>(null);
+const defaultStatus = ref<TaskStatus | undefined>(undefined);
 
 onMounted(async () => {
   await fetchWorkspace();
@@ -23,13 +24,15 @@ onMounted(async () => {
   await fetchTasks(projectId.value);
 });
 
-function openNewTask() {
+function openNewTask(status?: TaskStatus) {
   selectedTask.value = null;
+  defaultStatus.value = status;
   showModal.value = true;
 }
 
 function openTask(task: Task) {
   selectedTask.value = task;
+  defaultStatus.value = undefined;
   showModal.value = true;
 }
 
@@ -40,32 +43,27 @@ async function onSaved() {
 
 <template>
   <div class="p-4 md:p-6">
-    <div
-      v-if="project"
-      class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <div class="flex min-w-0 items-center gap-3">
-        <div
-          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
-          :style="{ backgroundColor: project.color }"
-        >
-          {{ project.name[0]?.toUpperCase() }}
-        </div>
-        <h1 class="truncate text-xl font-bold text-slate-900">{{ project.name }}</h1>
-      </div>
-      <UButton icon="i-lucide-plus" size="sm" class="shrink-0 self-start sm:self-auto" @click="openNewTask">
-        {{ t("projects.addTask") }}
-      </UButton>
-    </div>
+    <LayoutProjectHeader v-if="project" :project="project">
+      <template #actions>
+        <UButton icon="i-lucide-plus" size="sm" class="shrink-0" @click="openNewTask()">
+          {{ t("projects.addTask") }}
+        </UButton>
+      </template>
+    </LayoutProjectHeader>
 
     <LayoutProjectNav class="mb-6" />
 
-    <KanbanBoard :project-id="projectId" @task-click="openTask" />
+    <KanbanBoard
+      :project-id="projectId"
+      @task-click="openTask"
+      @add-task="openNewTask"
+    />
 
     <TasksTaskModal
       :task="selectedTask"
       :project-id="projectId"
       :open="showModal"
+      :default-status="defaultStatus"
       @update:open="showModal = $event"
       @saved="onSaved"
     />

@@ -39,6 +39,7 @@ export interface Database {
           workspace_id: string;
           user_id: string;
           role: string;
+          job_role: string | null;
           created_at: string;
         };
         Insert: {
@@ -46,6 +47,7 @@ export interface Database {
           workspace_id: string;
           user_id: string;
           role?: string;
+          job_role?: string | null;
           created_at?: string;
         };
         Update: {
@@ -53,6 +55,7 @@ export interface Database {
           workspace_id?: string;
           user_id?: string;
           role?: string;
+          job_role?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -116,6 +119,8 @@ export interface Database {
           id: string;
           project_id: string;
           assignee_id: string | null;
+          tester_id: string | null;
+          milestone_id: string | null;
           created_by: string | null;
           title: string;
           description: string | null;
@@ -131,6 +136,8 @@ export interface Database {
           id?: string;
           project_id: string;
           assignee_id?: string | null;
+          tester_id?: string | null;
+          milestone_id?: string | null;
           created_by?: string | null;
           title: string;
           description?: string | null;
@@ -146,6 +153,8 @@ export interface Database {
           id?: string;
           project_id?: string;
           assignee_id?: string | null;
+          tester_id?: string | null;
+          milestone_id?: string | null;
           created_by?: string | null;
           title?: string;
           description?: string | null;

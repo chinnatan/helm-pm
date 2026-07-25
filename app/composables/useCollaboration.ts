@@ -87,6 +87,21 @@ export function useMilestones(projectId: Ref<string | undefined>) {
     return { data, error: error?.message };
   }
 
+  async function updateMilestone(id: string, updates: { title?: string; date?: string }) {
+    const { data, error } = await supabase
+      .from("milestones")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (!error && data) {
+      const idx = milestones.value.findIndex((m) => m.id === id);
+      if (idx >= 0) milestones.value[idx] = data as Milestone;
+    }
+    return { data, error: error?.message };
+  }
+
   async function deleteMilestone(id: string) {
     await supabase.from("milestones").delete().eq("id", id);
     milestones.value = milestones.value.filter((m) => m.id !== id);
@@ -94,7 +109,7 @@ export function useMilestones(projectId: Ref<string | undefined>) {
 
   watch(projectId, fetchMilestones, { immediate: true });
 
-  return { milestones, fetchMilestones, createMilestone, deleteMilestone };
+  return { milestones, fetchMilestones, createMilestone, updateMilestone, deleteMilestone };
 }
 
 export function useDependencies(projectId: Ref<string | undefined>) {

@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import type { Task, TaskStatus, TaskPriority } from "~/types";
+import type { JobRole, Task, TaskStatus, TaskPriority } from "~/types";
 
 const props = defineProps<{
   task?: Task | null;
   projectId: string;
   open: boolean;
+  defaultStatus?: TaskStatus;
+  defaultDueDate?: string;
 }>();
 
 const emit = defineEmits<{
@@ -18,12 +20,16 @@ const { statuses, priorities } = useTaskLabels();
 const { createTask, updateTask, addSubtask, toggleSubtask, setTaskLabels, fetchActivity } =
   useTasks();
 const { members } = useWorkspace();
-const { labels } = useLabels();
+const { labels, fetchLabels } = useLabels();
+const projectIdRef = toRef(() => props.projectId);
+const { milestones, fetchMilestones } = useMilestones(projectIdRef);
 
 const form = reactive({
   title: "",
   description: "",
   assignee_id: null as string | null,
+  tester_id: null as string | null,
+  milestone_id: null as string | null,
   status: "todo" as TaskStatus,
   priority: "medium" as TaskPriority,
   due_date: "",
@@ -37,6 +43,10 @@ const saving = ref(false);
 const activeTab = ref("details");
 
 const isEdit = computed(() => !!props.task);
+
+function setActiveTab(key: string) {
+  activeTab.value = key;
+}
 
 const modalTabs = computed(() => [
   { key: "details", label: t("tasks.tabs.details") },
@@ -63,15 +73,50 @@ onUnmounted(() => {
   mobileMq = null;
 });
 
+const profileNameById = computed(() => {
+  const map = new Map<string, string>();
+  for (const m of members.value) {
+    map.set(m.user_id, m.profiles?.full_name || m.profiles?.email || m.user_id);
+  }
+  return map;
+});
+
+const milestoneTitleById = computed(() => {
+  const map = new Map<string, string>();
+  for (const ms of milestones.value) {
+    map.set(ms.id, ms.title);
+  }
+  return map;
+});
+
+function memberLabel(userId: string, jobRole: JobRole | null | undefined) {
+  const member = members.value.find((m) => m.user_id === userId);
+  const name = member?.profiles?.full_name || member?.profiles?.email || userId;
+  if (!jobRole) return name;
+  return `${name} (${t(`team.jobRoles.${jobRole}`)})`;
+}
+
+function sortedMembers(prefer: JobRole) {
+  return [...members.value].sort((a, b) => {
+    const aScore = a.job_role === prefer ? 0 : a.job_role ? 1 : 2;
+    const bScore = b.job_role === prefer ? 0 : b.job_role ? 1 : 2;
+    return aScore - bScore;
+  });
+}
+
 watch(
   () => props.open,
   async (open) => {
     if (!open) return;
 
+    await Promise.all([fetchLabels(), fetchMilestones()]);
+
     if (props.task) {
       form.title = props.task.title;
       form.description = props.task.description ?? "";
       form.assignee_id = props.task.assignee_id;
+      form.tester_id = props.task.tester_id;
+      form.milestone_id = props.task.milestone_id;
       form.status = props.task.status;
       form.priority = props.task.priority;
       form.due_date = props.task.due_date ?? "";
@@ -83,9 +128,11 @@ watch(
       form.title = "";
       form.description = "";
       form.assignee_id = null;
-      form.status = "todo";
+      form.tester_id = null;
+      form.milestone_id = null;
+      form.status = props.defaultStatus ?? "todo";
       form.priority = "medium";
-      form.due_date = "";
+      form.due_date = props.defaultDueDate ?? "";
       form.start_date = "";
       form.label_ids = [];
       activity.value = [];
@@ -100,11 +147,13 @@ async function save() {
   const payload = {
     title: form.title,
     description: form.description || undefined,
-    assignee_id: form.assignee_id || undefined,
+    assignee_id: form.assignee_id || null,
+    tester_id: form.tester_id || null,
+    milestone_id: form.milestone_id || null,
     status: form.status,
     priority: form.priority,
-    due_date: form.due_date || undefined,
-    start_date: form.start_date || undefined,
+    due_date: form.due_date || null,
+    start_date: form.start_date || null,
   };
 
   if (isEdit.value && props.task) {
@@ -128,12 +177,35 @@ async function handleAddSubtask() {
   newSubtask.value = "";
 }
 
-const memberOptions = computed(() =>
-  members.value.map((m) => ({
-    label: m.profiles?.full_name || m.profiles?.email || m.user_id,
-    value: m.user_id,
-  })),
-);
+function resolveActivityValue(field: string | null, value: string | null) {
+  if (!value) return t("common.none");
+  if (field === "assignee_id" || field === "tester_id") {
+    return profileNameById.value.get(value) ?? value;
+  }
+  if (field === "milestone_id") {
+    return milestoneTitleById.value.get(value) ?? value;
+  }
+  if (field === "status") {
+    return t(`status.${value}`);
+  }
+  if (field === "priority") {
+    return t(`priority.${value}`);
+  }
+  return value;
+}
+
+function fieldLabel(field: string | null) {
+  if (!field) return "";
+  const key = `tasks.fields.${field}`;
+  const translated = t(key);
+  return translated === key ? field : translated;
+}
+
+function actionLabel(action: string) {
+  if (action === "created") return t("common.created");
+  if (action === "updated") return t("common.updated");
+  return action;
+}
 
 const labelOptions = computed(() =>
   labels.value.map((l) => ({ label: l.name, value: l.id })),
@@ -147,9 +219,28 @@ const priorityItems = computed(() =>
   priorities.value.map((p) => ({ label: p.label, value: p.value })),
 );
 
-const assigneeItems = computed(() => [
+const developerItems = computed(() => [
   { label: t("tasks.unassigned"), value: null },
-  ...memberOptions.value,
+  ...sortedMembers("developer").map((m) => ({
+    label: memberLabel(m.user_id, m.job_role),
+    value: m.user_id,
+  })),
+]);
+
+const testerItems = computed(() => [
+  { label: t("tasks.unassigned"), value: null },
+  ...sortedMembers("tester").map((m) => ({
+    label: memberLabel(m.user_id, m.job_role),
+    value: m.user_id,
+  })),
+]);
+
+const milestoneItems = computed(() => [
+  { label: t("common.none"), value: null },
+  ...milestones.value.map((m) => ({
+    label: `${m.title} (${m.date})`,
+    value: m.id,
+  })),
 ]);
 </script>
 
@@ -172,7 +263,7 @@ const assigneeItems = computed(() => [
           color="neutral"
           size="xs"
           class="shrink-0"
-          @click="activeTab = tab.key"
+          @click="setActiveTab(tab.key)"
         >
           {{ tab.label }}
         </UButton>
@@ -196,8 +287,17 @@ const assigneeItems = computed(() => [
           <UFormField :label="t('tasks.assignee')">
             <USelect
               v-model="form.assignee_id"
-              :items="assigneeItems"
+              :items="developerItems"
               :placeholder="t('tasks.selectAssignee')"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField :label="t('tasks.tester')">
+            <USelect
+              v-model="form.tester_id"
+              :items="testerItems"
+              :placeholder="t('tasks.selectTester')"
               class="w-full"
             />
           </UFormField>
@@ -218,12 +318,21 @@ const assigneeItems = computed(() => [
             />
           </UFormField>
 
+          <UFormField :label="t('tasks.startDate')">
+            <UInput v-model="form.start_date" type="date" class="w-full" />
+          </UFormField>
+
           <UFormField :label="t('tasks.dueDate')">
             <UInput v-model="form.due_date" type="date" class="w-full" />
           </UFormField>
 
-          <UFormField :label="t('tasks.startDate')">
-            <UInput v-model="form.start_date" type="date" class="w-full" />
+          <UFormField :label="t('projects.milestone')">
+            <USelect
+              v-model="form.milestone_id"
+              :items="milestoneItems"
+              :placeholder="t('projects.selectMilestone')"
+              class="w-full"
+            />
           </UFormField>
 
           <UFormField :label="t('tasks.labels')">
@@ -237,27 +346,28 @@ const assigneeItems = computed(() => [
           </UFormField>
         </div>
 
-        <div v-if="isEdit && task?.subtasks" class="space-y-2">
-          <p class="text-sm font-medium text-slate-700">{{ t("tasks.subtasks") }}</p>
-          <div v-for="sub in task.subtasks" :key="sub.id" class="flex items-center gap-2">
-            <UCheckbox
-              :model-value="sub.completed"
-              @update:model-value="toggleSubtask(sub.id, $event as boolean)"
-            />
-            <span :class="sub.completed ? 'line-through text-slate-400' : 'text-slate-700'">
-              {{ sub.title }}
-            </span>
+        <UFormField v-if="isEdit && task?.subtasks" :label="t('tasks.subtasks')">
+          <div class="space-y-2">
+            <div v-for="sub in task.subtasks" :key="sub.id" class="flex items-center gap-2">
+              <UCheckbox
+                :model-value="sub.completed"
+                @update:model-value="(v) => toggleSubtask(sub.id, !!v)"
+              />
+              <span :class="sub.completed ? 'line-through text-slate-400' : 'text-slate-700'">
+                {{ sub.title }}
+              </span>
+            </div>
+            <div class="flex gap-2">
+              <UInput
+                v-model="newSubtask"
+                :placeholder="t('tasks.addSubtask')"
+                class="flex-1"
+                @keyup.enter="handleAddSubtask"
+              />
+              <UButton size="sm" @click="handleAddSubtask">{{ t("common.add") }}</UButton>
+            </div>
           </div>
-          <div class="flex gap-2">
-            <UInput
-              v-model="newSubtask"
-              :placeholder="t('tasks.addSubtask')"
-              class="flex-1"
-              @keyup.enter="handleAddSubtask"
-            />
-            <UButton size="sm" @click="handleAddSubtask">{{ t("common.add") }}</UButton>
-          </div>
-        </div>
+        </UFormField>
       </div>
 
       <TasksTaskComments
@@ -280,9 +390,12 @@ const assigneeItems = computed(() => [
             {{ log.profiles?.full_name || log.profiles?.email || t("common.system") }}
           </span>
           <span class="text-slate-600">
-            {{ log.action }}
+            {{ actionLabel(log.action) }}
             <template v-if="log.field_name">
-              {{ log.field_name }}: {{ log.old_value }} → {{ log.new_value }}
+              {{ fieldLabel(log.field_name) }}:
+              {{ resolveActivityValue(log.field_name, log.old_value) }}
+              →
+              {{ resolveActivityValue(log.field_name, log.new_value) }}
             </template>
           </span>
           <p class="text-xs text-slate-400">{{ toLocaleString(log.created_at) }}</p>

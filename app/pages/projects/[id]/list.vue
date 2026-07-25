@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Task, TaskStatus, TaskPriority } from "~/types";
+import { TASK_STATUS_VALUES } from "~/types";
 import { format, parseISO } from "date-fns";
 
 definePageMeta({ middleware: "auth" });
@@ -12,8 +13,7 @@ const projectId = computed(() => route.params.id as string);
 
 const { getProject, fetchProjects } = useProjects();
 const { tasks, loading, searchQuery, fetchTasks } = useTasks(projectId);
-const { fetchWorkspace } = useWorkspace();
-const { members } = useWorkspace();
+const { fetchWorkspace, members } = useWorkspace();
 
 const project = computed(() => getProject(projectId.value));
 const statusFilter = ref<TaskStatus | "all">("all");
@@ -27,13 +27,23 @@ onMounted(async () => {
   await fetchWorkspace();
   await fetchProjects();
   await fetchTasks(projectId.value);
+
+  const statusQuery = route.query.status as string | undefined;
+  if (statusQuery && TASK_STATUS_VALUES.includes(statusQuery as TaskStatus)) {
+    statusFilter.value = statusQuery as TaskStatus;
+  }
 });
 
 const filteredTasks = computed(() => {
   return tasks.value.filter((task) => {
     if (statusFilter.value !== "all" && task.status !== statusFilter.value) return false;
     if (priorityFilter.value !== "all" && task.priority !== priorityFilter.value) return false;
-    if (assigneeFilter.value !== "all" && task.assignee_id !== assigneeFilter.value) return false;
+    if (assigneeFilter.value !== "all") {
+      const match =
+        task.assignee_id === assigneeFilter.value ||
+        task.tester_id === assigneeFilter.value;
+      if (!match) return false;
+    }
     return true;
   });
 });
@@ -71,46 +81,54 @@ function openNew() {
 function formatDueDate(date: string) {
   return format(parseISO(date), "d MMM yyyy", { locale: dateFnsLocale.value });
 }
+
+function personName(profile?: { full_name?: string | null; email?: string } | null) {
+  return profile?.full_name || profile?.email || t("common.emDash");
+}
 </script>
 
 <template>
   <div class="p-4 md:p-6">
-    <div
-      v-if="project"
-      class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <h1 class="min-w-0 text-xl font-bold text-slate-900">
-        {{ project.name }} — {{ t("projects.listSuffix") }}
-      </h1>
-      <UButton icon="i-lucide-plus" size="sm" class="shrink-0 self-start sm:self-auto" @click="openNew">
-        {{ t("projects.addTask") }}
-      </UButton>
-    </div>
+    <LayoutProjectHeader v-if="project" :project="project" :subtitle="t('projects.listSuffix')">
+      <template #actions>
+        <UButton icon="i-lucide-plus" size="sm" class="shrink-0" @click="openNew">
+          {{ t("projects.addTask") }}
+        </UButton>
+      </template>
+    </LayoutProjectHeader>
 
     <LayoutProjectNav class="mb-6" />
 
-    <div class="mb-4 flex flex-wrap items-center gap-3">
-      <UInput
-        v-model="searchQuery"
-        icon="i-lucide-search"
-        :placeholder="t('projects.searchPlaceholder')"
-        class="w-full sm:w-64"
-      />
-      <USelect
-        v-model="statusFilter"
-        :items="statusFilterItems"
-        class="w-full sm:w-40"
-      />
-      <USelect
-        v-model="priorityFilter"
-        :items="priorityFilterItems"
-        class="w-full sm:w-40"
-      />
-      <USelect
-        v-model="assigneeFilter"
-        :items="assigneeFilterItems"
-        class="w-full sm:w-48"
-      />
+    <div class="mb-4 flex flex-wrap items-end gap-3">
+      <UFormField :label="t('projects.searchPlaceholder')" class="w-full sm:w-64">
+        <UInput
+          v-model="searchQuery"
+          icon="i-lucide-search"
+          :placeholder="t('projects.searchPlaceholder')"
+          class="w-full"
+        />
+      </UFormField>
+      <UFormField :label="t('projects.filterStatus')" class="w-full sm:w-40">
+        <USelect
+          v-model="statusFilter"
+          :items="statusFilterItems"
+          class="w-full"
+        />
+      </UFormField>
+      <UFormField :label="t('projects.filterPriority')" class="w-full sm:w-40">
+        <USelect
+          v-model="priorityFilter"
+          :items="priorityFilterItems"
+          class="w-full"
+        />
+      </UFormField>
+      <UFormField :label="t('projects.filterAssignee')" class="w-full sm:w-48">
+        <USelect
+          v-model="assigneeFilter"
+          :items="assigneeFilterItems"
+          class="w-full"
+        />
+      </UFormField>
     </div>
 
     <div v-if="loading" class="flex justify-center py-12">
@@ -118,7 +136,6 @@ function formatDueDate(date: string) {
     </div>
 
     <template v-else>
-      <!-- Mobile card list -->
       <div class="space-y-2 md:hidden">
         <button
           v-for="task in filteredTasks"
@@ -131,7 +148,9 @@ function formatDueDate(date: string) {
           <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
             <span>{{ statusLabel(task.status) }}</span>
             <span>{{ priorityLabel(task.priority) }}</span>
-            <span>{{ task.profiles?.full_name || task.profiles?.email || t("common.emDash") }}</span>
+            <span v-if="task.profiles">{{ t("tasks.devShort") }} {{ personName(task.profiles) }}</span>
+            <span v-if="task.tester">{{ t("tasks.testerShort") }} {{ personName(task.tester) }}</span>
+            <span v-if="task.milestones">{{ task.milestones.title }}</span>
             <span>{{ task.due_date ? formatDueDate(task.due_date) : t("common.emDash") }}</span>
           </div>
         </button>
@@ -140,15 +159,16 @@ function formatDueDate(date: string) {
         </p>
       </div>
 
-      <!-- Desktop table -->
       <div class="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white md:block">
-        <table class="w-full min-w-[640px] text-sm">
+        <table class="w-full min-w-[800px] text-sm">
           <thead class="border-b border-slate-200 bg-slate-50">
             <tr>
               <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colTitle") }}</th>
               <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colStatus") }}</th>
               <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colPriority") }}</th>
               <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colAssignee") }}</th>
+              <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colTester") }}</th>
+              <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colMilestone") }}</th>
               <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colDueDate") }}</th>
             </tr>
           </thead>
@@ -162,8 +182,10 @@ function formatDueDate(date: string) {
               <td class="px-4 py-3 font-medium text-slate-800">{{ task.title }}</td>
               <td class="px-4 py-3 text-slate-600">{{ statusLabel(task.status) }}</td>
               <td class="px-4 py-3 text-slate-600">{{ priorityLabel(task.priority) }}</td>
+              <td class="px-4 py-3 text-slate-600">{{ personName(task.profiles) }}</td>
+              <td class="px-4 py-3 text-slate-600">{{ personName(task.tester) }}</td>
               <td class="px-4 py-3 text-slate-600">
-                {{ task.profiles?.full_name || task.profiles?.email || t("common.emDash") }}
+                {{ task.milestones?.title || t("common.emDash") }}
               </td>
               <td class="px-4 py-3 text-slate-600">
                 {{ task.due_date ? formatDueDate(task.due_date) : t("common.emDash") }}

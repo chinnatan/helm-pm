@@ -1,7 +1,40 @@
-export type TaskStatus = "todo" | "in_progress" | "done" | "blocked";
+export type TaskStatus =
+  | "todo"
+  | "in_progress"
+  | "ready_for_test"
+  | "testing"
+  | "done"
+  | "release"
+  | "cancelled";
 export type TaskPriority = "low" | "medium" | "high" | "urgent";
 export type MemberRole = "admin" | "manager" | "member" | "viewer";
+export type JobRole = "developer" | "tester" | "designer" | "pm" | "other";
 export type PlannerTab = "today" | "week" | "inbox" | "focus";
+
+export const JOB_ROLE_VALUES: JobRole[] = [
+  "developer",
+  "tester",
+  "designer",
+  "pm",
+  "other",
+];
+
+export const TASK_STATUS_VALUES: TaskStatus[] = [
+  "todo",
+  "in_progress",
+  "ready_for_test",
+  "testing",
+  "done",
+  "release",
+  "cancelled",
+];
+
+/** Statuses that mean the task is no longer active work */
+export const TASK_CLOSED_STATUSES: TaskStatus[] = ["done", "release", "cancelled"];
+
+export function isTaskClosed(status: TaskStatus) {
+  return TASK_CLOSED_STATUSES.includes(status);
+}
 
 export interface Profile {
   id: string;
@@ -22,6 +55,7 @@ export interface WorkspaceMember {
   workspace_id: string;
   user_id: string;
   role: MemberRole;
+  job_role: JobRole | null;
   created_at: string;
   profiles?: Profile;
 }
@@ -43,10 +77,20 @@ export interface Label {
   color: string;
 }
 
+export interface Milestone {
+  id: string;
+  project_id: string;
+  title: string;
+  date: string;
+  created_at: string;
+}
+
 export interface Task {
   id: string;
   project_id: string;
   assignee_id: string | null;
+  tester_id: string | null;
+  milestone_id: string | null;
   created_by: string | null;
   title: string;
   description: string | null;
@@ -58,6 +102,8 @@ export interface Task {
   created_at: string;
   updated_at: string;
   profiles?: Profile;
+  tester?: Profile;
+  milestones?: Pick<Milestone, "id" | "title" | "date"> | null;
   projects?: Project;
   subtasks?: Subtask[];
   task_labels?: { labels: Label }[];
@@ -101,14 +147,6 @@ export interface UserTaskPreference {
   sort_order: number;
 }
 
-export interface Milestone {
-  id: string;
-  project_id: string;
-  title: string;
-  date: string;
-  created_at: string;
-}
-
 export interface TaskDependency {
   id: string;
   task_id: string;
@@ -133,13 +171,6 @@ export interface Attachment {
   filename: string;
   created_at: string;
 }
-
-export const TASK_STATUS_VALUES: TaskStatus[] = [
-  "todo",
-  "in_progress",
-  "done",
-  "blocked",
-];
 
 export const TASK_PRIORITY_META: { value: TaskPriority; color: string }[] = [
   { value: "low", color: "neutral" },

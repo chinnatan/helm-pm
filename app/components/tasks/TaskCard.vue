@@ -13,6 +13,7 @@ const emit = defineEmits<{
   pin: [task: Task, pinned: boolean];
 }>();
 
+const { t } = useI18n();
 const { dateFnsLocale } = useDateLocale();
 const { priorityMeta } = useTaskLabels();
 
@@ -33,6 +34,14 @@ const dueDateLabel = computed(() => {
   if (!props.task.due_date) return null;
   return format(parseISO(props.task.due_date), "d MMM", { locale: dateFnsLocale.value });
 });
+
+function personInitial(profile?: { full_name?: string | null; email?: string } | null) {
+  return (profile?.full_name || profile?.email)?.[0]?.toUpperCase() ?? "?";
+}
+
+function personName(profile?: { full_name?: string | null; email?: string } | null) {
+  return profile?.full_name || profile?.email || "";
+}
 </script>
 
 <template>
@@ -75,6 +84,15 @@ const dueDateLabel = computed(() => {
       </span>
 
       <UBadge
+        v-if="task.milestones"
+        color="warning"
+        variant="subtle"
+        size="xs"
+      >
+        {{ task.milestones.title }}
+      </UBadge>
+
+      <UBadge
         v-for="tl in task.task_labels"
         :key="tl.labels?.id"
         variant="subtle"
@@ -85,15 +103,32 @@ const dueDateLabel = computed(() => {
       </UBadge>
     </div>
 
-    <div v-if="task.profiles" class="mt-2 flex items-center gap-1.5">
-      <div
-        class="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[10px] font-medium text-slate-600"
-      >
-        {{ (task.profiles.full_name || task.profiles.email)?.[0]?.toUpperCase() }}
+    <div
+      v-if="task.profiles || task.tester"
+      class="mt-2 flex flex-wrap items-center gap-2"
+    >
+      <div v-if="task.profiles" class="flex items-center gap-1.5" :title="t('tasks.assignee')">
+        <div
+          class="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[10px] font-medium text-slate-600"
+        >
+          {{ personInitial(task.profiles) }}
+        </div>
+        <span class="text-xs text-slate-500">
+          <span class="text-slate-400">{{ t("tasks.devShort") }}</span>
+          {{ personName(task.profiles) }}
+        </span>
       </div>
-      <span class="text-xs text-slate-500">
-        {{ task.profiles.full_name || task.profiles.email }}
-      </span>
+      <div v-if="task.tester" class="flex items-center gap-1.5" :title="t('tasks.tester')">
+        <div
+          class="flex h-5 w-5 items-center justify-center rounded-full bg-amber-100 text-[10px] font-medium text-amber-700"
+        >
+          {{ personInitial(task.tester) }}
+        </div>
+        <span class="text-xs text-slate-500">
+          <span class="text-slate-400">{{ t("tasks.testerShort") }}</span>
+          {{ personName(task.tester) }}
+        </span>
+      </div>
     </div>
   </div>
 </template>

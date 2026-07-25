@@ -1,7 +1,7 @@
 import type { Task, PlannerTab } from "~/types";
+import { TASK_CLOSED_STATUSES } from "~/types";
 import {
   startOfDay,
-  endOfDay,
   startOfWeek,
   endOfWeek,
   isWithinInterval,
@@ -13,6 +13,8 @@ import {
 const PLANNER_SELECT = `
   *,
   profiles:assignee_id(id, email, full_name, avatar_url),
+  tester:tester_id(id, email, full_name, avatar_url),
+  milestones:milestone_id(id, title, date),
   projects(id, name, color),
   subtasks(*),
   task_labels(label_id, labels(*)),
@@ -22,6 +24,8 @@ const PLANNER_SELECT = `
 const TASK_SELECT = `
   *,
   profiles:assignee_id(id, email, full_name, avatar_url),
+  tester:tester_id(id, email, full_name, avatar_url),
+  milestones:milestone_id(id, title, date),
   projects(id, name, color),
   subtasks(*),
   task_labels(label_id, labels(*)),
@@ -44,6 +48,12 @@ export function usePlanner() {
     { value: "focus" as PlannerTab, label: t("planner.focus") },
   ]);
 
+  function mineFilter() {
+    if (!user.value) return "assignee_id.eq.null";
+    const id = user.value.id;
+    return `assignee_id.eq.${id},tester_id.eq.${id}`;
+  }
+
   async function fetchPlannerTasks() {
     if (!user.value) return;
     loading.value = true;
@@ -55,9 +65,9 @@ export function usePlanner() {
       const { data } = await supabase
         .from("tasks")
         .select(PLANNER_SELECT)
-        .eq("assignee_id", user.value.id)
+        .or(mineFilter())
         .eq("user_task_preferences.is_pinned", true)
-        .neq("status", "done")
+        .not("status", "in", `(${TASK_CLOSED_STATUSES.join(",")})`)
         .order("sort_order");
 
       tasks.value = (data ?? []) as Task[];
@@ -65,8 +75,8 @@ export function usePlanner() {
       let query = supabase
         .from("tasks")
         .select(TASK_SELECT)
-        .eq("assignee_id", user.value.id)
-        .neq("status", "done");
+        .or(mineFilter())
+        .not("status", "in", `(${TASK_CLOSED_STATUSES.join(",")})`);
 
       if (activeTab.value === "inbox") {
         query = query.is("due_date", null);

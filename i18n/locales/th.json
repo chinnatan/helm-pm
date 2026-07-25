@@ -9,7 +9,10 @@
     "loading": "กำลังโหลด...",
     "signOut": "ออกจากระบบ",
     "system": "ระบบ",
-    "emDash": "—"
+    "emDash": "—",
+    "none": "ไม่มี",
+    "created": "สร้าง",
+    "updated": "อัปเดต"
   },
   "nav": {
     "planner": "แพลนเนอร์ของฉัน",
@@ -63,17 +66,28 @@
     "calendarSuffix": "ปฏิทิน",
     "addTask": "เพิ่มงาน",
     "addMilestone": "เพิ่มไมล์สโตน",
+    "editMilestone": "แก้ไขไมล์สโตน",
     "milestoneTitle": "ชื่อ",
     "milestoneDate": "วันที่",
+    "milestone": "ไมล์สโตน",
+    "selectMilestone": "เลือกไมล์สโตน",
+    "overdueTasks": "เกินกำหนด",
+    "recentTasks": "งานล่าสุด",
+    "noOverdue": "ไม่มีงานเกินกำหนด",
     "statsTotal": "ทั้งหมด",
     "searchPlaceholder": "ค้นหางาน...",
     "allStatus": "สถานะทั้งหมด",
     "allPriority": "ความสำคัญทั้งหมด",
     "allAssignees": "ผู้รับผิดชอบทั้งหมด",
+    "filterStatus": "สถานะ",
+    "filterPriority": "ความสำคัญ",
+    "filterAssignee": "ผู้รับผิดชอบ",
     "colTitle": "ชื่องาน",
     "colStatus": "สถานะ",
     "colPriority": "ความสำคัญ",
-    "colAssignee": "ผู้รับผิดชอบ",
+    "colAssignee": "Developer",
+    "colTester": "Tester",
+    "colMilestone": "ไมล์สโตน",
     "colDueDate": "วันครบกำหนด",
     "noTasksFound": "ไม่พบงาน",
     "ganttEmpty": "เพิ่มวันเริ่มและวันครบกำหนดให้งานเพื่อแสดงบนไทม์ไลน์"
@@ -84,6 +98,10 @@
     "inviteMember": "เชิญสมาชิก",
     "invite": "เชิญ",
     "inviteHint": "ผู้ใช้ต้องสมัครก่อนจึงจะเชิญได้",
+    "email": "อีเมล",
+    "permissionRole": "สิทธิ์",
+    "jobRole": "บทบาทงาน",
+    "jobRoleNone": "ไม่ระบุ",
     "activeTasks": "งานที่กำลังทำ",
     "overdue": "เกินกำหนด",
     "noWorkspace": "ไม่มีพื้นที่ทำงาน",
@@ -93,6 +111,13 @@
       "manager": "ผู้จัดการ",
       "viewer": "ผู้ดู",
       "admin": "แอดมิน"
+    },
+    "jobRoles": {
+      "developer": "Developer",
+      "tester": "Tester",
+      "designer": "Designer",
+      "pm": "PM",
+      "other": "อื่นๆ"
     }
   },
   "tasks": {
@@ -102,9 +127,13 @@
     "titlePlaceholder": "ชื่องาน",
     "description": "คำอธิบาย",
     "descriptionPlaceholder": "คำอธิบาย...",
-    "assignee": "ผู้รับผิดชอบ",
+    "assignee": "Developer",
+    "tester": "Tester",
     "unassigned": "ยังไม่มอบหมาย",
-    "selectAssignee": "เลือกผู้รับผิดชอบ",
+    "selectAssignee": "เลือก Developer",
+    "selectTester": "เลือก Tester",
+    "devShort": "Dev",
+    "testerShort": "QA",
     "status": "สถานะ",
     "priority": "ความสำคัญ",
     "dueDate": "วันครบกำหนด",
@@ -113,6 +142,14 @@
     "selectLabels": "เลือกป้ายกำกับ",
     "subtasks": "งานย่อย",
     "addSubtask": "เพิ่มงานย่อย...",
+    "fields": {
+      "assignee_id": "Developer",
+      "tester_id": "Tester",
+      "milestone_id": "ไมล์สโตน",
+      "status": "สถานะ",
+      "due_date": "วันครบกำหนด",
+      "priority": "ความสำคัญ"
+    },
     "tabs": {
       "details": "รายละเอียด",
       "comments": "ความคิดเห็น",
@@ -135,8 +172,12 @@
   "status": {
     "todo": "ยังไม่เริ่ม",
     "in_progress": "กำลังทำ",
+    "ready_for_test": "พร้อมเทส",
+    "testing": "กำลังเทส",
     "done": "เสร็จแล้ว",
-    "blocked": "ติดขัด"
+    "release": "Release",
+    "cancelled": "ยกเลิก",
+    "blocked": "ยกเลิก"
   },
   "priority": {
     "low": "ต่ำ",

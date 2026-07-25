@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Task } from "~/types";
+import type { Milestone, Task } from "~/types";
 
 definePageMeta({ middleware: "auth" });
 
@@ -11,15 +11,23 @@ const projectIdRef = toRef(() => route.params.id as string);
 const { getProject, fetchProjects } = useProjects();
 const { tasks, fetchTasks, updateTask } = useTasks(projectId);
 const { fetchWorkspace } = useWorkspace();
-const { milestones, fetchMilestones, createMilestone } = useMilestones(projectIdRef);
+const {
+  milestones,
+  fetchMilestones,
+  createMilestone,
+  updateMilestone,
+  deleteMilestone,
+} = useMilestones(projectIdRef);
 const { dependencies } = useDependencies(projectIdRef);
 
 const project = computed(() => getProject(projectId.value));
 const showModal = ref(false);
 const selectedTask = ref<Task | null>(null);
 const showMilestone = ref(false);
+const editingMilestone = ref<Milestone | null>(null);
 const milestoneTitle = ref("");
 const milestoneDate = ref("");
+const savingMilestone = ref(false);
 
 onMounted(async () => {
   await fetchWorkspace();
@@ -37,35 +45,79 @@ function openTask(task: Task) {
   showModal.value = true;
 }
 
-async function handleCreateMilestone() {
-  if (!milestoneTitle.value || !milestoneDate.value) return;
-  await createMilestone(milestoneTitle.value, milestoneDate.value);
-  showMilestone.value = false;
+function openNewTask() {
+  selectedTask.value = null;
+  showModal.value = true;
+}
+
+function openCreateMilestone() {
+  editingMilestone.value = null;
   milestoneTitle.value = "";
   milestoneDate.value = "";
+  showMilestone.value = true;
+}
+
+function openEditMilestone(ms: { id: string; title: string; date: string }) {
+  editingMilestone.value = ms as Milestone;
+  milestoneTitle.value = ms.title;
+  milestoneDate.value = ms.date;
+  showMilestone.value = true;
+}
+
+async function handleSaveMilestone() {
+  if (!milestoneTitle.value || !milestoneDate.value) return;
+  savingMilestone.value = true;
+
+  if (editingMilestone.value) {
+    await updateMilestone(editingMilestone.value.id, {
+      title: milestoneTitle.value,
+      date: milestoneDate.value,
+    });
+  } else {
+    await createMilestone(milestoneTitle.value, milestoneDate.value);
+  }
+
+  savingMilestone.value = false;
+  showMilestone.value = false;
+  editingMilestone.value = null;
+  milestoneTitle.value = "";
+  milestoneDate.value = "";
+}
+
+function closeMilestoneModal() {
+  showMilestone.value = false;
+  editingMilestone.value = null;
+}
+
+async function handleDeleteMilestone() {
+  if (!editingMilestone.value) return;
+  savingMilestone.value = true;
+  await deleteMilestone(editingMilestone.value.id);
+  savingMilestone.value = false;
+  showMilestone.value = false;
+  editingMilestone.value = null;
 }
 </script>
 
 <template>
   <div class="p-4 md:p-6">
-    <div
-      v-if="project"
-      class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <h1 class="min-w-0 text-xl font-bold text-slate-900">
-        {{ project.name }} — {{ t("projects.ganttSuffix") }}
-      </h1>
-      <UButton
-        icon="i-lucide-flag"
-        size="sm"
-        variant="outline"
-        color="neutral"
-        class="shrink-0 self-start sm:self-auto"
-        @click="showMilestone = true"
-      >
-        {{ t("projects.addMilestone") }}
-      </UButton>
-    </div>
+    <LayoutProjectHeader v-if="project" :project="project">
+      <template #actions>
+        <UButton
+          icon="i-lucide-flag"
+          size="sm"
+          variant="outline"
+          color="neutral"
+          class="shrink-0"
+          @click="openCreateMilestone"
+        >
+          {{ t("projects.addMilestone") }}
+        </UButton>
+        <UButton icon="i-lucide-plus" size="sm" class="shrink-0" @click="openNewTask">
+          {{ t("projects.addTask") }}
+        </UButton>
+      </template>
+    </LayoutProjectHeader>
 
     <LayoutProjectNav class="mb-6" />
 
@@ -74,6 +126,8 @@ async function handleCreateMilestone() {
       :milestones="milestones"
       :dependencies="dependencies"
       @update-dates="handleDateUpdate"
+      @task-click="openTask"
+      @milestone-click="openEditMilestone"
     />
 
     <TasksTaskModal
@@ -84,7 +138,10 @@ async function handleCreateMilestone() {
       @saved="fetchTasks(projectId)"
     />
 
-    <UModal v-model:open="showMilestone" :title="t('projects.addMilestone')">
+    <UModal
+      v-model:open="showMilestone"
+      :title="editingMilestone ? t('projects.editMilestone') : t('projects.addMilestone')"
+    >
       <template #body>
         <div class="space-y-4">
           <UFormField :label="t('projects.milestoneTitle')">
@@ -96,11 +153,29 @@ async function handleCreateMilestone() {
         </div>
       </template>
       <template #footer>
-        <div class="flex justify-end gap-2">
-          <UButton variant="ghost" color="neutral" @click="showMilestone = false">
-            {{ t("common.cancel") }}
+        <div class="flex w-full items-center justify-between gap-2">
+          <UButton
+            v-if="editingMilestone"
+            variant="ghost"
+            color="error"
+            :loading="savingMilestone"
+            @click="handleDeleteMilestone"
+          >
+            {{ t("common.delete") }}
           </UButton>
-          <UButton @click="handleCreateMilestone">{{ t("common.create") }}</UButton>
+          <div v-else />
+          <div class="flex gap-2">
+            <UButton variant="ghost" color="neutral" @click="closeMilestoneModal">
+              {{ t("common.cancel") }}
+            </UButton>
+            <UButton
+              :loading="savingMilestone"
+              :disabled="!milestoneTitle || !milestoneDate"
+              @click="handleSaveMilestone"
+            >
+              {{ editingMilestone ? t("common.save") : t("common.create") }}
+            </UButton>
+          </div>
         </div>
       </template>
     </UModal>

@@ -14,6 +14,8 @@ const { t } = useI18n();
 
 const emit = defineEmits<{
   "update-dates": [taskId: string, startDate: string, endDate: string];
+  "task-click": [task: Task];
+  "milestone-click": [milestone: { id: string; title: string; date: string }];
 }>();
 
 const containerRef = ref<HTMLElement | null>(null);
@@ -21,8 +23,11 @@ let ganttInstance: InstanceType<typeof Gantt> | null = null;
 let mobileMq: MediaQueryList | null = null;
 
 function statusToProgress(status: string) {
-  if (status === "done") return 100;
-  if (status === "in_progress") return 50;
+  if (status === "done" || status === "release") return 100;
+  if (status === "testing") return 80;
+  if (status === "ready_for_test") return 65;
+  if (status === "in_progress") return 40;
+  if (status === "cancelled") return 0;
   return 0;
 }
 
@@ -66,10 +71,14 @@ function renderGantt() {
     on_date_change: (task: { id: string; start: string; end: string }) => {
       emit("update-dates", task.id, task.start, task.end);
     },
-  });
+    on_click: (task: { id: string }) => {
+      const found = props.tasks.find((t) => t.id === task.id);
+      if (found) emit("task-click", found);
+    },
+  } as ConstructorParameters<typeof Gantt>[2]);
 }
 
-watch(() => [props.tasks, props.dependencies], renderGantt, { deep: true });
+watch(() => [props.tasks, props.dependencies, props.milestones], renderGantt, { deep: true });
 
 onMounted(() => {
   mobileMq = window.matchMedia("(max-width: 767px)");
@@ -87,14 +96,17 @@ onUnmounted(() => {
 <template>
   <div>
     <div v-if="milestones?.length" class="mb-4 flex flex-wrap gap-2">
-      <UBadge
+      <button
         v-for="ms in milestones"
         :key="ms.id"
-        color="warning"
-        variant="subtle"
+        type="button"
+        class="cursor-pointer"
+        @click="emit('milestone-click', ms)"
       >
-        🎯 {{ ms.title }} — {{ ms.date }}
-      </UBadge>
+        <UBadge color="warning" variant="subtle" class="hover:ring-1 hover:ring-amber-300">
+          {{ ms.title }} — {{ ms.date }}
+        </UBadge>
+      </button>
     </div>
 
     <div
@@ -114,4 +126,5 @@ onUnmounted(() => {
 .gantt-container .bar-wrapper.priority-high .bar { fill: #f59e0b; }
 .gantt-container .bar-wrapper.priority-medium .bar { fill: #3b82f6; }
 .gantt-container .bar-wrapper.priority-low .bar { fill: #94a3b8; }
+.gantt-container .bar-wrapper { cursor: pointer; }
 </style>
