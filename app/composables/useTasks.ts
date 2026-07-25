@@ -36,7 +36,12 @@ export function useTasks(projectId?: Ref<string | undefined>) {
       );
     }
 
-    const { data } = await query;
+    const { data, error } = await query;
+    if (error) {
+      console.error("fetchTasks failed:", error.message);
+      loading.value = false;
+      return;
+    }
     tasks.value = (data ?? []) as Task[];
     loading.value = false;
   }

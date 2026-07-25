@@ -45,7 +45,7 @@ function handlePin(task: import("~/types").Task, pinned: boolean) {
       </UButton>
     </div>
 
-    <PlannerPlannerView
+    <PlannerView
       :tasks="tasks"
       :loading="loading"
       @task-click="handleTaskClick"

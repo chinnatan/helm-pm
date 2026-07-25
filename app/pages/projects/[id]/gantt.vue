@@ -56,7 +56,7 @@ async function handleCreateMilestone() {
 
     <LayoutProjectNav class="mb-6" />
 
-    <GanttGanttChart
+    <GanttChart
       :tasks="tasks"
       :milestones="milestones"
       :dependencies="dependencies"

@@ -13,22 +13,23 @@ const emit = defineEmits<{
   "task-click": [task: Task];
 }>();
 
-const columns = TASK_STATUSES.filter((s) => s.value !== "blocked");
+const columns = TASK_STATUSES;
 
-const localColumns = ref<Record<string, Task[]>>({
+const localColumns = ref<Record<TaskStatus, Task[]>>({
   todo: [],
   in_progress: [],
   done: [],
+  blocked: [],
 });
 
 watch(
   tasksByStatus,
   (val) => {
-    localColumns.value = {
-      todo: [...val.todo],
-      in_progress: [...val.in_progress],
-      done: [...val.done],
-    };
+    for (const status of Object.keys(localColumns.value) as TaskStatus[]) {
+      const target = localColumns.value[status];
+      const source = val[status] ?? [];
+      target.splice(0, target.length, ...source);
+    }
   },
   { immediate: true, deep: true },
 );
@@ -42,6 +43,10 @@ async function onDragEnd(status: TaskStatus) {
     }
   }
   await fetchTasks(props.projectId);
+}
+
+function handleDragEnd(status: TaskStatus) {
+  void onDragEnd(status);
 }
 
 let unsubscribe: (() => void) | null = null;
@@ -59,7 +64,7 @@ onUnmounted(() => {
   <div class="flex gap-4 overflow-x-auto pb-4">
     <div
       v-for="col in columns"
-      :key="col.value"
+      :key="`${projectId}-${col.value}`"
       class="flex w-72 shrink-0 flex-col rounded-xl bg-slate-100 p-3"
     >
       <div class="mb-3 flex items-center justify-between">
@@ -70,11 +75,11 @@ onUnmounted(() => {
       </div>
 
       <VueDraggable
-        v-model="localColumns[col.value]!"
+        v-model="localColumns[col.value]"
         group="tasks"
         class="flex min-h-[200px] flex-col gap-2"
         :animation="200"
-        @end="onDragEnd(col.value as TaskStatus)"
+        @end="handleDragEnd(col.value)"
       >
         <TasksTaskCard
           v-for="task in localColumns[col.value]"

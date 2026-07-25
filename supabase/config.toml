@@ -28,8 +28,8 @@ port = 54323
 
 [auth]
 enabled = true
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000/confirm"]
+site_url = "http://localhost:5100"
+additional_redirect_urls = ["http://localhost:5100/confirm"]
 
 [auth.email]
 enable_signup = true

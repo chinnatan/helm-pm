@@ -1,4 +1,10 @@
+import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
+
+// frappe-gantt exports CSS only via the "style" condition on ".", not as ./dist/*.css
+const frappeGanttCss = fileURLToPath(
+  new URL("./node_modules/frappe-gantt/dist/frappe-gantt.css", import.meta.url),
+);
 
 export default defineNuxtConfig({
   compatibilityDate: "2025-05-01",
@@ -10,6 +16,11 @@ export default defineNuxtConfig({
 
   vite: {
     plugins: [tailwindcss()],
+    resolve: {
+      alias: {
+        "frappe-gantt/dist/frappe-gantt.css": frappeGanttCss,
+      },
+    },
   },
 
   dir: {
@@ -55,12 +66,12 @@ export default defineNuxtConfig({
   },
 
   devServer: {
-    port: Number(process.env.NUXT_DEV_PORT || 3000),
+    port: Number(process.env.NUXT_DEV_PORT || 5100),
   },
 
   runtimeConfig: {
     public: {
-      appUrl: process.env.NUXT_PUBLIC_APP_URL || "http://localhost:3000",
+      appUrl: process.env.NUXT_PUBLIC_APP_URL || "http://localhost:5100",
     },
   },
 

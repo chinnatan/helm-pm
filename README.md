@@ -87,8 +87,8 @@ SUPABASE_URL=https://xxxxxxxx.supabase.co
 SUPABASE_KEY=sb_publishable_xxxxxxxx
 SUPABASE_SERVICE_KEY=sb_secret_xxxxxxxx
 
-NUXT_PUBLIC_APP_URL=http://localhost:3000
-NUXT_DEV_PORT=3000
+NUXT_PUBLIC_APP_URL=http://localhost:5100
+NUXT_DEV_PORT=5100
 ```
 
 ---
@@ -143,8 +143,8 @@ supabase db push
 ไปที่ **Authentication → URL Configuration** แล้วเพิ่ม:
 
 ```
-http://localhost:3000/confirm
-http://localhost:3000/**
+http://localhost:5100/confirm
+http://localhost:5100/**
 ```
 
 เมื่อ deploy production ให้เพิ่ม URL จริงด้วย เช่น `https://helm.yourdomain.com/confirm`
@@ -167,7 +167,7 @@ http://localhost:3000/**
 bun run dev
 ```
 
-เปิดเบราว์เซอร์ที่ [http://localhost:3000](http://localhost:3000)
+เปิดเบราว์เซอร์ที่ [http://localhost:5100](http://localhost:5100)
 
 ### ทดสอบครั้งแรก
 

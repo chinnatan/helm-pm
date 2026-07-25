@@ -1,0 +1,19 @@
+---
+description: Helm PM uses Supabase Postgres — never Azure PostgreSQL MCP
+alwaysApply: true
+---
+
+# Database: Supabase only
+
+This project uses **Supabase (Postgres)**. It does **not** use Azure PostgreSQL.
+
+## Do not
+
+- Call MCP `user-azure-postgresql-mcp` or any Azure PostgreSQL tools
+- Assume Azure connection strings, Entra ID, or Azure MCP schemas apply here
+
+## Do instead
+
+- Schema / RLS / grants: read and edit files under `supabase/migrations/`
+- App data access: Supabase client in the Nuxt app (`useSupabaseClient`, composables)
+- Ad-hoc inspection: Supabase Dashboard or Supabase CLI — not Azure MCP

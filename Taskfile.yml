@@ -17,7 +17,7 @@ tasks:
       - "{{.BUN}} install"
 
   dev:
-    desc: รัน dev server (http://localhost:3000)
+    desc: รัน dev server (http://localhost:5100)
     cmds:
       - "{{.BUN}} run dev"
 

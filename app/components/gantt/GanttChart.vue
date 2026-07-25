@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Task } from "~/types";
 import Gantt from "frappe-gantt";
+import "frappe-gantt/dist/frappe-gantt.css";
 import { format, parseISO, addDays } from "date-fns";
 
 const props = defineProps<{
@@ -95,8 +96,6 @@ onUnmounted(() => {
 </template>
 
 <style>
-@import "frappe-gantt/dist/frappe-gantt.css";
-
 .gantt-container .bar-wrapper.priority-urgent .bar { fill: #ef4444; }
 .gantt-container .bar-wrapper.priority-high .bar { fill: #f59e0b; }
 .gantt-container .bar-wrapper.priority-medium .bar { fill: #3b82f6; }

@@ -54,7 +54,7 @@ async function onSaved() {
 
     <LayoutProjectNav class="mb-6" />
 
-    <KanbanKanbanBoard :project-id="projectId" @task-click="openTask" />
+    <KanbanBoard :project-id="projectId" @task-click="openTask" />
 
     <TasksTaskModal
       :task="selectedTask"
