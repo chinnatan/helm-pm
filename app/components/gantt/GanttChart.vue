@@ -241,7 +241,7 @@ function buildGanttData() {
         .filter((d) => d.task_id === row.id)
         .map((d) => d.depends_on_task_id)
         .join(","),
-      custom_class: `priority-${row.task.priority} task-bar`,
+      custom_class: `priority-${row.task.priority}`,
     };
   });
 }
