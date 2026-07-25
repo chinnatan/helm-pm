@@ -86,11 +86,16 @@ export function useTasks(projectId?: Ref<string | undefined>) {
       .select(TASK_SELECT)
       .single();
 
-    if (!error && data) {
+    if (error) {
+      console.error("updateTask failed:", error.message);
+      return { data: null, error: error.message };
+    }
+
+    if (data) {
       const idx = tasks.value.findIndex((t) => t.id === id);
       if (idx >= 0) tasks.value[idx] = data as Task;
     }
-    return { data: data as Task | null, error: error?.message };
+    return { data: data as Task | null, error: undefined };
   }
 
   async function deleteTask(id: string) {
@@ -192,7 +197,9 @@ export function useTasks(projectId?: Ref<string | undefined>) {
       cancelled: [],
     };
     for (const task of tasks.value) {
-      grouped[task.status].push(task);
+      const bucket = grouped[task.status];
+      if (bucket) bucket.push(task);
+      else grouped.todo.push(task);
     }
     for (const status of Object.keys(grouped) as TaskStatus[]) {
       grouped[status]?.sort((a, b) => a.sort_order - b.sort_order);
