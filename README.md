@@ -248,12 +248,17 @@ helm-pm/
 |--------|--------|
 | `task` | แสดงคำสั่งทั้งหมด |
 | `task setup` | setup ครั้งแรก (install + สร้าง `.env`) |
-| `task dev` | รัน dev server |
+| `task dev` | รัน dev server (ใช้ `.env` — มักเป็น remote) |
+| `task dev:local` | เริ่ม Supabase local แล้วรัน Nuxt (ไม่กิน B/W cloud) |
 | `task build` | build สำหรับ production |
 | `task typecheck` | ตรวจ TypeScript |
 | `task check` | typecheck + build |
 | `task preview` | preview build local |
 | `task deploy` | build + deploy Cloudflare |
+| `task supabase:start` | รัน Supabase local stack (ต้องมี Docker) |
+| `task supabase:stop` | หยุด Supabase local |
+| `task supabase:status` | แสดง URL / keys ของ local |
+| `task supabase:reset` | reset DB local + รัน migrations |
 | `task supabase:push` | push migrations ขึ้น remote |
 | `task supabase:link -- <project-ref>` | เชื่อม Supabase CLI กับ project |
 | `task clean` | ลบ build cache |
