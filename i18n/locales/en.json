@@ -21,7 +21,10 @@
     "team": "Team",
     "menu": "Menu",
     "openMenu": "Open menu",
-    "closeMenu": "Close menu"
+    "closeMenu": "Close menu",
+    "switchProject": "Project",
+    "selectProject": "Select project",
+    "allProjects": "All projects"
   },
   "projectNav": {
     "overview": "Overview",

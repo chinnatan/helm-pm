@@ -21,7 +21,10 @@
     "team": "ทีม",
     "menu": "เมนู",
     "openMenu": "เปิดเมนู",
-    "closeMenu": "ปิดเมนู"
+    "closeMenu": "ปิดเมนู",
+    "switchProject": "โปรเจกต์",
+    "selectProject": "เลือกโปรเจกต์",
+    "allProjects": "โปรเจกต์ทั้งหมด"
   },
   "projectNav": {
     "overview": "ภาพรวม",
