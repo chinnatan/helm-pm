@@ -32,7 +32,7 @@ onMounted(async () => {
     </UButton>
 
     <template #content>
-      <div class="w-80 p-2">
+      <div class="w-[min(20rem,calc(100vw-2rem))] p-2">
         <div class="mb-2 flex items-center justify-between px-2">
           <h3 class="text-sm font-semibold">{{ t("notifications.title") }}</h3>
           <UButton v-if="unreadCount > 0" variant="link" size="xs" @click="markAllRead">

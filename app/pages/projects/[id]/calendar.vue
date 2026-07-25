@@ -57,10 +57,20 @@ function openTask(task: Task) {
   selectedTask.value = task;
   showModal.value = true;
 }
+
+const agendaDays = computed(() => {
+  return calendarDays.value
+    .filter((day) => isSameMonth(day, currentMonth.value))
+    .map((day) => ({
+      day,
+      tasks: tasksForDay(day),
+    }))
+    .filter((entry) => entry.tasks.length > 0);
+});
 </script>
 
 <template>
-  <div class="p-6">
+  <div class="p-4 md:p-6">
     <div v-if="project" class="mb-4">
       <h1 class="text-xl font-bold text-slate-900">
         {{ project.name }} — {{ t("projects.calendarSuffix") }}
@@ -71,11 +81,38 @@ function openTask(task: Task) {
 
     <div class="mb-4 flex items-center justify-between">
       <UButton icon="i-lucide-chevron-left" variant="ghost" color="neutral" @click="currentMonth = subMonths(currentMonth, 1)" />
-      <h2 class="text-lg font-semibold">{{ monthLabel }}</h2>
+      <h2 class="text-base font-semibold sm:text-lg">{{ monthLabel }}</h2>
       <UButton icon="i-lucide-chevron-right" variant="ghost" color="neutral" @click="currentMonth = addMonths(currentMonth, 1)" />
     </div>
 
-    <div class="grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200">
+    <!-- Mobile agenda -->
+    <div class="space-y-4 md:hidden">
+      <p v-if="agendaDays.length === 0" class="py-8 text-center text-slate-400">
+        {{ t("calendar.noTasksThisMonth") }}
+      </p>
+      <div
+        v-for="entry in agendaDays"
+        :key="entry.day.toISOString()"
+        class="rounded-xl border border-slate-200 bg-white p-4"
+      >
+        <h3 class="mb-2 text-sm font-semibold text-slate-700">
+          {{ format(entry.day, "EEEE d MMM", { locale: dateFnsLocale }) }}
+        </h3>
+        <button
+          v-for="task in entry.tasks"
+          :key="task.id"
+          type="button"
+          class="mb-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-white last:mb-0"
+          :style="{ backgroundColor: project?.color || '#1e3a5f' }"
+          @click="openTask(task)"
+        >
+          {{ task.title }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Desktop month grid -->
+    <div class="hidden grid-cols-7 gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200 md:grid">
       <div
         v-for="day in weekdayKeys"
         :key="day"

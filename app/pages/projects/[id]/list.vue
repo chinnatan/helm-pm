@@ -74,12 +74,17 @@ function formatDueDate(date: string) {
 </script>
 
 <template>
-  <div class="p-6">
-    <div v-if="project" class="mb-4 flex items-center justify-between">
-      <h1 class="text-xl font-bold text-slate-900">
+  <div class="p-4 md:p-6">
+    <div
+      v-if="project"
+      class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <h1 class="min-w-0 text-xl font-bold text-slate-900">
         {{ project.name }} — {{ t("projects.listSuffix") }}
       </h1>
-      <UButton icon="i-lucide-plus" size="sm" @click="openNew">{{ t("projects.addTask") }}</UButton>
+      <UButton icon="i-lucide-plus" size="sm" class="shrink-0 self-start sm:self-auto" @click="openNew">
+        {{ t("projects.addTask") }}
+      </UButton>
     </div>
 
     <LayoutProjectNav class="mb-6" />
@@ -89,22 +94,22 @@ function formatDueDate(date: string) {
         v-model="searchQuery"
         icon="i-lucide-search"
         :placeholder="t('projects.searchPlaceholder')"
-        class="w-64"
+        class="w-full sm:w-64"
       />
       <USelect
         v-model="statusFilter"
         :items="statusFilterItems"
-        class="w-40"
+        class="w-full sm:w-40"
       />
       <USelect
         v-model="priorityFilter"
         :items="priorityFilterItems"
-        class="w-40"
+        class="w-full sm:w-40"
       />
       <USelect
         v-model="assigneeFilter"
         :items="assigneeFilterItems"
-        class="w-48"
+        class="w-full sm:w-48"
       />
     </div>
 
@@ -112,40 +117,65 @@ function formatDueDate(date: string) {
       <UIcon name="i-lucide-loader-2" class="h-8 w-8 animate-spin text-slate-400" />
     </div>
 
-    <div v-else class="overflow-hidden rounded-xl border border-slate-200 bg-white">
-      <table class="w-full text-sm">
-        <thead class="border-b border-slate-200 bg-slate-50">
-          <tr>
-            <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colTitle") }}</th>
-            <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colStatus") }}</th>
-            <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colPriority") }}</th>
-            <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colAssignee") }}</th>
-            <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colDueDate") }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="task in filteredTasks"
-            :key="task.id"
-            class="cursor-pointer border-b border-slate-100 hover:bg-slate-50"
-            @click="openTask(task)"
-          >
-            <td class="px-4 py-3 font-medium text-slate-800">{{ task.title }}</td>
-            <td class="px-4 py-3 text-slate-600">{{ statusLabel(task.status) }}</td>
-            <td class="px-4 py-3 text-slate-600">{{ priorityLabel(task.priority) }}</td>
-            <td class="px-4 py-3 text-slate-600">
-              {{ task.profiles?.full_name || task.profiles?.email || t("common.emDash") }}
-            </td>
-            <td class="px-4 py-3 text-slate-600">
-              {{ task.due_date ? formatDueDate(task.due_date) : t("common.emDash") }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <p v-if="filteredTasks.length === 0" class="p-8 text-center text-slate-400">
-        {{ t("projects.noTasksFound") }}
-      </p>
-    </div>
+    <template v-else>
+      <!-- Mobile card list -->
+      <div class="space-y-2 md:hidden">
+        <button
+          v-for="task in filteredTasks"
+          :key="task.id"
+          type="button"
+          class="w-full rounded-xl border border-slate-200 bg-white p-4 text-left transition-colors hover:bg-slate-50"
+          @click="openTask(task)"
+        >
+          <p class="font-medium text-slate-800">{{ task.title }}</p>
+          <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+            <span>{{ statusLabel(task.status) }}</span>
+            <span>{{ priorityLabel(task.priority) }}</span>
+            <span>{{ task.profiles?.full_name || task.profiles?.email || t("common.emDash") }}</span>
+            <span>{{ task.due_date ? formatDueDate(task.due_date) : t("common.emDash") }}</span>
+          </div>
+        </button>
+        <p v-if="filteredTasks.length === 0" class="py-8 text-center text-slate-400">
+          {{ t("projects.noTasksFound") }}
+        </p>
+      </div>
+
+      <!-- Desktop table -->
+      <div class="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white md:block">
+        <table class="w-full min-w-[640px] text-sm">
+          <thead class="border-b border-slate-200 bg-slate-50">
+            <tr>
+              <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colTitle") }}</th>
+              <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colStatus") }}</th>
+              <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colPriority") }}</th>
+              <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colAssignee") }}</th>
+              <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colDueDate") }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="task in filteredTasks"
+              :key="task.id"
+              class="cursor-pointer border-b border-slate-100 hover:bg-slate-50"
+              @click="openTask(task)"
+            >
+              <td class="px-4 py-3 font-medium text-slate-800">{{ task.title }}</td>
+              <td class="px-4 py-3 text-slate-600">{{ statusLabel(task.status) }}</td>
+              <td class="px-4 py-3 text-slate-600">{{ priorityLabel(task.priority) }}</td>
+              <td class="px-4 py-3 text-slate-600">
+                {{ task.profiles?.full_name || task.profiles?.email || t("common.emDash") }}
+              </td>
+              <td class="px-4 py-3 text-slate-600">
+                {{ task.due_date ? formatDueDate(task.due_date) : t("common.emDash") }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-if="filteredTasks.length === 0" class="p-8 text-center text-slate-400">
+          {{ t("projects.noTasksFound") }}
+        </p>
+      </div>
+    </template>
 
     <TasksTaskModal
       :task="selectedTask"

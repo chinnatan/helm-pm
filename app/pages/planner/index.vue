@@ -24,22 +24,20 @@ function handlePin(task: import("~/types").Task, pinned: boolean) {
 </script>
 
 <template>
-  <div class="p-6">
-    <div class="mb-6 flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold text-slate-900">{{ t("planner.title") }}</h1>
-        <p class="text-sm text-slate-500">{{ t("planner.subtitle") }}</p>
-      </div>
-      <LayoutNotificationBell />
+  <div class="p-4 md:p-6">
+    <div class="mb-6">
+      <h1 class="text-xl font-bold text-slate-900 sm:text-2xl">{{ t("planner.title") }}</h1>
+      <p class="text-sm text-slate-500">{{ t("planner.subtitle") }}</p>
     </div>
 
-    <div class="mb-6 flex gap-2">
+    <div class="mb-6 flex gap-2 overflow-x-auto pb-1">
       <UButton
         v-for="tab in tabs"
         :key="tab.value"
         :variant="activeTab === tab.value ? 'solid' : 'outline'"
         color="neutral"
         size="sm"
+        class="shrink-0"
         @click="activeTab = tab.value"
       >
         {{ tab.label }}

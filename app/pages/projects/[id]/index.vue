@@ -26,17 +26,17 @@ const stats = computed(() => ({
 </script>
 
 <template>
-  <div class="p-6">
+  <div class="p-4 md:p-6">
     <div v-if="project" class="mb-6">
       <div class="flex items-center gap-3">
         <div
-          class="flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold text-white"
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white"
           :style="{ backgroundColor: project.color }"
         >
           {{ project.name[0]?.toUpperCase() }}
         </div>
-        <div>
-          <h1 class="text-2xl font-bold text-slate-900">{{ project.name }}</h1>
+        <div class="min-w-0">
+          <h1 class="truncate text-xl font-bold text-slate-900 sm:text-2xl">{{ project.name }}</h1>
           <p v-if="project.description" class="text-sm text-slate-500">{{ project.description }}</p>
         </div>
       </div>
@@ -44,7 +44,7 @@ const stats = computed(() => ({
 
     <LayoutProjectNav class="mb-6" />
 
-    <div class="grid gap-4 sm:grid-cols-4">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div class="rounded-xl border border-slate-200 bg-white p-4">
         <p class="text-sm text-slate-500">{{ t("projects.statsTotal") }}</p>
         <p class="text-2xl font-bold text-slate-900">{{ stats.total }}</p>

@@ -27,23 +27,22 @@ async function handleCreate() {
 </script>
 
 <template>
-  <div class="p-6">
-    <div class="mb-6 flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold text-slate-900">{{ t("projects.title") }}</h1>
+  <div class="p-4 md:p-6">
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div class="min-w-0">
+        <h1 class="text-xl font-bold text-slate-900 sm:text-2xl">{{ t("projects.title") }}</h1>
         <p class="text-sm text-slate-500">{{ t("projects.subtitle") }}</p>
       </div>
-      <div class="flex items-center gap-2">
-        <LayoutNotificationBell />
-        <UButton icon="i-lucide-plus" @click="showCreate = true">{{ t("projects.newProject") }}</UButton>
-      </div>
+      <UButton icon="i-lucide-plus" class="shrink-0 self-start sm:self-auto" @click="showCreate = true">
+        {{ t("projects.newProject") }}
+      </UButton>
     </div>
 
     <div v-if="loading" class="flex justify-center py-12">
       <UIcon name="i-lucide-loader-2" class="h-8 w-8 animate-spin text-slate-400" />
     </div>
 
-    <div v-else-if="projects.length === 0" class="rounded-xl border border-dashed border-slate-300 p-12 text-center">
+    <div v-else-if="projects.length === 0" class="rounded-xl border border-dashed border-slate-300 p-8 text-center sm:p-12">
       <UIcon name="i-lucide-folder-kanban" class="mx-auto mb-3 h-10 w-10 text-slate-300" />
       <p class="mb-4 text-slate-500">{{ t("projects.empty") }}</p>
       <UButton @click="showCreate = true">{{ t("projects.createFirst") }}</UButton>
@@ -58,12 +57,12 @@ async function handleCreate() {
       >
         <div class="mb-3 flex items-center gap-3">
           <div
-            class="flex h-10 w-10 items-center justify-center rounded-lg text-sm font-bold text-white"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white"
             :style="{ backgroundColor: project.color }"
           >
             {{ project.name[0]?.toUpperCase() }}
           </div>
-          <div>
+          <div class="min-w-0">
             <h3 class="font-semibold text-slate-900 group-hover:text-slate-700">{{ project.name }}</h3>
             <p v-if="project.description" class="text-xs text-slate-500 line-clamp-1">
               {{ project.description }}

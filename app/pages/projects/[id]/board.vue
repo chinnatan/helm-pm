@@ -39,18 +39,23 @@ async function onSaved() {
 </script>
 
 <template>
-  <div class="p-6">
-    <div v-if="project" class="mb-4 flex items-center justify-between">
-      <div class="flex items-center gap-3">
+  <div class="p-4 md:p-6">
+    <div
+      v-if="project"
+      class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div class="flex min-w-0 items-center gap-3">
         <div
-          class="flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold text-white"
+          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
           :style="{ backgroundColor: project.color }"
         >
           {{ project.name[0]?.toUpperCase() }}
         </div>
-        <h1 class="text-xl font-bold text-slate-900">{{ project.name }}</h1>
+        <h1 class="truncate text-xl font-bold text-slate-900">{{ project.name }}</h1>
       </div>
-      <UButton icon="i-lucide-plus" size="sm" @click="openNewTask">{{ t("projects.addTask") }}</UButton>
+      <UButton icon="i-lucide-plus" size="sm" class="shrink-0 self-start sm:self-auto" @click="openNewTask">
+        {{ t("projects.addTask") }}
+      </UButton>
     </div>
 
     <LayoutProjectNav class="mb-6" />

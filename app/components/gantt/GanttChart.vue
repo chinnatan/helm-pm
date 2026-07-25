@@ -18,11 +18,16 @@ const emit = defineEmits<{
 
 const containerRef = ref<HTMLElement | null>(null);
 let ganttInstance: InstanceType<typeof Gantt> | null = null;
+let mobileMq: MediaQueryList | null = null;
 
 function statusToProgress(status: string) {
   if (status === "done") return 100;
   if (status === "in_progress") return 50;
   return 0;
+}
+
+function viewMode() {
+  return mobileMq?.matches ? "Month" : "Week";
 }
 
 function buildGanttData() {
@@ -55,7 +60,7 @@ function renderGantt() {
   if (data.length === 0) return;
 
   ganttInstance = new Gantt(containerRef.value, data, {
-    view_mode: "Week",
+    view_mode: viewMode(),
     bar_height: 28,
     padding: 18,
     on_date_change: (task: { id: string; start: string; end: string }) => {
@@ -66,8 +71,15 @@ function renderGantt() {
 
 watch(() => [props.tasks, props.dependencies], renderGantt, { deep: true });
 
-onMounted(renderGantt);
+onMounted(() => {
+  mobileMq = window.matchMedia("(max-width: 767px)");
+  mobileMq.addEventListener("change", renderGantt);
+  renderGantt();
+});
+
 onUnmounted(() => {
+  mobileMq?.removeEventListener("change", renderGantt);
+  mobileMq = null;
   ganttInstance = null;
 });
 </script>
@@ -87,13 +99,13 @@ onUnmounted(() => {
 
     <div
       v-if="tasks.filter((t) => t.start_date || t.due_date).length === 0"
-      class="rounded-xl border border-dashed border-slate-300 p-12 text-center text-slate-500"
+      class="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500 sm:p-12"
     >
       <UIcon name="i-lucide-gantt-chart" class="mx-auto mb-3 h-10 w-10 text-slate-300" />
       <p>{{ t("projects.ganttEmpty") }}</p>
     </div>
 
-    <div ref="containerRef" class="gantt-container overflow-x-auto rounded-xl border border-slate-200 bg-white p-4" />
+    <div ref="containerRef" class="gantt-container overflow-x-auto rounded-xl border border-slate-200 bg-white p-2 sm:p-4" />
   </div>
 </template>
 

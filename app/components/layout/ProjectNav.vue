@@ -17,20 +17,22 @@ function isActive(path: string) {
 </script>
 
 <template>
-  <div class="flex gap-1 border-b border-slate-200 px-1">
-    <NuxtLink
-      v-for="tab in tabs"
-      :key="tab.to"
-      :to="tab.to"
-      class="flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-sm font-medium transition-colors"
-      :class="
-        isActive(tab.to)
-          ? 'border-b-2 border-slate-800 text-slate-900'
-          : 'text-slate-500 hover:text-slate-700'
-      "
-    >
-      <UIcon :name="tab.icon" class="h-4 w-4" />
-      {{ tab.label }}
-    </NuxtLink>
+  <div class="-mx-1 overflow-x-auto">
+    <div class="flex min-w-max gap-0.5 border-b border-slate-200 px-1 sm:gap-1">
+      <NuxtLink
+        v-for="tab in tabs"
+        :key="tab.to"
+        :to="tab.to"
+        class="flex shrink-0 items-center gap-1.5 rounded-t-lg px-2.5 py-2 text-sm font-medium transition-colors sm:px-3"
+        :class="
+          isActive(tab.to)
+            ? 'border-b-2 border-slate-800 text-slate-900'
+            : 'text-slate-500 hover:text-slate-700'
+        "
+      >
+        <UIcon :name="tab.icon" class="h-4 w-4 shrink-0" />
+        {{ tab.label }}
+      </NuxtLink>
+    </div>
   </div>
 </template>

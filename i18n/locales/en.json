@@ -14,7 +14,10 @@
   "nav": {
     "planner": "My Planner",
     "projects": "Projects",
-    "team": "Team"
+    "team": "Team",
+    "menu": "Menu",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
   },
   "projectNav": {
     "overview": "Overview",
@@ -150,7 +153,8 @@
       "fri": "Fri",
       "sat": "Sat",
       "sun": "Sun"
-    }
+    },
+    "noTasksThisMonth": "No tasks with due dates this month"
   },
   "language": {
     "th": "ไทย",

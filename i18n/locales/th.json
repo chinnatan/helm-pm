@@ -14,7 +14,10 @@
   "nav": {
     "planner": "แพลนเนอร์ของฉัน",
     "projects": "โปรเจกต์",
-    "team": "ทีม"
+    "team": "ทีม",
+    "menu": "เมนู",
+    "openMenu": "เปิดเมนู",
+    "closeMenu": "ปิดเมนู"
   },
   "projectNav": {
     "overview": "ภาพรวม",
@@ -150,7 +153,8 @@
       "fri": "ศ.",
       "sat": "ส.",
       "sun": "อา."
-    }
+    },
+    "noTasksThisMonth": "ไม่มีงานที่มีวันครบกำหนดในเดือนนี้"
   },
   "language": {
     "th": "ไทย",

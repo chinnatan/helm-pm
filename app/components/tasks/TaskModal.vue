@@ -45,6 +45,24 @@ const modalTabs = computed(() => [
   { key: "activity", label: t("tasks.tabs.activity") },
 ]);
 
+const isMobile = ref(false);
+let mobileMq: MediaQueryList | null = null;
+
+function updateIsMobile() {
+  isMobile.value = mobileMq?.matches ?? false;
+}
+
+onMounted(() => {
+  mobileMq = window.matchMedia("(max-width: 767px)");
+  updateIsMobile();
+  mobileMq.addEventListener("change", updateIsMobile);
+});
+
+onUnmounted(() => {
+  mobileMq?.removeEventListener("change", updateIsMobile);
+  mobileMq = null;
+});
+
 watch(
   () => props.open,
   async (open) => {
@@ -139,16 +157,21 @@ const assigneeItems = computed(() => [
   <UModal
     :open="open"
     :title="isEdit ? t('tasks.editTask') : t('tasks.newTask')"
+    :fullscreen="isMobile"
     @update:open="emit('update:open', $event)"
   >
     <template #body>
-      <div v-if="isEdit" class="mb-4 flex gap-2 border-b border-slate-200 pb-2">
+      <div
+        v-if="isEdit"
+        class="mb-4 flex gap-2 overflow-x-auto border-b border-slate-200 pb-2"
+      >
         <UButton
           v-for="tab in modalTabs"
           :key="tab.key"
           :variant="activeTab === tab.key ? 'solid' : 'ghost'"
           color="neutral"
           size="xs"
+          class="shrink-0"
           @click="activeTab = tab.key"
         >
           {{ tab.label }}
@@ -169,7 +192,7 @@ const assigneeItems = computed(() => [
           />
         </UFormField>
 
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <UFormField :label="t('tasks.assignee')">
             <USelect
               v-model="form.assignee_id"

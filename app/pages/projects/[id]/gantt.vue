@@ -47,12 +47,22 @@ async function handleCreateMilestone() {
 </script>
 
 <template>
-  <div class="p-6">
-    <div v-if="project" class="mb-4 flex items-center justify-between">
-      <h1 class="text-xl font-bold text-slate-900">
+  <div class="p-4 md:p-6">
+    <div
+      v-if="project"
+      class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <h1 class="min-w-0 text-xl font-bold text-slate-900">
         {{ project.name }} — {{ t("projects.ganttSuffix") }}
       </h1>
-      <UButton icon="i-lucide-flag" size="sm" variant="outline" color="neutral" @click="showMilestone = true">
+      <UButton
+        icon="i-lucide-flag"
+        size="sm"
+        variant="outline"
+        color="neutral"
+        class="shrink-0 self-start sm:self-auto"
+        @click="showMilestone = true"
+      >
         {{ t("projects.addMilestone") }}
       </UButton>
     </div>

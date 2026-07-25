@@ -61,11 +61,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex gap-4 overflow-x-auto pb-4">
+  <div class="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4">
     <div
       v-for="col in columns"
       :key="`${projectId}-${col.value}`"
-      class="flex w-72 shrink-0 flex-col rounded-xl bg-slate-100 p-3"
+      class="flex w-[min(18rem,85vw)] shrink-0 snap-start flex-col rounded-xl bg-slate-100 p-3"
     >
       <div class="mb-3 flex items-center justify-between">
         <h3 class="text-sm font-semibold text-slate-700">{{ col.label }}</h3>
