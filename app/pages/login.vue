@@ -1,6 +1,7 @@
 <script setup lang="ts">
 definePageMeta({ layout: "auth", middleware: "guest" });
 
+const { t, locale, setLocale } = useI18n();
 const supabase = useSupabaseClient();
 const email = ref("");
 const password = ref("");
@@ -26,7 +27,7 @@ async function handleEmailAuth() {
   if (!isSignUp.value) {
     navigateTo("/planner");
   } else {
-    error.value = "ตรวจสอบอีเมลเพื่อยืนยันบัญชี";
+    error.value = t("auth.checkEmail");
   }
 }
 
@@ -50,6 +51,25 @@ async function handleGoogleAuth() {
 
 <template>
   <div class="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+    <div class="mb-4 flex justify-end gap-1">
+      <UButton
+        size="xs"
+        :variant="locale === 'th' ? 'solid' : 'ghost'"
+        color="neutral"
+        @click="setLocale('th')"
+      >
+        {{ t("language.th") }}
+      </UButton>
+      <UButton
+        size="xs"
+        :variant="locale === 'en' ? 'solid' : 'ghost'"
+        color="neutral"
+        @click="setLocale('en')"
+      >
+        {{ t("language.en") }}
+      </UButton>
+    </div>
+
     <div class="mb-8 text-center">
       <div
         class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-800 text-lg font-bold text-white"
@@ -57,28 +77,28 @@ async function handleGoogleAuth() {
         H
       </div>
       <h1 class="text-2xl font-bold text-slate-900">Helm</h1>
-      <p class="mt-1 text-sm text-slate-500">Project Management — steer the ship</p>
+      <p class="mt-1 text-sm text-slate-500">{{ t("auth.tagline") }}</p>
     </div>
 
     <UAlert v-if="error" color="error" variant="subtle" class="mb-4" :title="error" />
 
     <form class="space-y-4" @submit.prevent="handleEmailAuth">
-      <UFormField label="อีเมล">
+      <UFormField :label="t('auth.email')">
         <UInput v-model="email" type="email" placeholder="you@example.com" required class="w-full" />
       </UFormField>
 
-      <UFormField label="รหัสผ่าน">
+      <UFormField :label="t('auth.password')">
         <UInput v-model="password" type="password" placeholder="••••••••" required class="w-full" />
       </UFormField>
 
       <UButton type="submit" block :loading="loading">
-        {{ isSignUp ? "สมัครสมาชิก" : "เข้าสู่ระบบ" }}
+        {{ isSignUp ? t("auth.signUp") : t("auth.signIn") }}
       </UButton>
     </form>
 
     <div class="my-4 flex items-center gap-3">
       <div class="h-px flex-1 bg-slate-200" />
-      <span class="text-xs text-slate-400">หรือ</span>
+      <span class="text-xs text-slate-400">{{ t("auth.or") }}</span>
       <div class="h-px flex-1 bg-slate-200" />
     </div>
 
@@ -90,7 +110,7 @@ async function handleGoogleAuth() {
       :loading="loading"
       @click="handleGoogleAuth"
     >
-      เข้าสู่ระบบด้วย Google
+      {{ t("auth.signInWithGoogle") }}
     </UButton>
 
     <p class="mt-6 text-center text-sm text-slate-500">
@@ -99,7 +119,7 @@ async function handleGoogleAuth() {
         class="text-slate-700 underline hover:text-slate-900"
         @click="isSignUp = !isSignUp"
       >
-        {{ isSignUp ? "มีบัญชีแล้ว? เข้าสู่ระบบ" : "ยังไม่มีบัญชี? สมัครสมาชิก" }}
+        {{ isSignUp ? t("auth.haveAccount") : t("auth.noAccount") }}
       </button>
     </p>
   </div>

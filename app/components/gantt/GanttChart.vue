@@ -10,6 +10,8 @@ const props = defineProps<{
   dependencies?: { task_id: string; depends_on_task_id: string }[];
 }>();
 
+const { t } = useI18n();
+
 const emit = defineEmits<{
   "update-dates": [taskId: string, startDate: string, endDate: string];
 }>();
@@ -88,7 +90,7 @@ onUnmounted(() => {
       class="rounded-xl border border-dashed border-slate-300 p-12 text-center text-slate-500"
     >
       <UIcon name="i-lucide-gantt-chart" class="mx-auto mb-3 h-10 w-10 text-slate-300" />
-      <p>Add start and due dates to tasks to see them on the timeline</p>
+      <p>{{ t("projects.ganttEmpty") }}</p>
     </div>
 
     <div ref="containerRef" class="gantt-container overflow-x-auto rounded-xl border border-slate-200 bg-white p-4" />

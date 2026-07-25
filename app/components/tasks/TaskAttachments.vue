@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const props = defineProps<{ taskId: string }>();
+const { t } = useI18n();
 const taskIdRef = toRef(props, "taskId");
 const { attachments, uploadFile, deleteAttachment } = useAttachments(taskIdRef);
 const uploading = ref(false);
@@ -36,12 +37,12 @@ async function onFileSelect(event: Event) {
       />
     </div>
 
-    <p v-if="attachments.length === 0" class="text-sm text-slate-400">No attachments</p>
+    <p v-if="attachments.length === 0" class="text-sm text-slate-400">{{ t("tasks.noAttachments") }}</p>
 
     <div>
       <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-slate-300 p-4 text-sm text-slate-500 hover:border-slate-400">
         <UIcon name="i-lucide-upload" class="h-4 w-4" />
-        <span>{{ uploading ? "Uploading..." : "Upload file" }}</span>
+        <span>{{ uploading ? t("tasks.uploading") : t("tasks.uploadFile") }}</span>
         <input type="file" class="hidden" :disabled="uploading" @change="onFileSelect" />
       </label>
     </div>

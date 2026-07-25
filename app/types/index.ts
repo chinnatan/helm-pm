@@ -134,18 +134,18 @@ export interface Attachment {
   created_at: string;
 }
 
-export const TASK_STATUSES: { value: TaskStatus; label: string }[] = [
-  { value: "todo", label: "To Do" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "done", label: "Done" },
-  { value: "blocked", label: "Blocked" },
+export const TASK_STATUS_VALUES: TaskStatus[] = [
+  "todo",
+  "in_progress",
+  "done",
+  "blocked",
 ];
 
-export const TASK_PRIORITIES: { value: TaskPriority; label: string; color: string }[] = [
-  { value: "low", label: "Low", color: "neutral" },
-  { value: "medium", label: "Medium", color: "info" },
-  { value: "high", label: "High", color: "warning" },
-  { value: "urgent", label: "Urgent", color: "error" },
+export const TASK_PRIORITY_META: { value: TaskPriority; color: string }[] = [
+  { value: "low", color: "neutral" },
+  { value: "medium", color: "info" },
+  { value: "high", color: "warning" },
+  { value: "urgent", color: "error" },
 ];
 
 export const PROJECT_COLORS = [

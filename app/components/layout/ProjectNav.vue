@@ -1,14 +1,15 @@
 <script setup lang="ts">
 const route = useRoute();
+const { t } = useI18n();
 const projectId = computed(() => route.params.id as string);
 
-const tabs = [
-  { label: "Overview", to: `/projects/${projectId.value}`, icon: "i-lucide-layout-dashboard" },
-  { label: "Board", to: `/projects/${projectId.value}/board`, icon: "i-lucide-columns-3" },
-  { label: "List", to: `/projects/${projectId.value}/list`, icon: "i-lucide-list" },
-  { label: "Gantt", to: `/projects/${projectId.value}/gantt`, icon: "i-lucide-gantt-chart" },
-  { label: "Calendar", to: `/projects/${projectId.value}/calendar`, icon: "i-lucide-calendar" },
-];
+const tabs = computed(() => [
+  { label: t("projectNav.overview"), to: `/projects/${projectId.value}`, icon: "i-lucide-layout-dashboard" },
+  { label: t("projectNav.board"), to: `/projects/${projectId.value}/board`, icon: "i-lucide-columns-3" },
+  { label: t("projectNav.list"), to: `/projects/${projectId.value}/list`, icon: "i-lucide-list" },
+  { label: t("projectNav.gantt"), to: `/projects/${projectId.value}/gantt`, icon: "i-lucide-gantt-chart" },
+  { label: t("projectNav.calendar"), to: `/projects/${projectId.value}/calendar`, icon: "i-lucide-calendar" },
+]);
 
 function isActive(path: string) {
   return route.path === path;

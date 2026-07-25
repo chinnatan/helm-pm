@@ -1,6 +1,7 @@
 <script setup lang="ts">
 definePageMeta({ middleware: "auth" });
 
+const { t } = useI18n();
 const { projects, loading, fetchProjects, createProject } = useProjects();
 const { fetchWorkspace } = useWorkspace();
 
@@ -29,12 +30,12 @@ async function handleCreate() {
   <div class="p-6">
     <div class="mb-6 flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Projects</h1>
-        <p class="text-sm text-slate-500">Manage your team projects</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t("projects.title") }}</h1>
+        <p class="text-sm text-slate-500">{{ t("projects.subtitle") }}</p>
       </div>
       <div class="flex items-center gap-2">
         <LayoutNotificationBell />
-        <UButton icon="i-lucide-plus" @click="showCreate = true">New Project</UButton>
+        <UButton icon="i-lucide-plus" @click="showCreate = true">{{ t("projects.newProject") }}</UButton>
       </div>
     </div>
 
@@ -44,8 +45,8 @@ async function handleCreate() {
 
     <div v-else-if="projects.length === 0" class="rounded-xl border border-dashed border-slate-300 p-12 text-center">
       <UIcon name="i-lucide-folder-kanban" class="mx-auto mb-3 h-10 w-10 text-slate-300" />
-      <p class="mb-4 text-slate-500">No projects yet</p>
-      <UButton @click="showCreate = true">Create your first project</UButton>
+      <p class="mb-4 text-slate-500">{{ t("projects.empty") }}</p>
+      <UButton @click="showCreate = true">{{ t("projects.createFirst") }}</UButton>
     </div>
 
     <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -72,21 +73,21 @@ async function handleCreate() {
       </NuxtLink>
     </div>
 
-    <UModal v-model:open="showCreate" title="New Project">
+    <UModal v-model:open="showCreate" :title="t('projects.newProject')">
       <template #body>
         <div class="space-y-4">
-          <UFormField label="Project Name" required>
-            <UInput v-model="newName" placeholder="Project name" class="w-full" />
+          <UFormField :label="t('projects.name')" required>
+            <UInput v-model="newName" :placeholder="t('projects.namePlaceholder')" class="w-full" />
           </UFormField>
-          <UFormField label="Description">
-            <UTextarea v-model="newDescription" placeholder="Optional description" :rows="2" class="w-full" />
+          <UFormField :label="t('projects.description')">
+            <UTextarea v-model="newDescription" :placeholder="t('projects.descriptionPlaceholder')" :rows="2" class="w-full" />
           </UFormField>
         </div>
       </template>
       <template #footer>
         <div class="flex justify-end gap-2">
-          <UButton variant="ghost" color="neutral" @click="showCreate = false">Cancel</UButton>
-          <UButton :loading="creating" :disabled="!newName.trim()" @click="handleCreate">Create</UButton>
+          <UButton variant="ghost" color="neutral" @click="showCreate = false">{{ t("common.cancel") }}</UButton>
+          <UButton :loading="creating" :disabled="!newName.trim()" @click="handleCreate">{{ t("common.create") }}</UButton>
         </div>
       </template>
     </UModal>

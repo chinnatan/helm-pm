@@ -6,6 +6,8 @@ defineProps<{
   loading?: boolean;
 }>();
 
+const { t } = useI18n();
+
 const emit = defineEmits<{
   "task-click": [task: Task];
   "mark-done": [taskId: string];
@@ -20,7 +22,7 @@ const emit = defineEmits<{
 
   <div v-else-if="tasks.length === 0" class="rounded-xl border border-dashed border-slate-300 p-12 text-center">
     <UIcon name="i-lucide-calendar-check" class="mx-auto mb-3 h-10 w-10 text-slate-300" />
-    <p class="text-slate-500">No tasks for this view</p>
+    <p class="text-slate-500">{{ t("planner.empty") }}</p>
   </div>
 
   <div v-else class="space-y-2">

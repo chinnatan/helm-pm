@@ -3,6 +3,7 @@ import type { Task } from "~/types";
 
 definePageMeta({ middleware: "auth" });
 
+const { t } = useI18n();
 const route = useRoute();
 const projectId = computed(() => route.params.id as string);
 const projectIdRef = toRef(() => route.params.id as string);
@@ -11,7 +12,7 @@ const { getProject, fetchProjects } = useProjects();
 const { tasks, fetchTasks, updateTask } = useTasks(projectId);
 const { fetchWorkspace } = useWorkspace();
 const { milestones, fetchMilestones, createMilestone } = useMilestones(projectIdRef);
-const { dependencies, addDependency } = useDependencies(projectIdRef);
+const { dependencies } = useDependencies(projectIdRef);
 
 const project = computed(() => getProject(projectId.value));
 const showModal = ref(false);
@@ -48,9 +49,11 @@ async function handleCreateMilestone() {
 <template>
   <div class="p-6">
     <div v-if="project" class="mb-4 flex items-center justify-between">
-      <h1 class="text-xl font-bold text-slate-900">{{ project.name }} — Gantt</h1>
+      <h1 class="text-xl font-bold text-slate-900">
+        {{ project.name }} — {{ t("projects.ganttSuffix") }}
+      </h1>
       <UButton icon="i-lucide-flag" size="sm" variant="outline" color="neutral" @click="showMilestone = true">
-        Add Milestone
+        {{ t("projects.addMilestone") }}
       </UButton>
     </div>
 
@@ -71,21 +74,23 @@ async function handleCreateMilestone() {
       @saved="fetchTasks(projectId)"
     />
 
-    <UModal v-model:open="showMilestone" title="Add Milestone">
+    <UModal v-model:open="showMilestone" :title="t('projects.addMilestone')">
       <template #body>
         <div class="space-y-4">
-          <UFormField label="Title">
+          <UFormField :label="t('projects.milestoneTitle')">
             <UInput v-model="milestoneTitle" class="w-full" />
           </UFormField>
-          <UFormField label="Date">
+          <UFormField :label="t('projects.milestoneDate')">
             <UInput v-model="milestoneDate" type="date" class="w-full" />
           </UFormField>
         </div>
       </template>
       <template #footer>
         <div class="flex justify-end gap-2">
-          <UButton variant="ghost" color="neutral" @click="showMilestone = false">Cancel</UButton>
-          <UButton @click="handleCreateMilestone">Create</UButton>
+          <UButton variant="ghost" color="neutral" @click="showMilestone = false">
+            {{ t("common.cancel") }}
+          </UButton>
+          <UButton @click="handleCreateMilestone">{{ t("common.create") }}</UButton>
         </div>
       </template>
     </UModal>

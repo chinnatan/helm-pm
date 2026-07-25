@@ -1,6 +1,7 @@
 <script setup lang="ts">
 definePageMeta({ middleware: "auth" });
 
+const { t } = useI18n();
 const route = useRoute();
 const projectId = computed(() => route.params.id as string);
 
@@ -45,19 +46,19 @@ const stats = computed(() => ({
 
     <div class="grid gap-4 sm:grid-cols-4">
       <div class="rounded-xl border border-slate-200 bg-white p-4">
-        <p class="text-sm text-slate-500">Total</p>
+        <p class="text-sm text-slate-500">{{ t("projects.statsTotal") }}</p>
         <p class="text-2xl font-bold text-slate-900">{{ stats.total }}</p>
       </div>
       <div class="rounded-xl border border-slate-200 bg-white p-4">
-        <p class="text-sm text-slate-500">To Do</p>
+        <p class="text-sm text-slate-500">{{ t("status.todo") }}</p>
         <p class="text-2xl font-bold text-slate-600">{{ stats.todo }}</p>
       </div>
       <div class="rounded-xl border border-slate-200 bg-white p-4">
-        <p class="text-sm text-slate-500">In Progress</p>
+        <p class="text-sm text-slate-500">{{ t("status.in_progress") }}</p>
         <p class="text-2xl font-bold text-blue-600">{{ stats.inProgress }}</p>
       </div>
       <div class="rounded-xl border border-slate-200 bg-white p-4">
-        <p class="text-sm text-slate-500">Done</p>
+        <p class="text-sm text-slate-500">{{ t("status.done") }}</p>
         <p class="text-2xl font-bold text-green-600">{{ stats.done }}</p>
       </div>
     </div>

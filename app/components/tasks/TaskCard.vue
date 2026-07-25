@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { Task } from "~/types";
-import { TASK_PRIORITIES } from "~/types";
 import { format, parseISO } from "date-fns";
 
 const props = defineProps<{
@@ -14,9 +13,10 @@ const emit = defineEmits<{
   pin: [task: Task, pinned: boolean];
 }>();
 
-const priority = computed(
-  () => TASK_PRIORITIES.find((p) => p.value === props.task.priority) ?? TASK_PRIORITIES[1],
-);
+const { dateFnsLocale } = useDateLocale();
+const { priorityMeta } = useTaskLabels();
+
+const priority = computed(() => priorityMeta(props.task.priority));
 
 const isPinned = computed(
   () => props.task.user_task_preferences?.some((p) => p.is_pinned) ?? false,
@@ -27,6 +27,11 @@ const subtaskProgress = computed(() => {
   if (subs.length === 0) return null;
   const done = subs.filter((s) => s.completed).length;
   return `${done}/${subs.length}`;
+});
+
+const dueDateLabel = computed(() => {
+  if (!props.task.due_date) return null;
+  return format(parseISO(props.task.due_date), "d MMM", { locale: dateFnsLocale.value });
 });
 </script>
 
@@ -61,8 +66,8 @@ const subtaskProgress = computed(() => {
         {{ priority?.label }}
       </UBadge>
 
-      <span v-if="task.due_date" class="text-xs text-slate-500">
-        {{ format(parseISO(task.due_date), "d MMM") }}
+      <span v-if="dueDateLabel" class="text-xs text-slate-500">
+        {{ dueDateLabel }}
       </span>
 
       <span v-if="subtaskProgress" class="text-xs text-slate-400">

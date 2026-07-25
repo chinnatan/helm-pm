@@ -2,12 +2,13 @@
 const user = useSupabaseUser();
 const supabase = useSupabaseClient();
 const route = useRoute();
+const { t, locale, setLocale } = useI18n();
 
-const navItems = [
-  { label: "My Planner", to: "/planner", icon: "i-lucide-calendar-days" },
-  { label: "Projects", to: "/projects", icon: "i-lucide-folder-kanban" },
-  { label: "Team", to: "/team", icon: "i-lucide-users" },
-];
+const navItems = computed(() => [
+  { label: t("nav.planner"), to: "/planner", icon: "i-lucide-calendar-days" },
+  { label: t("nav.projects"), to: "/projects", icon: "i-lucide-folder-kanban" },
+  { label: t("nav.team"), to: "/team", icon: "i-lucide-users" },
+]);
 
 async function signOut() {
   await supabase.auth.signOut();
@@ -16,6 +17,10 @@ async function signOut() {
 
 function isActive(path: string) {
   return route.path === path || route.path.startsWith(`${path}/`);
+}
+
+async function switchLocale(code: "th" | "en") {
+  await setLocale(code);
 }
 </script>
 
@@ -49,6 +54,24 @@ function isActive(path: string) {
       </nav>
 
       <div class="border-t border-slate-200 p-3">
+        <div class="mb-2 flex items-center gap-1 px-2">
+          <UButton
+            size="xs"
+            :variant="locale === 'th' ? 'solid' : 'ghost'"
+            color="neutral"
+            @click="switchLocale('th')"
+          >
+            {{ t("language.th") }}
+          </UButton>
+          <UButton
+            size="xs"
+            :variant="locale === 'en' ? 'solid' : 'ghost'"
+            color="neutral"
+            @click="switchLocale('en')"
+          >
+            {{ t("language.en") }}
+          </UButton>
+        </div>
         <div class="flex items-center justify-between rounded-lg px-2 py-2">
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-medium text-slate-800">
@@ -60,7 +83,7 @@ function isActive(path: string) {
             variant="ghost"
             color="neutral"
             size="xs"
-            aria-label="Sign out"
+            :aria-label="t('common.signOut')"
             @click="signOut"
           />
         </div>

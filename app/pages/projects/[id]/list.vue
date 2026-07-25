@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import type { Task, TaskStatus, TaskPriority } from "~/types";
-import { TASK_STATUSES, TASK_PRIORITIES } from "~/types";
 import { format, parseISO } from "date-fns";
 
 definePageMeta({ middleware: "auth" });
 
+const { t } = useI18n();
+const { dateFnsLocale } = useDateLocale();
+const { statuses, priorities, statusLabel, priorityLabel } = useTaskLabels();
 const route = useRoute();
 const projectId = computed(() => route.params.id as string);
 
@@ -28,13 +30,31 @@ onMounted(async () => {
 });
 
 const filteredTasks = computed(() => {
-  return tasks.value.filter((t) => {
-    if (statusFilter.value !== "all" && t.status !== statusFilter.value) return false;
-    if (priorityFilter.value !== "all" && t.priority !== priorityFilter.value) return false;
-    if (assigneeFilter.value !== "all" && t.assignee_id !== assigneeFilter.value) return false;
+  return tasks.value.filter((task) => {
+    if (statusFilter.value !== "all" && task.status !== statusFilter.value) return false;
+    if (priorityFilter.value !== "all" && task.priority !== priorityFilter.value) return false;
+    if (assigneeFilter.value !== "all" && task.assignee_id !== assigneeFilter.value) return false;
     return true;
   });
 });
+
+const statusFilterItems = computed(() => [
+  { label: t("projects.allStatus"), value: "all" },
+  ...statuses.value.map((s) => ({ label: s.label, value: s.value })),
+]);
+
+const priorityFilterItems = computed(() => [
+  { label: t("projects.allPriority"), value: "all" },
+  ...priorities.value.map((p) => ({ label: p.label, value: p.value })),
+]);
+
+const assigneeFilterItems = computed(() => [
+  { label: t("projects.allAssignees"), value: "all" },
+  ...members.value.map((m) => ({
+    label: m.profiles?.full_name || m.profiles?.email || "",
+    value: m.user_id,
+  })),
+]);
 
 watch(searchQuery, () => fetchTasks(projectId.value));
 
@@ -47,13 +67,19 @@ function openNew() {
   selectedTask.value = null;
   showModal.value = true;
 }
+
+function formatDueDate(date: string) {
+  return format(parseISO(date), "d MMM yyyy", { locale: dateFnsLocale.value });
+}
 </script>
 
 <template>
   <div class="p-6">
     <div v-if="project" class="mb-4 flex items-center justify-between">
-      <h1 class="text-xl font-bold text-slate-900">{{ project.name }} — List</h1>
-      <UButton icon="i-lucide-plus" size="sm" @click="openNew">Add Task</UButton>
+      <h1 class="text-xl font-bold text-slate-900">
+        {{ project.name }} — {{ t("projects.listSuffix") }}
+      </h1>
+      <UButton icon="i-lucide-plus" size="sm" @click="openNew">{{ t("projects.addTask") }}</UButton>
     </div>
 
     <LayoutProjectNav class="mb-6" />
@@ -62,25 +88,22 @@ function openNew() {
       <UInput
         v-model="searchQuery"
         icon="i-lucide-search"
-        placeholder="Search tasks..."
+        :placeholder="t('projects.searchPlaceholder')"
         class="w-64"
       />
       <USelect
         v-model="statusFilter"
-        :items="[{ label: 'All Status', value: 'all' }, ...TASK_STATUSES.map((s) => ({ label: s.label, value: s.value }))]"
+        :items="statusFilterItems"
         class="w-40"
       />
       <USelect
         v-model="priorityFilter"
-        :items="[{ label: 'All Priority', value: 'all' }, ...TASK_PRIORITIES.map((p) => ({ label: p.label, value: p.value }))]"
+        :items="priorityFilterItems"
         class="w-40"
       />
       <USelect
         v-model="assigneeFilter"
-        :items="[
-          { label: 'All Assignees', value: 'all' },
-          ...members.map((m) => ({ label: m.profiles?.full_name || m.profiles?.email || '', value: m.user_id })),
-        ]"
+        :items="assigneeFilterItems"
         class="w-48"
       />
     </div>
@@ -93,11 +116,11 @@ function openNew() {
       <table class="w-full text-sm">
         <thead class="border-b border-slate-200 bg-slate-50">
           <tr>
-            <th class="px-4 py-3 text-left font-medium text-slate-600">Title</th>
-            <th class="px-4 py-3 text-left font-medium text-slate-600">Status</th>
-            <th class="px-4 py-3 text-left font-medium text-slate-600">Priority</th>
-            <th class="px-4 py-3 text-left font-medium text-slate-600">Assignee</th>
-            <th class="px-4 py-3 text-left font-medium text-slate-600">Due Date</th>
+            <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colTitle") }}</th>
+            <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colStatus") }}</th>
+            <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colPriority") }}</th>
+            <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colAssignee") }}</th>
+            <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colDueDate") }}</th>
           </tr>
         </thead>
         <tbody>
@@ -108,18 +131,20 @@ function openNew() {
             @click="openTask(task)"
           >
             <td class="px-4 py-3 font-medium text-slate-800">{{ task.title }}</td>
-            <td class="px-4 py-3 capitalize text-slate-600">{{ task.status.replace("_", " ") }}</td>
-            <td class="px-4 py-3 capitalize text-slate-600">{{ task.priority }}</td>
+            <td class="px-4 py-3 text-slate-600">{{ statusLabel(task.status) }}</td>
+            <td class="px-4 py-3 text-slate-600">{{ priorityLabel(task.priority) }}</td>
             <td class="px-4 py-3 text-slate-600">
-              {{ task.profiles?.full_name || task.profiles?.email || "—" }}
+              {{ task.profiles?.full_name || task.profiles?.email || t("common.emDash") }}
             </td>
             <td class="px-4 py-3 text-slate-600">
-              {{ task.due_date ? format(parseISO(task.due_date), "d MMM yyyy") : "—" }}
+              {{ task.due_date ? formatDueDate(task.due_date) : t("common.emDash") }}
             </td>
           </tr>
         </tbody>
       </table>
-      <p v-if="filteredTasks.length === 0" class="p-8 text-center text-slate-400">No tasks found</p>
+      <p v-if="filteredTasks.length === 0" class="p-8 text-center text-slate-400">
+        {{ t("projects.noTasksFound") }}
+      </p>
     </div>
 
     <TasksTaskModal

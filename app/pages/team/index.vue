@@ -3,6 +3,7 @@ import { format } from "date-fns";
 
 definePageMeta({ middleware: "auth" });
 
+const { t } = useI18n();
 const { members, fetchWorkspace, inviteMember } = useWorkspace();
 const { fetchProjects } = useProjects();
 const supabase = useSupabaseClient();
@@ -59,33 +60,33 @@ async function handleInvite() {
   }
 }
 
-const roleOptions = [
-  { label: "Member", value: "member" },
-  { label: "Manager", value: "manager" },
-  { label: "Viewer", value: "viewer" },
-  { label: "Admin", value: "admin" },
-];
+const roleOptions = computed(() => [
+  { label: t("team.roles.member"), value: "member" },
+  { label: t("team.roles.manager"), value: "manager" },
+  { label: t("team.roles.viewer"), value: "viewer" },
+  { label: t("team.roles.admin"), value: "admin" },
+]);
 </script>
 
 <template>
   <div class="p-6">
     <div class="mb-6 flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">Team</h1>
-        <p class="text-sm text-slate-500">Workspace members and workload</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t("team.title") }}</h1>
+        <p class="text-sm text-slate-500">{{ t("team.subtitle") }}</p>
       </div>
       <LayoutNotificationBell />
     </div>
 
     <div class="mb-8 rounded-xl border border-slate-200 bg-white p-5">
-      <h2 class="mb-4 text-sm font-semibold text-slate-700">Invite Member</h2>
+      <h2 class="mb-4 text-sm font-semibold text-slate-700">{{ t("team.inviteMember") }}</h2>
       <UAlert v-if="inviteError" color="error" variant="subtle" class="mb-3" :title="inviteError" />
       <div class="flex flex-wrap gap-3">
         <UInput v-model="inviteEmail" placeholder="email@example.com" class="w-64" />
         <USelect v-model="inviteRole" :items="roleOptions" class="w-36" />
-        <UButton :loading="inviting" @click="handleInvite">Invite</UButton>
+        <UButton :loading="inviting" @click="handleInvite">{{ t("team.invite") }}</UButton>
       </div>
-      <p class="mt-2 text-xs text-slate-400">User must sign up first before they can be invited</p>
+      <p class="mt-2 text-xs text-slate-400">{{ t("team.inviteHint") }}</p>
     </div>
 
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -102,16 +103,18 @@ const roleOptions = [
             <p class="font-medium text-slate-900">
               {{ member.profiles?.full_name || member.profiles?.email }}
             </p>
-            <p class="text-xs capitalize text-slate-500">{{ member.role }}</p>
+            <p class="text-xs text-slate-500">
+              {{ t(`team.roles.${member.role}`) }}
+            </p>
           </div>
         </div>
         <div class="flex gap-4 text-sm">
           <div>
-            <p class="text-slate-500">Active tasks</p>
+            <p class="text-slate-500">{{ t("team.activeTasks") }}</p>
             <p class="text-lg font-semibold">{{ memberTasks[member.user_id] ?? 0 }}</p>
           </div>
           <div>
-            <p class="text-slate-500">Overdue</p>
+            <p class="text-slate-500">{{ t("team.overdue") }}</p>
             <p class="text-lg font-semibold text-red-500">{{ memberOverdue[member.user_id] ?? 0 }}</p>
           </div>
         </div>

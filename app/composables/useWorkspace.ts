@@ -40,7 +40,9 @@ export function useWorkspace() {
   }
 
   async function inviteMember(email: string, role: string = "member") {
-    if (!workspace.value) return { error: "No workspace" };
+    const { t } = useI18n();
+
+    if (!workspace.value) return { error: t("team.noWorkspace") };
 
     const { data: profile } = await supabase
       .from("profiles")
@@ -49,7 +51,7 @@ export function useWorkspace() {
       .single();
 
     if (!profile) {
-      return { error: "User not found. They must sign up first." };
+      return { error: t("team.userNotFound") };
     }
 
     const { error } = await supabase.from("workspace_members").insert({

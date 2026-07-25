@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { Task, TaskStatus, TaskPriority } from "~/types";
-import { TASK_STATUSES, TASK_PRIORITIES } from "~/types";
 
 const props = defineProps<{
   task?: Task | null;
@@ -13,6 +12,9 @@ const emit = defineEmits<{
   saved: [];
 }>();
 
+const { t } = useI18n();
+const { toLocaleString } = useDateLocale();
+const { statuses, priorities } = useTaskLabels();
 const { createTask, updateTask, addSubtask, toggleSubtask, setTaskLabels, fetchActivity } =
   useTasks();
 const { members } = useWorkspace();
@@ -35,6 +37,13 @@ const saving = ref(false);
 const activeTab = ref("details");
 
 const isEdit = computed(() => !!props.task);
+
+const modalTabs = computed(() => [
+  { key: "details", label: t("tasks.tabs.details") },
+  { key: "comments", label: t("tasks.tabs.comments") },
+  { key: "attachments", label: t("tasks.tabs.attachments") },
+  { key: "activity", label: t("tasks.tabs.activity") },
+]);
 
 watch(
   () => props.open,
@@ -111,85 +120,102 @@ const memberOptions = computed(() =>
 const labelOptions = computed(() =>
   labels.value.map((l) => ({ label: l.name, value: l.id })),
 );
+
+const statusItems = computed(() =>
+  statuses.value.map((s) => ({ label: s.label, value: s.value })),
+);
+
+const priorityItems = computed(() =>
+  priorities.value.map((p) => ({ label: p.label, value: p.value })),
+);
+
+const assigneeItems = computed(() => [
+  { label: t("tasks.unassigned"), value: null },
+  ...memberOptions.value,
+]);
 </script>
 
 <template>
   <UModal
     :open="open"
-    :title="isEdit ? 'Edit Task' : 'New Task'"
+    :title="isEdit ? t('tasks.editTask') : t('tasks.newTask')"
     @update:open="emit('update:open', $event)"
   >
     <template #body>
       <div v-if="isEdit" class="mb-4 flex gap-2 border-b border-slate-200 pb-2">
         <UButton
-          v-for="tab in ['details', 'comments', 'attachments', 'activity']"
-          :key="tab"
-          :variant="activeTab === tab ? 'solid' : 'ghost'"
+          v-for="tab in modalTabs"
+          :key="tab.key"
+          :variant="activeTab === tab.key ? 'solid' : 'ghost'"
           color="neutral"
           size="xs"
-          class="capitalize"
-          @click="activeTab = tab"
+          @click="activeTab = tab.key"
         >
-          {{ tab }}
+          {{ tab.label }}
         </UButton>
       </div>
 
       <div v-if="activeTab === 'details' || !isEdit" class="space-y-4">
-        <UFormField label="Title" required>
-          <UInput v-model="form.title" placeholder="Task title" class="w-full" />
+        <UFormField :label="t('tasks.title')" required>
+          <UInput v-model="form.title" :placeholder="t('tasks.titlePlaceholder')" class="w-full" />
         </UFormField>
 
-        <UFormField label="Description">
-          <UTextarea v-model="form.description" placeholder="Description..." :rows="3" class="w-full" />
+        <UFormField :label="t('tasks.description')">
+          <UTextarea
+            v-model="form.description"
+            :placeholder="t('tasks.descriptionPlaceholder')"
+            :rows="3"
+            class="w-full"
+          />
         </UFormField>
 
         <div class="grid grid-cols-2 gap-4">
-          <UFormField label="Assignee">
+          <UFormField :label="t('tasks.assignee')">
             <USelect
               v-model="form.assignee_id"
-              :items="[{ label: 'Unassigned', value: null }, ...memberOptions]"
-              placeholder="Select assignee"
+              :items="assigneeItems"
+              :placeholder="t('tasks.selectAssignee')"
               class="w-full"
             />
           </UFormField>
 
-          <UFormField label="Status">
+          <UFormField :label="t('tasks.status')">
             <USelect
               v-model="form.status"
-              :items="TASK_STATUSES.map((s) => ({ label: s.label, value: s.value }))"
+              :items="statusItems"
               class="w-full"
             />
           </UFormField>
 
-          <UFormField label="Priority">
+          <UFormField :label="t('tasks.priority')">
             <USelect
               v-model="form.priority"
-              :items="TASK_PRIORITIES.map((p) => ({ label: p.label, value: p.value }))"
+              :items="priorityItems"
               class="w-full"
             />
           </UFormField>
 
-          <UFormField label="Due Date">
+          <UFormField :label="t('tasks.dueDate')">
             <UInput v-model="form.due_date" type="date" class="w-full" />
           </UFormField>
 
-          <UFormField label="Start Date">
+          <UFormField :label="t('tasks.startDate')">
             <UInput v-model="form.start_date" type="date" class="w-full" />
           </UFormField>
 
-          <UFormField label="Labels">
+          <UFormField :label="t('tasks.labels')">
             <USelect
               v-model="form.label_ids"
               :items="labelOptions"
               multiple
-              placeholder="Select labels"
+              :placeholder="t('tasks.selectLabels')"
               class="w-full"
             />
           </UFormField>
         </div>
 
         <div v-if="isEdit && task?.subtasks" class="space-y-2">
-          <p class="text-sm font-medium text-slate-700">Subtasks</p>
+          <p class="text-sm font-medium text-slate-700">{{ t("tasks.subtasks") }}</p>
           <div v-for="sub in task.subtasks" :key="sub.id" class="flex items-center gap-2">
             <UCheckbox
               :model-value="sub.completed"
@@ -200,8 +226,13 @@ const labelOptions = computed(() =>
             </span>
           </div>
           <div class="flex gap-2">
-            <UInput v-model="newSubtask" placeholder="Add subtask..." class="flex-1" @keyup.enter="handleAddSubtask" />
-            <UButton size="sm" @click="handleAddSubtask">Add</UButton>
+            <UInput
+              v-model="newSubtask"
+              :placeholder="t('tasks.addSubtask')"
+              class="flex-1"
+              @keyup.enter="handleAddSubtask"
+            />
+            <UButton size="sm" @click="handleAddSubtask">{{ t("common.add") }}</UButton>
           </div>
         </div>
       </div>
@@ -222,24 +253,28 @@ const labelOptions = computed(() =>
           :key="log.id"
           class="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm"
         >
-          <span class="font-medium">{{ log.profiles?.full_name || log.profiles?.email || "System" }}</span>
+          <span class="font-medium">
+            {{ log.profiles?.full_name || log.profiles?.email || t("common.system") }}
+          </span>
           <span class="text-slate-600">
             {{ log.action }}
             <template v-if="log.field_name">
               {{ log.field_name }}: {{ log.old_value }} → {{ log.new_value }}
             </template>
           </span>
-          <p class="text-xs text-slate-400">{{ new Date(log.created_at).toLocaleString() }}</p>
+          <p class="text-xs text-slate-400">{{ toLocaleString(log.created_at) }}</p>
         </div>
-        <p v-if="activity.length === 0" class="text-sm text-slate-400">No activity yet</p>
+        <p v-if="activity.length === 0" class="text-sm text-slate-400">{{ t("tasks.noActivity") }}</p>
       </div>
     </template>
 
     <template v-if="activeTab === 'details' || !isEdit" #footer>
       <div class="flex justify-end gap-2">
-        <UButton variant="ghost" color="neutral" @click="emit('update:open', false)">Cancel</UButton>
+        <UButton variant="ghost" color="neutral" @click="emit('update:open', false)">
+          {{ t("common.cancel") }}
+        </UButton>
         <UButton :loading="saving" :disabled="!form.title" @click="save">
-          {{ isEdit ? "Save" : "Create" }}
+          {{ isEdit ? t("common.save") : t("common.create") }}
         </UButton>
       </div>
     </template>

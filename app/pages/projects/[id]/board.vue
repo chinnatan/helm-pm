@@ -3,6 +3,7 @@ import type { Task } from "~/types";
 
 definePageMeta({ middleware: "auth" });
 
+const { t } = useI18n();
 const route = useRoute();
 const projectId = computed(() => route.params.id as string);
 
@@ -49,7 +50,7 @@ async function onSaved() {
         </div>
         <h1 class="text-xl font-bold text-slate-900">{{ project.name }}</h1>
       </div>
-      <UButton icon="i-lucide-plus" size="sm" @click="openNewTask">Add Task</UButton>
+      <UButton icon="i-lucide-plus" size="sm" @click="openNewTask">{{ t("projects.addTask") }}</UButton>
     </div>
 
     <LayoutProjectNav class="mb-6" />

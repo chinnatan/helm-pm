@@ -14,6 +14,8 @@ import {
 
 definePageMeta({ middleware: "auth" });
 
+const { t } = useI18n();
+const { dateFnsLocale } = useDateLocale();
 const route = useRoute();
 const projectId = computed(() => route.params.id as string);
 
@@ -25,6 +27,8 @@ const project = computed(() => getProject(projectId.value));
 const currentMonth = ref(new Date());
 const showModal = ref(false);
 const selectedTask = ref<Task | null>(null);
+
+const weekdayKeys = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
 onMounted(async () => {
   await fetchWorkspace();
@@ -38,10 +42,14 @@ const calendarDays = computed(() => {
   return eachDayOfInterval({ start, end });
 });
 
+const monthLabel = computed(() =>
+  format(currentMonth.value, "MMMM yyyy", { locale: dateFnsLocale.value }),
+);
+
 function tasksForDay(day: Date) {
-  return tasks.value.filter((t) => {
-    if (!t.due_date) return false;
-    return isSameDay(parseISO(t.due_date), day);
+  return tasks.value.filter((task) => {
+    if (!task.due_date) return false;
+    return isSameDay(parseISO(task.due_date), day);
   });
 }
 
@@ -54,24 +62,26 @@ function openTask(task: Task) {
 <template>
   <div class="p-6">
     <div v-if="project" class="mb-4">
-      <h1 class="text-xl font-bold text-slate-900">{{ project.name }} — Calendar</h1>
+      <h1 class="text-xl font-bold text-slate-900">
+        {{ project.name }} — {{ t("projects.calendarSuffix") }}
+      </h1>
     </div>
 
     <LayoutProjectNav class="mb-6" />
 
     <div class="mb-4 flex items-center justify-between">
       <UButton icon="i-lucide-chevron-left" variant="ghost" color="neutral" @click="currentMonth = subMonths(currentMonth, 1)" />
-      <h2 class="text-lg font-semibold">{{ format(currentMonth, "MMMM yyyy") }}</h2>
+      <h2 class="text-lg font-semibold">{{ monthLabel }}</h2>
       <UButton icon="i-lucide-chevron-right" variant="ghost" color="neutral" @click="currentMonth = addMonths(currentMonth, 1)" />
     </div>
 
     <div class="grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200">
       <div
-        v-for="day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
+        v-for="day in weekdayKeys"
         :key="day"
         class="bg-slate-50 px-2 py-2 text-center text-xs font-medium text-slate-500"
       >
-        {{ day }}
+        {{ t(`calendar.weekdays.${day}`) }}
       </div>
 
       <div

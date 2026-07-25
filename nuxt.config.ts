@@ -10,7 +10,23 @@ export default defineNuxtConfig({
   compatibilityDate: "2025-05-01",
   devtools: { enabled: true },
 
-  modules: ["@nuxt/ui", "@nuxtjs/supabase"],
+  modules: ["@nuxt/ui", "@nuxtjs/supabase", "@nuxtjs/i18n"],
+
+  i18n: {
+    locales: [
+      { code: "th", language: "th-TH", name: "ไทย", file: "th.json" },
+      { code: "en", language: "en-US", name: "English", file: "en.json" },
+    ],
+    defaultLocale: "th",
+    strategy: "no_prefix",
+    langDir: "locales",
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: "helm_locale",
+      fallbackLocale: "th",
+      redirectOn: "root",
+    },
+  },
 
   css: ["~/assets/css/main.css"],
 

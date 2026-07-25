@@ -1,0 +1,159 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "create": "Create",
+    "add": "Add",
+    "delete": "Delete",
+    "send": "Send",
+    "loading": "Loading...",
+    "signOut": "Sign out",
+    "system": "System",
+    "emDash": "—"
+  },
+  "nav": {
+    "planner": "My Planner",
+    "projects": "Projects",
+    "team": "Team"
+  },
+  "projectNav": {
+    "overview": "Overview",
+    "board": "Board",
+    "list": "List",
+    "gantt": "Gantt",
+    "calendar": "Calendar"
+  },
+  "auth": {
+    "tagline": "Project Management — steer the ship",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "or": "or",
+    "signInWithGoogle": "Sign in with Google",
+    "haveAccount": "Already have an account? Sign in",
+    "noAccount": "Don't have an account? Sign up",
+    "checkEmail": "Check your email to confirm your account",
+    "confirming": "Signing you in..."
+  },
+  "planner": {
+    "title": "My Planner",
+    "subtitle": "Your personal task view",
+    "today": "Today",
+    "week": "This Week",
+    "inbox": "Inbox",
+    "focus": "Focus",
+    "empty": "No tasks for this view"
+  },
+  "projects": {
+    "title": "Projects",
+    "subtitle": "Manage your team projects",
+    "newProject": "New Project",
+    "empty": "No projects yet",
+    "createFirst": "Create your first project",
+    "name": "Project Name",
+    "namePlaceholder": "Project name",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional description",
+    "listSuffix": "List",
+    "ganttSuffix": "Gantt",
+    "calendarSuffix": "Calendar",
+    "addTask": "Add Task",
+    "addMilestone": "Add Milestone",
+    "milestoneTitle": "Title",
+    "milestoneDate": "Date",
+    "statsTotal": "Total",
+    "searchPlaceholder": "Search tasks...",
+    "allStatus": "All Status",
+    "allPriority": "All Priority",
+    "allAssignees": "All Assignees",
+    "colTitle": "Title",
+    "colStatus": "Status",
+    "colPriority": "Priority",
+    "colAssignee": "Assignee",
+    "colDueDate": "Due Date",
+    "noTasksFound": "No tasks found",
+    "ganttEmpty": "Add start and due dates to tasks to see them on the timeline"
+  },
+  "team": {
+    "title": "Team",
+    "subtitle": "Workspace members and workload",
+    "inviteMember": "Invite Member",
+    "invite": "Invite",
+    "inviteHint": "User must sign up first before they can be invited",
+    "activeTasks": "Active tasks",
+    "overdue": "Overdue",
+    "noWorkspace": "No workspace",
+    "userNotFound": "User not found. They must sign up first.",
+    "roles": {
+      "member": "Member",
+      "manager": "Manager",
+      "viewer": "Viewer",
+      "admin": "Admin"
+    }
+  },
+  "tasks": {
+    "editTask": "Edit Task",
+    "newTask": "New Task",
+    "title": "Title",
+    "titlePlaceholder": "Task title",
+    "description": "Description",
+    "descriptionPlaceholder": "Description...",
+    "assignee": "Assignee",
+    "unassigned": "Unassigned",
+    "selectAssignee": "Select assignee",
+    "status": "Status",
+    "priority": "Priority",
+    "dueDate": "Due Date",
+    "startDate": "Start Date",
+    "labels": "Labels",
+    "selectLabels": "Select labels",
+    "subtasks": "Subtasks",
+    "addSubtask": "Add subtask...",
+    "tabs": {
+      "details": "Details",
+      "comments": "Comments",
+      "attachments": "Attachments",
+      "activity": "Activity"
+    },
+    "noActivity": "No activity yet",
+    "noComments": "No comments yet",
+    "commentPlaceholder": "Write a comment... Use {'@'}email to mention",
+    "noAttachments": "No attachments",
+    "uploadFile": "Upload file",
+    "uploading": "Uploading..."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "ariaLabel": "Notifications",
+    "markAllRead": "Mark all read",
+    "empty": "No notifications"
+  },
+  "status": {
+    "todo": "To Do",
+    "in_progress": "In Progress",
+    "done": "Done",
+    "blocked": "Blocked"
+  },
+  "priority": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "urgent": "Urgent"
+  },
+  "calendar": {
+    "weekdays": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    }
+  },
+  "language": {
+    "th": "ไทย",
+    "en": "EN"
+  }
+}

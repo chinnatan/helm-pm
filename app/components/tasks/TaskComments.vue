@@ -1,5 +1,7 @@
 <script setup lang="ts">
 const props = defineProps<{ taskId: string }>();
+const { t } = useI18n();
+const { toLocaleString } = useDateLocale();
 const taskIdRef = toRef(props, "taskId");
 const { comments, addComment } = useComments(taskIdRef);
 const newComment = ref("");
@@ -22,22 +24,24 @@ async function submit() {
           {{ comment.profiles?.full_name || comment.profiles?.email }}
         </span>
         <span class="text-xs text-slate-400">
-          {{ new Date(comment.created_at).toLocaleString() }}
+          {{ toLocaleString(comment.created_at) }}
         </span>
       </div>
       <p class="text-sm text-slate-700 whitespace-pre-wrap">{{ comment.content }}</p>
     </div>
 
-    <p v-if="comments.length === 0" class="text-sm text-slate-400">No comments yet</p>
+    <p v-if="comments.length === 0" class="text-sm text-slate-400">{{ t("tasks.noComments") }}</p>
 
     <div class="flex gap-2">
       <UTextarea
         v-model="newComment"
-        placeholder="Write a comment... Use @email to mention"
+        :placeholder="t('tasks.commentPlaceholder')"
         :rows="2"
         class="flex-1"
       />
-      <UButton :loading="sending" :disabled="!newComment.trim()" @click="submit">Send</UButton>
+      <UButton :loading="sending" :disabled="!newComment.trim()" @click="submit">
+        {{ t("common.send") }}
+      </UButton>
     </div>
   </div>
 </template>

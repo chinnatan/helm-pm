@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { Task, TaskStatus } from "~/types";
-import { TASK_STATUSES } from "~/types";
 import { VueDraggable } from "vue-draggable-plus";
 
 const props = defineProps<{ projectId: string }>();
 
+const { statuses } = useTaskLabels();
 const { tasksByStatus, updateTaskStatus, subscribeToProject, fetchTasks } = useTasks(
   toRef(props, "projectId"),
 );
@@ -13,7 +13,7 @@ const emit = defineEmits<{
   "task-click": [task: Task];
 }>();
 
-const columns = TASK_STATUSES;
+const columns = statuses;
 
 const localColumns = ref<Record<TaskStatus, Task[]>>({
   todo: [],

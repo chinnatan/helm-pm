@@ -1,6 +1,7 @@
 <script setup lang="ts">
 definePageMeta({ middleware: "auth" });
 
+const { t } = useI18n();
 const { activeTab, tabs, tasks, loading, fetchPlannerTasks, togglePin, markDone } = usePlanner();
 const { fetchWorkspace } = useWorkspace();
 
@@ -26,8 +27,8 @@ function handlePin(task: import("~/types").Task, pinned: boolean) {
   <div class="p-6">
     <div class="mb-6 flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold text-slate-900">My Planner</h1>
-        <p class="text-sm text-slate-500">Your personal task view</p>
+        <h1 class="text-2xl font-bold text-slate-900">{{ t("planner.title") }}</h1>
+        <p class="text-sm text-slate-500">{{ t("planner.subtitle") }}</p>
       </div>
       <LayoutNotificationBell />
     </div>

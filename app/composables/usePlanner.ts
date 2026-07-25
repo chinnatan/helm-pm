@@ -31,17 +31,18 @@ const TASK_SELECT = `
 export function usePlanner() {
   const supabase = useSupabaseClient();
   const user = useSupabaseUser();
+  const { t } = useI18n();
 
   const activeTab = ref<PlannerTab>("today");
   const tasks = useState<Task[]>("plannerTasks", () => []);
   const loading = ref(false);
 
-  const tabs: { value: PlannerTab; label: string }[] = [
-    { value: "today", label: "Today" },
-    { value: "week", label: "This Week" },
-    { value: "inbox", label: "Inbox" },
-    { value: "focus", label: "Focus" },
-  ];
+  const tabs = computed(() => [
+    { value: "today" as PlannerTab, label: t("planner.today") },
+    { value: "week" as PlannerTab, label: t("planner.week") },
+    { value: "inbox" as PlannerTab, label: t("planner.inbox") },
+    { value: "focus" as PlannerTab, label: t("planner.focus") },
+  ]);
 
   async function fetchPlannerTasks() {
     if (!user.value) return;

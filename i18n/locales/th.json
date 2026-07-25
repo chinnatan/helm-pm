@@ -1,0 +1,159 @@
+{
+  "common": {
+    "save": "บันทึก",
+    "cancel": "ยกเลิก",
+    "create": "สร้าง",
+    "add": "เพิ่ม",
+    "delete": "ลบ",
+    "send": "ส่ง",
+    "loading": "กำลังโหลด...",
+    "signOut": "ออกจากระบบ",
+    "system": "ระบบ",
+    "emDash": "—"
+  },
+  "nav": {
+    "planner": "แพลนเนอร์ของฉัน",
+    "projects": "โปรเจกต์",
+    "team": "ทีม"
+  },
+  "projectNav": {
+    "overview": "ภาพรวม",
+    "board": "บอร์ด",
+    "list": "รายการ",
+    "gantt": "แกนต์",
+    "calendar": "ปฏิทิน"
+  },
+  "auth": {
+    "tagline": "จัดการโปรเจกต์ — พาเรือไปถึงฝั่ง",
+    "email": "อีเมล",
+    "password": "รหัสผ่าน",
+    "signIn": "เข้าสู่ระบบ",
+    "signUp": "สมัครสมาชิก",
+    "or": "หรือ",
+    "signInWithGoogle": "เข้าสู่ระบบด้วย Google",
+    "haveAccount": "มีบัญชีแล้ว? เข้าสู่ระบบ",
+    "noAccount": "ยังไม่มีบัญชี? สมัครสมาชิก",
+    "checkEmail": "ตรวจสอบอีเมลเพื่อยืนยันบัญชี",
+    "confirming": "กำลังเข้าสู่ระบบ..."
+  },
+  "planner": {
+    "title": "แพลนเนอร์ของฉัน",
+    "subtitle": "มุมมองงานส่วนตัวของคุณ",
+    "today": "วันนี้",
+    "week": "สัปดาห์นี้",
+    "inbox": "กล่องขาเข้า",
+    "focus": "โฟกัส",
+    "empty": "ไม่มีงานในมุมมองนี้"
+  },
+  "projects": {
+    "title": "โปรเจกต์",
+    "subtitle": "จัดการโปรเจกต์ของทีม",
+    "newProject": "โปรเจกต์ใหม่",
+    "empty": "ยังไม่มีโปรเจกต์",
+    "createFirst": "สร้างโปรเจกต์แรกของคุณ",
+    "name": "ชื่อโปรเจกต์",
+    "namePlaceholder": "ชื่อโปรเจกต์",
+    "description": "คำอธิบาย",
+    "descriptionPlaceholder": "คำอธิบาย (ไม่บังคับ)",
+    "listSuffix": "รายการ",
+    "ganttSuffix": "แกนต์",
+    "calendarSuffix": "ปฏิทิน",
+    "addTask": "เพิ่มงาน",
+    "addMilestone": "เพิ่มไมล์สโตน",
+    "milestoneTitle": "ชื่อ",
+    "milestoneDate": "วันที่",
+    "statsTotal": "ทั้งหมด",
+    "searchPlaceholder": "ค้นหางาน...",
+    "allStatus": "สถานะทั้งหมด",
+    "allPriority": "ความสำคัญทั้งหมด",
+    "allAssignees": "ผู้รับผิดชอบทั้งหมด",
+    "colTitle": "ชื่องาน",
+    "colStatus": "สถานะ",
+    "colPriority": "ความสำคัญ",
+    "colAssignee": "ผู้รับผิดชอบ",
+    "colDueDate": "วันครบกำหนด",
+    "noTasksFound": "ไม่พบงาน",
+    "ganttEmpty": "เพิ่มวันเริ่มและวันครบกำหนดให้งานเพื่อแสดงบนไทม์ไลน์"
+  },
+  "team": {
+    "title": "ทีม",
+    "subtitle": "สมาชิกพื้นที่ทำงานและภาระงาน",
+    "inviteMember": "เชิญสมาชิก",
+    "invite": "เชิญ",
+    "inviteHint": "ผู้ใช้ต้องสมัครก่อนจึงจะเชิญได้",
+    "activeTasks": "งานที่กำลังทำ",
+    "overdue": "เกินกำหนด",
+    "noWorkspace": "ไม่มีพื้นที่ทำงาน",
+    "userNotFound": "ไม่พบผู้ใช้ ต้องสมัครก่อน",
+    "roles": {
+      "member": "สมาชิก",
+      "manager": "ผู้จัดการ",
+      "viewer": "ผู้ดู",
+      "admin": "แอดมิน"
+    }
+  },
+  "tasks": {
+    "editTask": "แก้ไขงาน",
+    "newTask": "งานใหม่",
+    "title": "ชื่องาน",
+    "titlePlaceholder": "ชื่องาน",
+    "description": "คำอธิบาย",
+    "descriptionPlaceholder": "คำอธิบาย...",
+    "assignee": "ผู้รับผิดชอบ",
+    "unassigned": "ยังไม่มอบหมาย",
+    "selectAssignee": "เลือกผู้รับผิดชอบ",
+    "status": "สถานะ",
+    "priority": "ความสำคัญ",
+    "dueDate": "วันครบกำหนด",
+    "startDate": "วันเริ่ม",
+    "labels": "ป้ายกำกับ",
+    "selectLabels": "เลือกป้ายกำกับ",
+    "subtasks": "งานย่อย",
+    "addSubtask": "เพิ่มงานย่อย...",
+    "tabs": {
+      "details": "รายละเอียด",
+      "comments": "ความคิดเห็น",
+      "attachments": "ไฟล์แนบ",
+      "activity": "กิจกรรม"
+    },
+    "noActivity": "ยังไม่มีกิจกรรม",
+    "noComments": "ยังไม่มีความคิดเห็น",
+    "commentPlaceholder": "เขียนความคิดเห็น... ใช้ {'@'}email เพื่อแท็ก",
+    "noAttachments": "ไม่มีไฟล์แนบ",
+    "uploadFile": "อัปโหลดไฟล์",
+    "uploading": "กำลังอัปโหลด..."
+  },
+  "notifications": {
+    "title": "การแจ้งเตือน",
+    "ariaLabel": "การแจ้งเตือน",
+    "markAllRead": "อ่านทั้งหมด",
+    "empty": "ไม่มีการแจ้งเตือน"
+  },
+  "status": {
+    "todo": "ยังไม่เริ่ม",
+    "in_progress": "กำลังทำ",
+    "done": "เสร็จแล้ว",
+    "blocked": "ติดขัด"
+  },
+  "priority": {
+    "low": "ต่ำ",
+    "medium": "ปานกลาง",
+    "high": "สูง",
+    "urgent": "เร่งด่วน"
+  },
+  "calendar": {
+    "weekdays": {
+      "mon": "จ.",
+      "tue": "อ.",
+      "wed": "พ.",
+      "thu": "พฤ.",
+      "fri": "ศ.",
+      "sat": "ส.",
+      "sun": "อา."
+    }
+  },
+  "language": {
+    "th": "ไทย",
+    "en": "EN"
+  }
+}

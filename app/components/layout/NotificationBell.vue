@@ -1,4 +1,6 @@
 <script setup lang="ts">
+const { t } = useI18n();
+const { toLocaleString } = useDateLocale();
 const { notifications, unreadCount, fetchNotifications, markRead, markAllRead, subscribe } =
   useNotifications();
 
@@ -17,7 +19,7 @@ onMounted(async () => {
       icon="i-lucide-bell"
       variant="ghost"
       color="neutral"
-      aria-label="Notifications"
+      :aria-label="t('notifications.ariaLabel')"
       class="relative"
     >
       <UBadge
@@ -32,14 +34,14 @@ onMounted(async () => {
     <template #content>
       <div class="w-80 p-2">
         <div class="mb-2 flex items-center justify-between px-2">
-          <h3 class="text-sm font-semibold">Notifications</h3>
+          <h3 class="text-sm font-semibold">{{ t("notifications.title") }}</h3>
           <UButton v-if="unreadCount > 0" variant="link" size="xs" @click="markAllRead">
-            Mark all read
+            {{ t("notifications.markAllRead") }}
           </UButton>
         </div>
 
         <div v-if="notifications.length === 0" class="px-2 py-4 text-center text-sm text-slate-400">
-          No notifications
+          {{ t("notifications.empty") }}
         </div>
 
         <div
@@ -50,7 +52,7 @@ onMounted(async () => {
           @click="markRead(n.id)"
         >
           <p class="text-slate-700">{{ n.message }}</p>
-          <p class="text-xs text-slate-400">{{ new Date(n.created_at).toLocaleString() }}</p>
+          <p class="text-xs text-slate-400">{{ toLocaleString(n.created_at) }}</p>
         </div>
       </div>
     </template>
