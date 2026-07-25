@@ -180,12 +180,12 @@ export const TASK_PRIORITY_META: { value: TaskPriority; color: string }[] = [
 ];
 
 export const PROJECT_COLORS = [
-  "#1e3a5f",
-  "#2563eb",
-  "#7c3aed",
-  "#db2777",
-  "#dc2626",
-  "#ea580c",
-  "#16a34a",
+  "#0B6E7A",
+  "#085560",
+  "#0e7490",
   "#0891b2",
+  "#2563eb",
+  "#1e3a5f",
+  "#16a34a",
+  "#ea580c",
 ];

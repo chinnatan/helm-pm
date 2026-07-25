@@ -26,8 +26,8 @@ function isActive(path: string) {
         class="flex shrink-0 items-center gap-1.5 rounded-t-lg px-2.5 py-2 text-sm font-medium transition-colors sm:px-3"
         :class="
           isActive(tab.to)
-            ? 'border-b-2 border-slate-800 text-slate-900'
-            : 'text-slate-500 hover:text-slate-700'
+            ? 'border-b-2 border-ocean-700 text-ocean-900'
+            : 'text-slate-500 hover:text-ocean-800'
         "
       >
         <UIcon :name="tab.icon" class="h-4 w-4 shrink-0" />

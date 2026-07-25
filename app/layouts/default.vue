@@ -56,7 +56,7 @@ watch(
 </script>
 
 <template>
-  <div class="flex min-h-screen bg-slate-50">
+  <div class="flex min-h-screen bg-ocean-50">
     <!-- Desktop sidebar -->
     <aside
       class="hidden w-60 shrink-0 flex-col border-r border-slate-200 bg-white md:flex"
@@ -64,11 +64,11 @@ watch(
       <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
         <div class="flex items-center gap-2">
           <div
-            class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-800 text-sm font-bold text-white"
+            class="flex h-8 w-8 items-center justify-center rounded-lg bg-ocean-800 text-sm font-bold text-white"
           >
             H
           </div>
-          <span class="text-lg font-semibold text-slate-800">Helm</span>
+          <span class="text-lg font-semibold text-ocean-900">Helm</span>
         </div>
         <LayoutNotificationBell v-if="isDesktop" />
       </div>
@@ -81,8 +81,8 @@ watch(
           class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
           :class="
             isActive(item.to)
-              ? 'bg-slate-100 text-slate-900'
-              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+              ? 'bg-ocean-100 text-ocean-900'
+              : 'text-slate-600 hover:bg-ocean-50 hover:text-ocean-900'
           "
         >
           <UIcon :name="item.icon" class="h-4 w-4" />
@@ -143,11 +143,11 @@ watch(
           />
           <div class="flex items-center gap-2">
             <div
-              class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800 text-xs font-bold text-white"
+              class="flex h-7 w-7 items-center justify-center rounded-lg bg-ocean-800 text-xs font-bold text-white"
             >
               H
             </div>
-            <span class="text-base font-semibold text-slate-800">Helm</span>
+            <span class="text-base font-semibold text-ocean-900">Helm</span>
           </div>
         </div>
         <LayoutNotificationBell v-if="!isDesktop" />
@@ -174,8 +174,8 @@ watch(
             class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors"
             :class="
               isActive(item.to)
-                ? 'bg-slate-100 text-slate-900'
-                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                ? 'bg-ocean-100 text-ocean-900'
+                : 'text-slate-600 hover:bg-ocean-50 hover:text-ocean-900'
             "
             @click="navigateAndClose(item.to)"
           >

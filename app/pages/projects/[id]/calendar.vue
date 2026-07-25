@@ -120,7 +120,7 @@ const agendaDays = computed(() => {
           :key="task.id"
           type="button"
           class="mb-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-white last:mb-0"
-          :style="{ backgroundColor: project?.color || '#1e3a5f' }"
+          :style="{ backgroundColor: project?.color || '#0B6E7A' }"
           @click="openTask(task)"
         >
           {{ task.title }}
@@ -150,7 +150,7 @@ const agendaDays = computed(() => {
           v-for="task in tasksForDay(day).slice(0, 3)"
           :key="task.id"
           class="mb-1 cursor-pointer truncate rounded px-1 py-0.5 text-xs text-white"
-          :style="{ backgroundColor: project?.color || '#1e3a5f' }"
+          :style="{ backgroundColor: project?.color || '#0B6E7A' }"
           @click.stop="openTask(task)"
         >
           {{ task.title }}
