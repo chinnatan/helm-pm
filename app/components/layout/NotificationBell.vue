@@ -8,8 +8,7 @@ const open = ref(false);
 
 onMounted(async () => {
   await fetchNotifications();
-  const unsub = subscribe();
-  onUnmounted(unsub);
+  subscribe();
 });
 </script>
 

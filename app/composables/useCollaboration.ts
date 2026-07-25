@@ -183,10 +183,14 @@ export function useDependencies(projectId: Ref<string | undefined>) {
   return { dependencies, fetchDependencies, addDependency, removeDependency };
 }
 
+/** Shared realtime channel — NotificationBell remounts between desktop/mobile layout. */
+let notificationsChannel: ReturnType<ReturnType<typeof useSupabaseClient>["channel"]> | null =
+  null;
+
 export function useNotifications() {
   const supabase = useSupabaseClient();
   const user = useSupabaseUser();
-  const notifications = ref<Notification[]>([]);
+  const notifications = useState<Notification[]>("notifications", () => []);
   const unreadCount = computed(() => notifications.value.filter((n) => !n.read).length);
 
   async function fetchNotifications() {
@@ -219,13 +223,13 @@ export function useNotifications() {
   }
 
   function subscribe() {
-    if (!user.value) return () => {};
+    if (!user.value || notificationsChannel) return;
 
     const uid = user.value.id;
 
     // ไม่ใส่ filter บน user_id — Realtime จำกัด filter ตาม column privilege / replica identity
     // อาศัย RLS + กรองฝั่ง client แทน
-    const channel = supabase
+    notificationsChannel = supabase
       .channel(`notifications:${uid}`)
       .on(
         "postgres_changes",
@@ -240,8 +244,6 @@ export function useNotifications() {
         },
       )
       .subscribe();
-
-    return () => supabase.removeChannel(channel);
   }
 
   return {
