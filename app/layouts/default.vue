@@ -1,5 +1,4 @@
 <script setup lang="ts">
-const user = useSupabaseUser();
 const supabase = useSupabaseClient();
 const route = useRoute();
 const { t, locale, setLocale } = useI18n();
@@ -123,21 +122,7 @@ watch(
             {{ t("language.en") }}
           </UButton>
         </div>
-        <div class="flex items-center justify-between rounded-lg px-2 py-2">
-          <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-medium text-slate-800">
-              {{ user?.email }}
-            </p>
-          </div>
-          <UButton
-            icon="i-lucide-log-out"
-            variant="ghost"
-            color="neutral"
-            size="xs"
-            :aria-label="t('common.signOut')"
-            @click="signOut"
-          />
-        </div>
+        <LayoutUserMenu @sign-out="signOut" />
       </div>
     </aside>
 
@@ -221,21 +206,7 @@ watch(
               {{ t("language.en") }}
             </UButton>
           </div>
-          <div class="flex items-center justify-between rounded-lg py-2">
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-medium text-slate-800">
-                {{ user?.email }}
-              </p>
-            </div>
-            <UButton
-              icon="i-lucide-log-out"
-              variant="ghost"
-              color="neutral"
-              size="xs"
-              :aria-label="t('common.signOut')"
-              @click="signOut"
-            />
-          </div>
+          <LayoutUserMenu @sign-out="signOut" />
         </div>
       </template>
     </USlideover>

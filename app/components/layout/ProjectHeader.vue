@@ -22,7 +22,7 @@ defineProps<{
           <span v-if="subtitle" class="font-semibold text-slate-500"> — {{ subtitle }}</span>
         </h1>
         <p v-if="project.description && !$slots.actions" class="truncate text-sm text-slate-500">
-          {{ project.description }}
+          {{ stripMarkdownForPreview(project.description) }}
         </p>
       </div>
     </div>

@@ -131,12 +131,7 @@ supabase db push
 
 - เปิด **Email** provider
 - ถ้าทดสอบ local: ปิด **Confirm email** ชั่วคราวได้ที่ **Authentication → Providers → Email**
-
-### Google OAuth (optional)
-
-1. สร้าง OAuth Client ที่ [Google Cloud Console](https://console.cloud.google.com/)
-2. Authorized redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`
-3. ใส่ Client ID / Secret ใน Supabase → **Authentication → Providers → Google**
+- ตอนสมัครต้องกรอก **ชื่อ** และ **นามสกุล** (บังคับ) ส่วนรูปโปรไฟล์เป็นทางเลือก
 
 ### Redirect URLs
 
@@ -151,13 +146,21 @@ http://localhost:5100/**
 
 ---
 
-## 5. สร้าง Storage Bucket (สำหรับแนบไฟล์)
+## 5. สร้าง Storage Bucket
+
+### แนบไฟล์ในงาน (`attachments`)
 
 1. ไปที่ **Storage** ใน Supabase Dashboard
 2. กด **New bucket**
 3. ตั้งชื่อ `attachments`
 4. เปิด **Public bucket** (หรือตั้ง policy เองถ้าต้องการ private)
 5. ถ้าใช้ public bucket ไม่ต้องตั้ง policy เพิ่ม — ถ้า private ให้เพิ่ม policy ให้ authenticated users อัปโหลด/อ่านได้
+
+### รูปโปรไฟล์ (`avatars`)
+
+1. สร้าง bucket ชื่อ `avatars`
+2. เปิด **Public bucket**
+3. ถ้า private ให้เพิ่ม policy ให้ authenticated users อัปโหลด/อัปเดตไฟล์ของตัวเอง และอ่านได้
 
 ---
 
@@ -320,6 +323,7 @@ task supabase:push
 ### อัปโหลดไฟล์ไม่ได้
 
 - ตรวจว่าสร้าง bucket `attachments` แล้ว
+- ตรวจว่าสร้าง bucket `avatars` แล้ว (รูปโปรไฟล์ตอนสมัคร)
 - ตรวจ Storage policies ใน Supabase
 
 ### Build ล้มบน Cloudflare

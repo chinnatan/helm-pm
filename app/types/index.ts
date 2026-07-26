@@ -48,6 +48,8 @@ export const REQUIREMENT_STATUS_VALUES: RequirementStatus[] = [
 export interface Profile {
   id: string;
   email: string;
+  first_name: string | null;
+  last_name: string | null;
   full_name: string | null;
   avatar_url: string | null;
   created_at: string;

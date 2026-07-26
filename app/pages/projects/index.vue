@@ -78,7 +78,7 @@ async function handleCreate() {
               {{ project.customers.name }}
             </p>
             <p v-else-if="project.description" class="text-xs text-slate-500 line-clamp-1">
-              {{ project.description }}
+              {{ stripMarkdownForPreview(project.description) }}
             </p>
           </div>
         </div>
@@ -92,7 +92,12 @@ async function handleCreate() {
             <UInput v-model="newName" :placeholder="t('projects.namePlaceholder')" class="w-full" />
           </UFormField>
           <UFormField :label="t('projects.description')">
-            <UTextarea v-model="newDescription" :placeholder="t('projects.descriptionPlaceholder')" :rows="2" class="w-full" />
+            <RichTextEditor
+              v-model="newDescription"
+              :placeholder="t('projects.descriptionPlaceholder')"
+              :rows="2"
+              variant="full"
+            />
           </UFormField>
           <UFormField :label="t('projects.customer')">
             <USelect

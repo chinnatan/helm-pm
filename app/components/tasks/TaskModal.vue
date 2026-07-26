@@ -289,11 +289,11 @@ const customerItems = computed(() => [
         </UFormField>
 
         <UFormField :label="t('tasks.description')">
-          <UTextarea
+          <RichTextEditor
             v-model="form.description"
             :placeholder="t('tasks.descriptionPlaceholder')"
             :rows="3"
-            class="w-full"
+            variant="full"
           />
         </UFormField>
 
