@@ -3,6 +3,7 @@ import type { Profile } from "~/types";
 export function useProfile() {
   const supabase = useSupabaseClient();
   const user = useSupabaseUser();
+  const { uploadAvatarFile } = useAvatarUpload();
   const profile = useState<Profile | null>("my-profile", () => null);
   const loading = ref(false);
 
@@ -71,28 +72,19 @@ export function useProfile() {
   async function uploadAvatar(file: File) {
     if (!user.value) return { error: "Not signed in" };
 
-    const ext = file.name.split(".").pop() || "jpg";
-    const path = `${user.value.id}/avatar.${ext}`;
+    const { avatar_url, error } = await uploadAvatarFile(user.value.id, file, {
+      bustCache: true,
+    });
 
-    const { error: uploadError } = await supabase.storage
-      .from("avatars")
-      .upload(path, file, { upsert: true, contentType: file.type });
+    if (error || !avatar_url) return { data: null, error: error ?? "Upload failed" };
 
-    if (uploadError) return { error: uploadError.message };
+    if (profile.value) {
+      profile.value = { ...profile.value, avatar_url };
+    } else {
+      await fetchMyProfile();
+    }
 
-    const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
-    // bust cache
-    const avatar_url = `${urlData.publicUrl}?t=${Date.now()}`;
-
-    const { data, error } = await supabase
-      .from("profiles")
-      .update({ avatar_url })
-      .eq("id", user.value.id)
-      .select()
-      .single();
-
-    if (!error && data) profile.value = data as Profile;
-    return { data: data as Profile | null, error: error?.message };
+    return { data: profile.value, error: undefined };
   }
 
   async function changePassword(currentPassword: string, newPassword: string) {

@@ -276,12 +276,15 @@ export function useAttachments(taskId: Ref<string | undefined>) {
   async function uploadFile(file: File) {
     if (!taskId.value || !user.value) return;
 
-    const ext = file.name.split(".").pop();
+    const optimized = await optimizeUploadFile(file);
+    const ext = optimized.name.split(".").pop() || "bin";
     const path = `${taskId.value}/${Date.now()}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from("attachments")
-      .upload(path, file);
+      .upload(path, optimized, {
+        contentType: optimized.type || undefined,
+      });
 
     if (uploadError) return { error: uploadError.message };
 
@@ -293,7 +296,7 @@ export function useAttachments(taskId: Ref<string | undefined>) {
         task_id: taskId.value,
         uploaded_by: user.value.id,
         file_url: urlData.publicUrl,
-        filename: file.name,
+        filename: optimized.name,
       })
       .select()
       .single();

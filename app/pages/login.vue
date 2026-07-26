@@ -3,6 +3,7 @@ definePageMeta({ layout: "auth", middleware: "guest" });
 
 const { t, locale, setLocale } = useI18n();
 const supabase = useSupabaseClient();
+const { uploadAvatarFile } = useAvatarUpload();
 
 const email = ref("");
 const password = ref("");
@@ -26,25 +27,6 @@ function clearAvatar() {
   if (avatarPreview.value) URL.revokeObjectURL(avatarPreview.value);
   avatarFile.value = null;
   avatarPreview.value = null;
-}
-
-async function uploadAvatar(userId: string, file: File) {
-  const ext = file.name.split(".").pop() || "jpg";
-  const path = `${userId}/avatar.${ext}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from("avatars")
-    .upload(path, file, { upsert: true, contentType: file.type });
-
-  if (uploadError) return { error: uploadError.message };
-
-  const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
-  const { error: updateError } = await supabase
-    .from("profiles")
-    .update({ avatar_url: urlData.publicUrl })
-    .eq("id", userId);
-
-  return { error: updateError?.message };
 }
 
 async function handleEmailAuth() {
@@ -81,7 +63,7 @@ async function handleEmailAuth() {
     }
 
     if (data.session?.user && avatarFile.value) {
-      const { error: avatarError } = await uploadAvatar(
+      const { error: avatarError } = await uploadAvatarFile(
         data.session.user.id,
         avatarFile.value,
       );
