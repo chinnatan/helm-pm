@@ -139,9 +139,12 @@ const jobRoleOptions = computed(() => [
         class="rounded-xl border border-slate-200 bg-white p-5"
       >
         <div class="mb-3 flex items-center gap-3">
-          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-200 text-sm font-medium text-slate-600">
-            {{ (member.profiles?.full_name || member.profiles?.email)?.[0]?.toUpperCase() }}
-          </div>
+          <UserAvatar
+            size="md"
+            :src="member.profiles?.avatar_url"
+            :name="member.profiles?.full_name"
+            :email="member.profiles?.email"
+          />
           <div class="min-w-0 flex-1">
             <p class="truncate font-medium text-slate-900">
               {{ member.profiles?.full_name || member.profiles?.email }}

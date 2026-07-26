@@ -47,10 +47,6 @@ const dueDateLabel = computed(() => {
   return format(parseISO(props.task.due_date), "d MMM", { locale: dateFnsLocale.value });
 });
 
-function personInitial(profile?: { full_name?: string | null; email?: string } | null) {
-  return (profile?.full_name || profile?.email)?.[0]?.toUpperCase() ?? "?";
-}
-
 function personName(profile?: { full_name?: string | null; email?: string } | null) {
   return profile?.full_name || profile?.email || "";
 }
@@ -147,22 +143,23 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
       class="mt-2 flex flex-wrap items-center gap-2"
     >
       <div v-if="task.profiles" class="flex items-center gap-1.5" :title="t('tasks.assignee')">
-        <div
-          class="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[10px] font-medium text-slate-600"
-        >
-          {{ personInitial(task.profiles) }}
-        </div>
+        <UserAvatar
+          :src="task.profiles.avatar_url"
+          :name="task.profiles.full_name"
+          :email="task.profiles.email"
+        />
         <span class="text-xs text-slate-500">
           <span class="text-slate-400">{{ t("tasks.devShort") }}</span>
           {{ personName(task.profiles) }}
         </span>
       </div>
       <div v-if="task.tester" class="flex items-center gap-1.5" :title="t('tasks.tester')">
-        <div
-          class="flex h-5 w-5 items-center justify-center rounded-full bg-amber-100 text-[10px] font-medium text-amber-700"
-        >
-          {{ personInitial(task.tester) }}
-        </div>
+        <UserAvatar
+          :src="task.tester.avatar_url"
+          :name="task.tester.full_name"
+          :email="task.tester.email"
+          tone="amber"
+        />
         <span class="text-xs text-slate-500">
           <span class="text-slate-400">{{ t("tasks.testerShort") }}</span>
           {{ personName(task.tester) }}

@@ -20,6 +20,12 @@ async function submit() {
   <div class="space-y-4">
     <div v-for="comment in comments" :key="comment.id" class="rounded-lg bg-slate-50 p-3">
       <div class="mb-1 flex items-center gap-2">
+        <UserAvatar
+          size="sm"
+          :src="comment.profiles?.avatar_url"
+          :name="comment.profiles?.full_name"
+          :email="comment.profiles?.email"
+        />
         <span class="text-sm font-medium text-slate-800">
           {{ comment.profiles?.full_name || comment.profiles?.email }}
         </span>
