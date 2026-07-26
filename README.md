@@ -158,9 +158,20 @@ http://localhost:5100/**
 
 ### รูปโปรไฟล์ (`avatars`)
 
+แอปใช้ `getPublicUrl` ดังนั้นต้องเป็น **Public bucket** + มี SELECT ให้ทุกคนอ่านได้
+
 1. สร้าง bucket ชื่อ `avatars`
-2. เปิด **Public bucket**
-3. ถ้า private ให้เพิ่ม policy ให้ authenticated users อัปโหลด/อัปเดตไฟล์ของตัวเอง และอ่านได้
+2. เปิด **Public bucket** (สำคัญ — ถ้า Private รูปใน `<img>` จะไม่ขึ้น)
+3. รัน migration `012_avatars_storage_policies.sql` หรือตั้ง policy ดังนี้:
+
+| Operation | Role | เงื่อนไข |
+|-----------|------|----------|
+| **SELECT** | `public` (ทุกคน) | `bucket_id = 'avatars'` |
+| **INSERT / UPDATE / DELETE** | `authenticated` | โฟลเดอร์แรก = `auth.uid()` |
+
+อย่าใช้ SELECT แบบ “own เท่านั้น” — คนอื่นในทีม (และ `<img>` ที่ไม่ส่ง JWT) จะเห็นรูปไม่ได้
+
+ลบ policy เก่าที่ชื่อคล้าย `avatars_* …` ใน Dashboard ก่อน ถ้าซ้ำกับ migration
 
 ---
 
