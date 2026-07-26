@@ -96,12 +96,11 @@ function formatDue(date: string) {
       </template>
     </LayoutProjectHeader>
 
-    <p
+    <RichTextContent
       v-if="project?.description"
-      class="mb-4 -mt-2 text-sm text-slate-500"
-    >
-      {{ project.description }}
-    </p>
+      class="mb-4 -mt-2 text-slate-500"
+      :content="project.description"
+    />
 
     <div v-if="project" class="mb-4 max-w-xs">
       <UFormField :label="t('projects.customer')">

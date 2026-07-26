@@ -235,7 +235,7 @@ function formatMeetingDate(iso: string) {
               <UInput v-model="editForm.contact_email" type="email" class="w-full" />
             </UFormField>
             <UFormField :label="t('customers.notes')">
-              <UTextarea v-model="editForm.notes" :rows="3" class="w-full" />
+              <RichTextEditor v-model="editForm.notes" :rows="3" variant="full" />
             </UFormField>
             <UButton :loading="saving" @click="handleSaveCustomer">
               {{ t("common.save") }}
@@ -295,9 +295,11 @@ function formatMeetingDate(iso: string) {
                     {{ formatMeetingDate(meeting.met_at) }}
                   </span>
                 </div>
-                <p v-if="meeting.summary" class="mt-1 text-sm text-slate-600 whitespace-pre-wrap">
-                  {{ meeting.summary }}
-                </p>
+                <RichTextContent
+                  v-if="meeting.summary"
+                  class="mt-1 text-slate-600"
+                  :content="meeting.summary"
+                />
               </li>
             </ul>
             <p v-else class="text-sm text-slate-400">{{ t("customers.noMeetings") }}</p>
@@ -322,9 +324,11 @@ function formatMeetingDate(iso: string) {
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div class="min-w-0">
                     <p class="font-medium text-slate-800">{{ req.title }}</p>
-                    <p v-if="req.description" class="mt-0.5 text-sm text-slate-600">
-                      {{ req.description }}
-                    </p>
+                    <RichTextContent
+                      v-if="req.description"
+                      class="mt-0.5 text-slate-600"
+                      :content="req.description"
+                    />
                     <p v-if="req.meetings" class="mt-1 text-xs text-slate-400">
                       {{ t("customers.fromMeeting") }}: {{ req.meetings.title }}
                     </p>
@@ -368,7 +372,7 @@ function formatMeetingDate(iso: string) {
             <UInput v-model="meetingForm.met_at" type="datetime-local" class="w-full" />
           </UFormField>
           <UFormField :label="t('customers.summary')">
-            <UTextarea v-model="meetingForm.summary" :rows="3" class="w-full" />
+            <RichTextEditor v-model="meetingForm.summary" :rows="3" variant="full" />
           </UFormField>
         </div>
       </template>
@@ -395,7 +399,7 @@ function formatMeetingDate(iso: string) {
             <UInput v-model="requirementForm.title" class="w-full" />
           </UFormField>
           <UFormField :label="t('customers.requirementDescription')">
-            <UTextarea v-model="requirementForm.description" :rows="3" class="w-full" />
+            <RichTextEditor v-model="requirementForm.description" :rows="3" variant="full" />
           </UFormField>
           <UFormField :label="t('customers.linkMeeting')">
             <USelect

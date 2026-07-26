@@ -8,7 +8,7 @@ const newComment = ref("");
 const sending = ref(false);
 
 async function submit() {
-  if (!newComment.value.trim()) return;
+  if (isEmptyMarkdown(newComment.value)) return;
   sending.value = true;
   await addComment(newComment.value.trim());
   newComment.value = "";
@@ -27,19 +27,26 @@ async function submit() {
           {{ toLocaleString(comment.created_at) }}
         </span>
       </div>
-      <p class="text-sm text-slate-700 whitespace-pre-wrap">{{ comment.content }}</p>
+      <RichTextContent :content="comment.content" />
     </div>
 
     <p v-if="comments.length === 0" class="text-sm text-slate-400">{{ t("tasks.noComments") }}</p>
 
-    <div class="flex gap-2">
-      <UTextarea
-        v-model="newComment"
-        :placeholder="t('tasks.commentPlaceholder')"
-        :rows="2"
-        class="flex-1"
-      />
-      <UButton :loading="sending" :disabled="!newComment.trim()" @click="submit">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+      <div class="min-w-0 flex-1">
+        <RichTextEditor
+          v-model="newComment"
+          :placeholder="t('tasks.commentPlaceholder')"
+          :rows="2"
+          variant="minimal"
+        />
+      </div>
+      <UButton
+        :loading="sending"
+        :disabled="isEmptyMarkdown(newComment)"
+        class="shrink-0"
+        @click="submit"
+      >
         {{ t("common.send") }}
       </UButton>
     </div>

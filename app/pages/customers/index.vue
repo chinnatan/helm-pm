@@ -103,7 +103,7 @@ async function handleCreate() {
             <UInput v-model="form.contact_email" type="email" class="w-full" />
           </UFormField>
           <UFormField :label="t('customers.notes')">
-            <UTextarea v-model="form.notes" :rows="2" class="w-full" />
+            <RichTextEditor v-model="form.notes" :rows="2" variant="full" />
           </UFormField>
         </div>
       </template>
