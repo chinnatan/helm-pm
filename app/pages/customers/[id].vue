@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Customer, Requirement, Task } from "~/types";
+import type { Customer, Meeting, Requirement, Task } from "~/types";
 import { REQUIREMENT_STATUS_VALUES } from "~/types";
 import { format, parseISO } from "date-fns";
 
@@ -19,11 +19,12 @@ const {
   fetchOpenTasksForCustomer,
   fetchCustomers,
 } = useCustomers();
-const { meetings, createMeeting, fetchMeetings } = useMeetings(customerIdRef);
+const { meetings, createMeeting, updateMeeting: updateMeetingApi, deleteMeeting: deleteMeetingApi, fetchMeetings } = useMeetings(customerIdRef);
 const {
   requirements,
   createRequirement,
   updateRequirement,
+  deleteRequirement,
   createTaskFromRequirement,
   fetchRequirements,
 } = useRequirements(customerIdRef);
@@ -48,6 +49,15 @@ const meetingForm = reactive({
 });
 const savingMeeting = ref(false);
 
+const showEditMeeting = ref(false);
+const editingMeetingId = ref<string | null>(null);
+const editMeetingForm = reactive({
+  title: "",
+  met_at: "",
+  summary: "",
+});
+const savingEditMeeting = ref(false);
+
 const showRequirement = ref(false);
 const requirementForm = reactive({
   title: "",
@@ -55,6 +65,15 @@ const requirementForm = reactive({
   meeting_id: null as string | null,
 });
 const savingRequirement = ref(false);
+
+const showEditRequirement = ref(false);
+const editingRequirementId = ref<string | null>(null);
+const editRequirementForm = reactive({
+  title: "",
+  description: "",
+  meeting_id: null as string | null,
+});
+const savingEditRequirement = ref(false);
 
 const showCreateTask = ref(false);
 const selectedRequirement = ref<Requirement | null>(null);
@@ -74,7 +93,7 @@ const projectItems = computed(() => {
 const meetingItems = computed(() => [
   { label: t("common.none"), value: null },
   ...meetings.value.map((m) => ({
-    label: `${m.title} (${format(parseISO(m.met_at), "d MMM yyyy")})`,
+    label: `${m.title} (${formatMeetingDate(m.met_at)})`,
     value: m.id,
   })),
 ]);
@@ -137,6 +156,31 @@ async function handleCreateMeeting() {
   meetingForm.met_at = format(new Date(), "yyyy-MM-dd'T'HH:mm");
 }
 
+function openEditMeeting(meeting: Meeting) {
+  editingMeetingId.value = meeting.id;
+  editMeetingForm.title = meeting.title;
+  editMeetingForm.met_at = format(parseISO(meeting.met_at), "yyyy-MM-dd'T'HH:mm");
+  editMeetingForm.summary = meeting.summary ?? "";
+  showEditMeeting.value = true;
+}
+
+async function handleUpdateMeeting() {
+  if (!editingMeetingId.value || !editMeetingForm.title.trim()) return;
+  savingEditMeeting.value = true;
+  await updateMeetingApi(editingMeetingId.value, {
+    title: editMeetingForm.title.trim(),
+    met_at: new Date(editMeetingForm.met_at).toISOString(),
+    summary: editMeetingForm.summary.trim() || null,
+  });
+  savingEditMeeting.value = false;
+  showEditMeeting.value = false;
+  editingMeetingId.value = null;
+}
+
+async function handleDeleteMeeting(id: string) {
+  await deleteMeetingApi(id);
+}
+
 async function handleCreateRequirement() {
   if (!requirementForm.title.trim()) return;
   savingRequirement.value = true;
@@ -150,6 +194,31 @@ async function handleCreateRequirement() {
   requirementForm.title = "";
   requirementForm.description = "";
   requirementForm.meeting_id = null;
+}
+
+function openEditRequirement(req: Requirement) {
+  editingRequirementId.value = req.id;
+  editRequirementForm.title = req.title;
+  editRequirementForm.description = req.description ?? "";
+  editRequirementForm.meeting_id = req.meeting_id ?? null;
+  showEditRequirement.value = true;
+}
+
+async function handleUpdateRequirement() {
+  if (!editingRequirementId.value || !editRequirementForm.title.trim()) return;
+  savingEditRequirement.value = true;
+  await updateRequirement(editingRequirementId.value, {
+    title: editRequirementForm.title.trim(),
+    description: editRequirementForm.description.trim() || null,
+    meeting_id: editRequirementForm.meeting_id,
+  });
+  savingEditRequirement.value = false;
+  showEditRequirement.value = false;
+  editingRequirementId.value = null;
+}
+
+async function handleDeleteRequirement(id: string) {
+  await deleteRequirement(id);
 }
 
 function openCreateTaskModal(req: Requirement) {
@@ -291,14 +360,33 @@ function formatMeetingDate(iso: string) {
               >
                 <div class="flex items-start justify-between gap-2">
                   <p class="font-medium text-slate-800">{{ meeting.title }}</p>
-                  <span class="shrink-0 text-xs text-slate-500">
-                    {{ formatMeetingDate(meeting.met_at) }}
-                  </span>
+                  <div class="flex shrink-0 items-center gap-1">
+                    <span class="text-xs text-slate-500">
+                      {{ formatMeetingDate(meeting.met_at) }}
+                    </span>
+                    <UButton
+                      size="xs"
+                      variant="ghost"
+                      color="neutral"
+                      icon="i-lucide-pencil"
+                      :aria-label="t('customers.editMeeting')"
+                      @click="openEditMeeting(meeting)"
+                    />
+                    <UButton
+                      size="xs"
+                      variant="ghost"
+                      color="error"
+                      icon="i-lucide-trash-2"
+                      :aria-label="t('common.delete')"
+                      @click="handleDeleteMeeting(meeting.id)"
+                    />
+                  </div>
                 </div>
                 <RichTextContent
                   v-if="meeting.summary"
                   class="mt-1 text-slate-600"
                   :content="meeting.summary"
+                  :clamp-lines="5"
                 />
               </li>
             </ul>
@@ -352,6 +440,22 @@ function formatMeetingDate(iso: string) {
                     <UBadge v-else color="success" variant="subtle" size="sm">
                       {{ t("customers.linkedTask") }}
                     </UBadge>
+                    <UButton
+                      size="xs"
+                      variant="ghost"
+                      color="neutral"
+                      icon="i-lucide-pencil"
+                      :aria-label="t('customers.editRequirement')"
+                      @click="openEditRequirement(req)"
+                    />
+                    <UButton
+                      size="xs"
+                      variant="ghost"
+                      color="error"
+                      icon="i-lucide-trash-2"
+                      :aria-label="t('common.delete')"
+                      @click="handleDeleteRequirement(req.id)"
+                    />
                   </div>
                 </div>
               </li>
@@ -392,6 +496,36 @@ function formatMeetingDate(iso: string) {
       </template>
     </UModal>
 
+    <UModal v-model:open="showEditMeeting" :title="t('customers.editMeeting')">
+      <template #body>
+        <div class="space-y-4">
+          <UFormField :label="t('customers.meetingTitle')" required>
+            <UInput v-model="editMeetingForm.title" class="w-full" />
+          </UFormField>
+          <UFormField :label="t('customers.metAt')">
+            <UInput v-model="editMeetingForm.met_at" type="datetime-local" class="w-full" />
+          </UFormField>
+          <UFormField :label="t('customers.summary')">
+            <RichTextEditor v-model="editMeetingForm.summary" :rows="3" variant="full" />
+          </UFormField>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UButton variant="ghost" color="neutral" @click="showEditMeeting = false">
+            {{ t("common.cancel") }}
+          </UButton>
+          <UButton
+            :loading="savingEditMeeting"
+            :disabled="!editMeetingForm.title.trim()"
+            @click="handleUpdateMeeting"
+          >
+            {{ t("common.save") }}
+          </UButton>
+        </div>
+      </template>
+    </UModal>
+
     <UModal v-model:open="showRequirement" :title="t('customers.addRequirement')">
       <template #body>
         <div class="space-y-4">
@@ -421,6 +555,40 @@ function formatMeetingDate(iso: string) {
             @click="handleCreateRequirement"
           >
             {{ t("common.create") }}
+          </UButton>
+        </div>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="showEditRequirement" :title="t('customers.editRequirement')">
+      <template #body>
+        <div class="space-y-4">
+          <UFormField :label="t('customers.requirementTitle')" required>
+            <UInput v-model="editRequirementForm.title" class="w-full" />
+          </UFormField>
+          <UFormField :label="t('customers.requirementDescription')">
+            <RichTextEditor v-model="editRequirementForm.description" :rows="3" variant="full" />
+          </UFormField>
+          <UFormField :label="t('customers.linkMeeting')">
+            <USelect
+              v-model="editRequirementForm.meeting_id"
+              :items="meetingItems"
+              class="w-full"
+            />
+          </UFormField>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UButton variant="ghost" color="neutral" @click="showEditRequirement = false">
+            {{ t("common.cancel") }}
+          </UButton>
+          <UButton
+            :loading="savingEditRequirement"
+            :disabled="!editRequirementForm.title.trim()"
+            @click="handleUpdateRequirement"
+          >
+            {{ t("common.save") }}
           </UButton>
         </div>
       </template>
