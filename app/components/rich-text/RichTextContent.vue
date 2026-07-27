@@ -1,13 +1,32 @@
 <script setup lang="ts">
+const { t } = useI18n();
+
 const props = defineProps<{
   content?: string | null;
   class?: string;
+  clampLines?: number;
 }>();
 
 const html = ref("");
+const expanded = ref(false);
+const isClamped = ref(false);
+const contentRef = ref<HTMLElement | null>(null);
 
 async function refresh() {
   html.value = await renderMarkdownToSafeHtml(props.content);
+}
+
+function measureOverflow() {
+  const el = contentRef.value;
+  if (!el || !props.clampLines) {
+    isClamped.value = false;
+    return;
+  }
+  nextTick(() => {
+    const el2 = contentRef.value;
+    if (!el2) return;
+    isClamped.value = el2.scrollHeight > el2.clientHeight + 1;
+  });
 }
 
 onMounted(() => {
@@ -21,27 +40,63 @@ watch(
   },
 );
 
+watch(html, () => {
+  if (props.clampLines && !expanded.value) {
+    nextTick(measureOverflow);
+  }
+});
+
+watch(expanded, (val) => {
+  if (!val) {
+    nextTick(measureOverflow);
+  }
+});
+
+const CLAMP_CLASSES: Record<number, string> = {
+  1: "line-clamp-1",
+  2: "line-clamp-2",
+  3: "line-clamp-3",
+  4: "line-clamp-4",
+  5: "line-clamp-5",
+  6: "line-clamp-6",
+};
+
+const clampClass = computed(() => {
+  if (!props.clampLines || expanded.value) return "";
+  return CLAMP_CLASSES[props.clampLines] ?? "line-clamp-5";
+});
+
 const preview = computed(() => stripMarkdownForPreview(props.content));
 </script>
 
 <template>
-  <ClientOnly>
-    <div
-      v-if="html"
-      class="rich-text-content text-sm text-slate-700"
-      :class="props.class"
-      v-html="html"
-    />
-    <template #fallback>
-      <p
-        v-if="preview"
-        class="text-sm text-slate-700 whitespace-pre-wrap"
-        :class="props.class"
-      >
-        {{ preview }}
-      </p>
-    </template>
-  </ClientOnly>
+  <div>
+    <ClientOnly>
+      <div
+        v-if="html"
+        ref="contentRef"
+        class="rich-text-content text-sm text-slate-700"
+        :class="[props.class, clampClass]"
+        v-html="html"
+      />
+      <template #fallback>
+        <p
+          v-if="preview"
+          class="text-sm text-slate-700 whitespace-pre-wrap"
+          :class="props.class"
+        >
+          {{ preview }}
+        </p>
+      </template>
+    </ClientOnly>
+    <button
+      v-if="clampLines && (isClamped || expanded)"
+      class="mt-1 text-xs font-medium text-ocean-700 hover:text-ocean-900 hover:underline"
+      @click="expanded = !expanded"
+    >
+      {{ expanded ? t("common.showLess") : t("common.showMore") }}
+    </button>
+  </div>
 </template>
 
 <style>

@@ -12,7 +12,9 @@
     "emDash": "—",
     "none": "ไม่มี",
     "created": "สร้าง",
-    "updated": "อัปเดต"
+    "updated": "อัปเดต",
+    "showMore": "แสดงเพิ่มเติม",
+    "showLess": "แสดงน้อยลง"
   },
   "nav": {
     "planner": "แพลนเนอร์ของฉัน",
