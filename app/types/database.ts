@@ -11,6 +11,7 @@ export interface Database {
           last_name: string | null;
           full_name: string | null;
           avatar_url: string | null;
+          active_workspace_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -20,6 +21,7 @@ export interface Database {
           last_name?: string | null;
           full_name?: string | null;
           avatar_url?: string | null;
+          active_workspace_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -29,6 +31,7 @@ export interface Database {
           last_name?: string | null;
           full_name?: string | null;
           avatar_url?: string | null;
+          active_workspace_id?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -74,6 +77,7 @@ export interface Database {
           description: string | null;
           color: string;
           customer_id: string | null;
+          owner_id: string | null;
           created_at: string;
           archived_at: string | null;
         };
@@ -84,6 +88,7 @@ export interface Database {
           description?: string | null;
           color?: string;
           customer_id?: string | null;
+          owner_id?: string | null;
           created_at?: string;
           archived_at?: string | null;
         };
@@ -94,6 +99,7 @@ export interface Database {
           description?: string | null;
           color?: string;
           customer_id?: string | null;
+          owner_id?: string | null;
           created_at?: string;
           archived_at?: string | null;
         };
@@ -504,9 +510,125 @@ export interface Database {
         };
         Relationships: [];
       };
+      workspace_invites: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          token: string;
+          invite_type: string;
+          email: string | null;
+          role: string;
+          job_role: string | null;
+          expires_at: string;
+          created_by: string | null;
+          created_at: string;
+          revoked_at: string | null;
+          accepted_at: string | null;
+          accepted_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          token: string;
+          invite_type: string;
+          email?: string | null;
+          role?: string;
+          job_role?: string | null;
+          expires_at: string;
+          created_by?: string | null;
+          created_at?: string;
+          revoked_at?: string | null;
+          accepted_at?: string | null;
+          accepted_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          workspace_id?: string;
+          token?: string;
+          invite_type?: string;
+          email?: string | null;
+          role?: string;
+          job_role?: string | null;
+          expires_at?: string;
+          created_by?: string | null;
+          created_at?: string;
+          revoked_at?: string | null;
+          accepted_at?: string | null;
+          accepted_by?: string | null;
+        };
+        Relationships: [];
+      };
+      audit_log: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          actor_id: string | null;
+          action: string;
+          entity_type: string;
+          entity_id: string | null;
+          entity_label: string | null;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          actor_id?: string | null;
+          action: string;
+          entity_type: string;
+          entity_id?: string | null;
+          entity_label?: string | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          workspace_id?: string;
+          actor_id?: string | null;
+          action?: string;
+          entity_type?: string;
+          entity_id?: string | null;
+          entity_label?: string | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      create_workspace: {
+        Args: { ws_name: string };
+        Returns: string;
+      };
+      set_active_workspace: {
+        Args: { ws_id: string };
+        Returns: string;
+      };
+      create_workspace_invite: {
+        Args: {
+          p_workspace_id: string;
+          p_invite_type: string;
+          p_expires_at: string;
+          p_role?: string;
+          p_job_role?: string | null;
+          p_email?: string | null;
+        };
+        Returns: Json;
+      };
+      get_invite_preview: {
+        Args: { p_token: string };
+        Returns: Json;
+      };
+      accept_workspace_invite: {
+        Args: { p_token: string };
+        Returns: string;
+      };
+      revoke_workspace_invite: {
+        Args: { p_invite_id: string };
+        Returns: undefined;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

@@ -52,6 +52,7 @@ export interface Profile {
   last_name: string | null;
   full_name: string | null;
   avatar_url: string | null;
+  active_workspace_id?: string | null;
   created_at: string;
 }
 
@@ -59,6 +60,12 @@ export interface Workspace {
   id: string;
   name: string;
   created_at: string;
+}
+
+export interface WorkspaceMembership {
+  membershipId: string;
+  role: MemberRole;
+  workspace: Workspace;
 }
 
 export interface WorkspaceMember {
@@ -69,6 +76,60 @@ export interface WorkspaceMember {
   job_role: JobRole | null;
   created_at: string;
   profiles?: Profile;
+}
+
+export type InviteType = "open" | "email";
+export type InvitePreviewStatus =
+  | "valid"
+  | "expired"
+  | "revoked"
+  | "accepted"
+  | "not_found";
+
+export interface WorkspaceInvite {
+  id: string;
+  workspace_id: string;
+  token: string;
+  invite_type: InviteType;
+  email: string | null;
+  role: MemberRole;
+  job_role: JobRole | null;
+  expires_at: string;
+  created_by: string | null;
+  created_at: string;
+  revoked_at: string | null;
+  accepted_at: string | null;
+  accepted_by: string | null;
+}
+
+export interface InvitePreview {
+  status: InvitePreviewStatus;
+  workspace_id?: string;
+  workspace_name?: string;
+  invite_type?: InviteType;
+  email?: string | null;
+  role?: MemberRole;
+  expires_at?: string;
+}
+
+export type AuditEntityType =
+  | "workspace"
+  | "member"
+  | "invite"
+  | "project"
+  | "customer";
+
+export interface AuditLogEntry {
+  id: string;
+  workspace_id: string;
+  actor_id: string | null;
+  action: string;
+  entity_type: AuditEntityType | string;
+  entity_id: string | null;
+  entity_label: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  profiles?: Pick<Profile, "id" | "email" | "full_name" | "avatar_url"> | null;
 }
 
 export interface Customer {
@@ -90,9 +151,11 @@ export interface Project {
   description: string | null;
   color: string;
   customer_id: string | null;
+  owner_id: string | null;
   created_at: string;
   archived_at: string | null;
   customers?: Pick<Customer, "id" | "name"> | null;
+  owner?: Pick<Profile, "id" | "email" | "full_name" | "avatar_url"> | null;
 }
 
 export interface Label {
