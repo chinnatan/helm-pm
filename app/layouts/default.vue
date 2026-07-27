@@ -81,12 +81,13 @@ watch(
 </script>
 
 <template>
-  <div class="flex min-h-screen bg-ocean-50">
+  <div class="flex h-dvh overflow-hidden bg-ocean-50">
     <!-- Desktop sidebar -->
     <aside
       class="hidden w-60 shrink-0 flex-col border-r border-slate-200 bg-white md:flex"
     >
-      <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+      <!-- Header -->
+      <div class="shrink-0 flex items-center justify-between border-b border-slate-200 px-5 py-4">
         <div class="flex items-center gap-2">
           <div
             class="flex h-8 w-8 items-center justify-center rounded-lg bg-ocean-800 text-sm font-bold text-white"
@@ -98,29 +99,32 @@ watch(
         <LayoutNotificationBell v-if="isDesktop" />
       </div>
 
-        <nav class="flex-1 space-y-1 overflow-y-auto p-3">
-          <NuxtLink
-            v-for="item in navItems"
-            :key="item.match"
-            :to="item.to"
-            class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
-            :class="
-              isActive(item.match)
-                ? 'bg-ocean-100 text-ocean-900'
-                : 'text-slate-600 hover:bg-ocean-50 hover:text-ocean-900'
-            "
-          >
-            <UIcon :name="item.icon" class="h-4 w-4" />
-            {{ item.label }}
-          </NuxtLink>
+      <!-- Primary nav (pinned) -->
+      <nav class="shrink-0 space-y-1 p-3">
+        <NuxtLink
+          v-for="item in navItems"
+          :key="item.match"
+          :to="item.to"
+          class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
+          :class="
+            isActive(item.match)
+              ? 'bg-ocean-100 text-ocean-900'
+              : 'text-slate-600 hover:bg-ocean-50 hover:text-ocean-900'
+          "
+        >
+          <UIcon :name="item.icon" class="h-4 w-4" />
+          {{ item.label }}
+        </NuxtLink>
+      </nav>
 
-          <div class="space-y-3 pt-3">
-            <LayoutWorkspaceSwitcher />
-            <LayoutProjectSwitcher />
-          </div>
-        </nav>
+      <!-- Context switchers (scrollable) -->
+      <div class="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 pb-3">
+        <LayoutWorkspaceSwitcher />
+        <LayoutProjectSwitcher />
+      </div>
 
-      <div class="border-t border-slate-200 p-3">
+      <!-- Footer (pinned) -->
+      <div class="shrink-0 border-t border-slate-200 p-3">
         <div class="mb-2 flex items-center gap-1 px-2">
           <UButton
             size="xs"
@@ -143,7 +147,7 @@ watch(
       </div>
     </aside>
 
-    <div class="flex min-w-0 flex-1 flex-col">
+    <div class="flex min-h-0 min-w-0 flex-1 flex-col">
       <!-- Mobile top bar -->
       <header
         class="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden"
@@ -169,7 +173,7 @@ watch(
         <LayoutNotificationBell v-if="!isDesktop" />
       </header>
 
-      <main class="flex-1 overflow-auto">
+      <main class="min-h-0 flex-1 overflow-auto">
         <slot />
       </main>
     </div>
