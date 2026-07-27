@@ -1,4 +1,5 @@
-import type { Profile } from "~/types";
+import type { Profile, TaskCardDensity } from "~/types";
+import { TASK_CARD_DENSITY_VALUES } from "~/types";
 
 export function useProfile() {
   const supabase = useSupabaseClient();
@@ -21,6 +22,14 @@ export function useProfile() {
     }
     const name = displayName.value;
     return name[0]?.toUpperCase() ?? "?";
+  });
+
+  const taskCardDensity = computed<TaskCardDensity>(() => {
+    const d = profile.value?.task_card_density;
+    if (d && TASK_CARD_DENSITY_VALUES.includes(d as TaskCardDensity)) {
+      return d as TaskCardDensity;
+    }
+    return "standard";
   });
 
   async function fetchMyProfile() {
@@ -69,6 +78,23 @@ export function useProfile() {
     return { data: data as Profile | null, error: error?.message };
   }
 
+  async function updateTaskCardDensity(density: TaskCardDensity) {
+    if (!user.value) return { error: "Not signed in" };
+    if (!TASK_CARD_DENSITY_VALUES.includes(density)) {
+      return { error: "invalid_density" };
+    }
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ task_card_density: density })
+      .eq("id", user.value.id)
+      .select()
+      .single();
+
+    if (!error && data) profile.value = data as Profile;
+    return { data: data as Profile | null, error: error?.message };
+  }
+
   async function uploadAvatar(file: File) {
     if (!user.value) return { error: "Not signed in" };
 
@@ -106,8 +132,10 @@ export function useProfile() {
     loading,
     displayName,
     initials,
+    taskCardDensity,
     fetchMyProfile,
     updateProfile,
+    updateTaskCardDensity,
     uploadAvatar,
     changePassword,
   };

@@ -8,6 +8,12 @@ const props = defineProps<{
   draggable?: boolean;
 }>();
 
+const cardContext = computed(() => ({
+  showProject: props.showProject !== false,
+}));
+
+const { display } = useTaskCardDisplay(() => props.task, cardContext);
+
 const emit = defineEmits<{
   click: [task: Task];
   pin: [task: Task, pinned: boolean];
@@ -78,6 +84,14 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
       <span class="text-xs text-slate-500">{{ task.projects.name }}</span>
     </div>
 
+    <div
+      v-if="display.showCustomer && task.customers?.name"
+      class="mb-2 flex items-center gap-1.5"
+    >
+      <UIcon name="i-lucide-building-2" class="h-3.5 w-3.5 shrink-0 text-slate-400" />
+      <span class="text-xs text-slate-500">{{ task.customers.name }}</span>
+    </div>
+
     <div class="flex flex-wrap items-center gap-1.5">
       <UBadge :color="(priority?.color ?? 'neutral') as 'neutral'" variant="subtle" size="xs">
         {{ priority?.label }}
@@ -92,7 +106,7 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
       </span>
 
       <UBadge
-        v-if="task.milestones"
+        v-if="display.showMilestone && task.milestones"
         color="warning"
         variant="subtle"
         size="xs"
@@ -100,19 +114,21 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
         {{ task.milestones.title }}
       </UBadge>
 
-      <UBadge
-        v-for="tl in task.task_labels"
-        :key="tl.labels?.id"
-        variant="subtle"
-        size="xs"
-        :style="{ backgroundColor: tl.labels?.color + '20', color: tl.labels?.color }"
-      >
-        {{ tl.labels?.name }}
-      </UBadge>
+      <template v-if="display.showLabels">
+        <UBadge
+          v-for="tl in task.task_labels"
+          :key="tl.labels?.id"
+          variant="subtle"
+          size="xs"
+          :style="{ backgroundColor: tl.labels?.color + '20', color: tl.labels?.color }"
+        >
+          {{ tl.labels?.name }}
+        </UBadge>
+      </template>
     </div>
 
     <div
-      v-if="visibleSubtasks.length"
+      v-if="display.showSubtaskList && visibleSubtasks.length"
       class="mt-2 space-y-1 border-t border-slate-100 pt-2"
     >
       <div
@@ -139,7 +155,7 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
     </div>
 
     <div
-      v-if="task.profiles || task.tester"
+      v-if="display.showPeople && (task.profiles || task.tester)"
       class="mt-2 flex flex-wrap items-center gap-2"
     >
       <div v-if="task.profiles" class="flex items-center gap-1.5" :title="t('tasks.assignee')">

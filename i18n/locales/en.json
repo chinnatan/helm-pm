@@ -80,7 +80,17 @@
     "passwordTooShort": "Password must be at least 6 characters",
     "passwordMismatch": "New passwords do not match",
     "currentPasswordInvalid": "Current password is incorrect",
-    "passwordChanged": "Password updated successfully"
+    "passwordChanged": "Password updated successfully",
+    "taskCard": {
+      "title": "Task cards",
+      "hint": "Personal setting — each person sees their own choice",
+      "compact": "Compact",
+      "compactDesc": "Title, priority, and due date",
+      "standard": "Standard",
+      "standardDesc": "Project, customer (context-aware), labels, and assignees",
+      "detailed": "Detailed",
+      "detailedDesc": "Everything, including subtasks and customer when set"
+    }
   },
   "planner": {
     "title": "My Planner",
@@ -107,6 +117,7 @@
     "addTask": "Add Task",
     "myTasks": "My tasks",
     "allTasks": "All tasks",
+    "cardDensity": "Cards",
     "addMilestone": "Add Milestone",
     "editMilestone": "Edit Milestone",
     "milestoneTitle": "Title",

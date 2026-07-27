@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { TaskCardDensity } from "~/types";
+import { TASK_CARD_DENSITY_VALUES } from "~/types";
 const emit = defineEmits<{
   "sign-out": [];
 }>();
@@ -9,8 +11,10 @@ const {
   profile,
   displayName,
   initials,
+  taskCardDensity,
   fetchMyProfile,
   updateProfile,
+  updateTaskCardDensity,
   uploadAvatar,
   changePassword,
 } = useProfile();
@@ -18,6 +22,8 @@ const {
 const open = ref(false);
 const saving = ref(false);
 const savingPassword = ref(false);
+const savingDensity = ref(false);
+const densityError = ref("");
 const error = ref("");
 const passwordError = ref("");
 const passwordSuccess = ref("");
@@ -42,6 +48,7 @@ const shownAvatar = computed(
 
 function openModal() {
   error.value = "";
+  densityError.value = "";
   passwordError.value = "";
   passwordSuccess.value = "";
   form.first_name = profile.value?.first_name ?? "";
@@ -138,6 +145,23 @@ async function savePassword() {
   passwordForm.next = "";
   passwordForm.confirm = "";
   passwordSuccess.value = t("profile.passwordChanged");
+}
+
+const densityOptions = computed(() =>
+  TASK_CARD_DENSITY_VALUES.map((value) => ({
+    value,
+    label: t(`profile.taskCard.${value}`),
+    description: t(`profile.taskCard.${value}Desc`),
+  })),
+);
+
+async function onDensityChange(density: TaskCardDensity) {
+  if (density === taskCardDensity.value || savingDensity.value) return;
+  densityError.value = "";
+  savingDensity.value = true;
+  const { error: err } = await updateTaskCardDensity(density);
+  savingDensity.value = false;
+  if (err) densityError.value = err;
 }
 
 onMounted(() => {
@@ -250,6 +274,40 @@ onUnmounted(() => {
               class="w-full"
             />
           </UFormField>
+
+          <div class="border-t border-slate-100 pt-4">
+            <h3 class="mb-1 text-sm font-semibold text-slate-800">
+              {{ t("profile.taskCard.title") }}
+            </h3>
+            <p class="mb-3 text-xs text-slate-500">
+              {{ t("profile.taskCard.hint") }}
+            </p>
+            <UAlert
+              v-if="densityError"
+              color="error"
+              variant="subtle"
+              class="mb-3"
+              :title="densityError"
+            />
+            <div class="space-y-2">
+              <button
+                v-for="opt in densityOptions"
+                :key="opt.value"
+                type="button"
+                class="flex w-full flex-col rounded-lg border px-3 py-2.5 text-left transition-colors"
+                :class="
+                  taskCardDensity === opt.value
+                    ? 'border-ocean-600 bg-ocean-50'
+                    : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                "
+                :disabled="savingDensity"
+                @click="onDensityChange(opt.value)"
+              >
+                <span class="text-sm font-medium text-slate-800">{{ opt.label }}</span>
+                <span class="text-xs text-slate-500">{{ opt.description }}</span>
+              </button>
+            </div>
+          </div>
 
           <div class="border-t border-slate-100 pt-4">
             <h3 class="mb-3 text-sm font-semibold text-slate-800">

@@ -26,9 +26,11 @@ onUnmounted(() => {
 
 const { projectsHomePath } = useLastProject();
 const { isWorkspaceAdmin, fetchWorkspace } = useWorkspace();
+const { fetchMyProfile } = useProfile();
 
 onMounted(() => {
   fetchWorkspace();
+  fetchMyProfile();
 });
 
 const navItems = computed(() => {

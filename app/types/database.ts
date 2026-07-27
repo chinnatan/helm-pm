@@ -12,6 +12,7 @@ export interface Database {
           full_name: string | null;
           avatar_url: string | null;
           active_workspace_id: string | null;
+          task_card_density: string;
           created_at: string;
         };
         Insert: {
@@ -22,6 +23,7 @@ export interface Database {
           full_name?: string | null;
           avatar_url?: string | null;
           active_workspace_id?: string | null;
+          task_card_density?: string;
           created_at?: string;
         };
         Update: {
@@ -32,6 +34,7 @@ export interface Database {
           full_name?: string | null;
           avatar_url?: string | null;
           active_workspace_id?: string | null;
+          task_card_density?: string;
           created_at?: string;
         };
         Relationships: [];

@@ -80,7 +80,17 @@
     "passwordTooShort": "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร",
     "passwordMismatch": "รหัสผ่านใหม่ไม่ตรงกัน",
     "currentPasswordInvalid": "รหัสผ่านปัจจุบันไม่ถูกต้อง",
-    "passwordChanged": "เปลี่ยนรหัสผ่านสำเร็จ"
+    "passwordChanged": "เปลี่ยนรหัสผ่านสำเร็จ",
+    "taskCard": {
+      "title": "การแสดงการ์ดงาน",
+      "hint": "ตั้งค่าส่วนตัว — แต่ละคนเห็นแบบที่เลือกเอง",
+      "compact": "กะทัดรัด",
+      "compactDesc": "ชื่องาน ความสำคัญ และกำหนดส่ง",
+      "standard": "มาตรฐาน",
+      "standardDesc": "โปรเจกต์ ลูกค้า (ตามบริบท) ป้าย และผู้รับผิดชอบ",
+      "detailed": "ละเอียด",
+      "detailedDesc": "แสดงครบ รวมรายการย่อยและลูกค้าที่เลือกไว้"
+    }
   },
   "planner": {
     "title": "แพลนเนอร์ของฉัน",
@@ -107,6 +117,7 @@
     "addTask": "เพิ่มงาน",
     "myTasks": "งานของฉัน",
     "allTasks": "งานทั้งหมด",
+    "cardDensity": "การ์ด",
     "addMilestone": "เพิ่มไมล์สโตน",
     "editMilestone": "แก้ไขไมล์สโตน",
     "milestoneTitle": "ชื่อ",

@@ -11,6 +11,13 @@ export type MemberRole = "admin" | "manager" | "member" | "viewer";
 export type JobRole = "developer" | "tester" | "designer" | "pm" | "other";
 export type PlannerTab = "today" | "week" | "inbox" | "focus";
 export type CustomerStatus = "active" | "archived";
+export type TaskCardDensity = "compact" | "standard" | "detailed";
+
+export const TASK_CARD_DENSITY_VALUES: TaskCardDensity[] = [
+  "compact",
+  "standard",
+  "detailed",
+];
 export type RequirementStatus = "open" | "in_progress" | "done" | "cancelled";
 
 export const JOB_ROLE_VALUES: JobRole[] = [
@@ -53,6 +60,7 @@ export interface Profile {
   full_name: string | null;
   avatar_url: string | null;
   active_workspace_id?: string | null;
+  task_card_density?: TaskCardDensity;
   created_at: string;
 }
 
