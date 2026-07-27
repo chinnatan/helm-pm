@@ -25,18 +25,34 @@ onUnmounted(() => {
 });
 
 const { projectsHomePath } = useLastProject();
+const { isWorkspaceAdmin, fetchWorkspace } = useWorkspace();
 
-const navItems = computed(() => [
-  { label: t("nav.planner"), to: "/planner", match: "/planner", icon: "i-lucide-calendar-days" },
-  {
-    label: t("nav.projects"),
-    to: projectsHomePath.value,
-    match: "/projects",
-    icon: "i-lucide-folder-kanban",
-  },
-  { label: t("nav.customers"), to: "/customers", match: "/customers", icon: "i-lucide-building-2" },
-  { label: t("nav.team"), to: "/team", match: "/team", icon: "i-lucide-users" },
-]);
+onMounted(() => {
+  fetchWorkspace();
+});
+
+const navItems = computed(() => {
+  const items = [
+    { label: t("nav.planner"), to: "/planner", match: "/planner", icon: "i-lucide-calendar-days" },
+    {
+      label: t("nav.projects"),
+      to: projectsHomePath.value,
+      match: "/projects",
+      icon: "i-lucide-folder-kanban",
+    },
+    { label: t("nav.customers"), to: "/customers", match: "/customers", icon: "i-lucide-building-2" },
+    { label: t("nav.team"), to: "/team", match: "/team", icon: "i-lucide-users" },
+  ];
+  if (isWorkspaceAdmin.value) {
+    items.push({
+      label: t("nav.audit"),
+      to: "/audit",
+      match: "/audit",
+      icon: "i-lucide-scroll-text",
+    });
+  }
+  return items;
+});
 
 async function signOut() {
   await supabase.auth.signOut();
@@ -82,26 +98,27 @@ watch(
         <LayoutNotificationBell v-if="isDesktop" />
       </div>
 
-      <nav class="flex-1 space-y-1 overflow-y-auto p-3">
-        <NuxtLink
-          v-for="item in navItems"
-          :key="item.match"
-          :to="item.to"
-          class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
-          :class="
-            isActive(item.match)
-              ? 'bg-ocean-100 text-ocean-900'
-              : 'text-slate-600 hover:bg-ocean-50 hover:text-ocean-900'
-          "
-        >
-          <UIcon :name="item.icon" class="h-4 w-4" />
-          {{ item.label }}
-        </NuxtLink>
+        <nav class="flex-1 space-y-1 overflow-y-auto p-3">
+          <NuxtLink
+            v-for="item in navItems"
+            :key="item.match"
+            :to="item.to"
+            class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
+            :class="
+              isActive(item.match)
+                ? 'bg-ocean-100 text-ocean-900'
+                : 'text-slate-600 hover:bg-ocean-50 hover:text-ocean-900'
+            "
+          >
+            <UIcon :name="item.icon" class="h-4 w-4" />
+            {{ item.label }}
+          </NuxtLink>
 
-        <div class="pt-3">
-          <LayoutProjectSwitcher />
-        </div>
-      </nav>
+          <div class="space-y-3 pt-3">
+            <LayoutWorkspaceSwitcher />
+            <LayoutProjectSwitcher />
+          </div>
+        </nav>
 
       <div class="border-t border-slate-200 p-3">
         <div class="mb-2 flex items-center gap-1 px-2">
@@ -182,7 +199,8 @@ watch(
             {{ item.label }}
           </button>
 
-          <div class="pt-3">
+          <div class="space-y-3 pt-3">
+            <LayoutWorkspaceSwitcher @navigated="menuOpen = false" />
             <LayoutProjectSwitcher @navigated="menuOpen = false" />
           </div>
         </nav>

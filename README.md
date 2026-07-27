@@ -23,6 +23,7 @@ Helm ช่วยแจกงานให้ทีม ดูภาพรวม�
 - Subtasks, labels, priority, search
 - Comments, notifications, attachments
 - Milestones และ task dependencies
+- **หลาย Workspace** — แยกทีม/องค์กร; ลูกค้าและโปรเจกต์ไม่ปนข้าม workspace
 
 ---
 
@@ -330,6 +331,53 @@ task supabase:push
 
 - ตรวจว่ารัน migration `002_rls_policies.sql` แล้ว
 - ตรวจว่า user เป็นสมาชิก workspace (`workspace_members`)
+- ตรวจว่าอยู่ **workspace ที่ถูกต้อง** (สลับจากเมนู Workspace ใน sidebar)
+
+### แยกทีมด้วย Workspace (แนะนำ)
+
+Helm ออกแบบให้ **หนึ่งทีม = หนึ่ง workspace**
+
+- ลูกค้า (`customers`), โปรเจกต์, ป้ายกำกับ และสมาชิกทีม แยกตาม `workspace_id`
+- สมาชิกเห็นข้อมูลเฉพาะ workspace ที่ถูกเชิญเข้า และ workspace ที่เลือกอยู่
+- สร้าง workspace ใหม่จาก sidebar → **Workspace → สร้าง workspace** แล้วเชิญเฉพาะคนในทีมนั้น (หน้า Team)
+- **เชิญผ่านลิงก์:** หน้า Team (แอดมิน) → สร้างลิงก์เปิดหรือผูกอีเมล พร้อมวันหมดอายุ → แชร์ `/invite/{token}`
+- **Audit log:** แอดมินดูประวัติโปรเจกต์/ลูกค้า/สมาชิก/invite ได้ที่เมนู Audit
+
+**อย่าเชิญทุกทีมเข้า workspace เดียว** — จะทำให้ลูกค้าและโปรเจกต์ปนกัน
+
+#### ข้อมูลเดิมที่ปนใน workspace เดียวแล้ว
+
+ยังไม่มี wizard ย้ายในแอป — ย้ายด้วยมือ/SQL:
+
+1. สร้าง workspace ใหม่ต่อทีมจาก UI
+2. เชิญเฉพาะสมาชิกทีมนั้นเข้า workspace ใหม่
+3. อัปเดต `workspace_id` ของแถวที่ต้องย้าย เช่น:
+
+```sql
+-- ตัวอย่าง: ย้ายลูกค้าและโปรเจกต์ที่เกี่ยวข้องไป workspace ใหม่
+-- แทนที่ :old_ws, :new_ws, และเงื่อนไขให้ตรงข้อมูลจริง
+
+update customers
+set workspace_id = :new_ws
+where workspace_id = :old_ws
+  and id in (/* customer ids ของทีมนี้ */);
+
+update projects
+set workspace_id = :new_ws
+where workspace_id = :old_ws
+  and customer_id in (/* customer ids ที่ย้ายแล้ว */);
+
+-- labels ที่ workspace ใหม่จะมีชุด default จาก create_workspace อยู่แล้ว
+-- งาน (tasks) ตาม projects ที่ย้าย — ไม่ต้องเปลี่ยน workspace_id โดยตรง
+```
+
+4. (ทางเลือก) ลบสมาชิกออกจาก workspace เก่าหลังย้ายเสร็จ
+
+อย่าลืมรัน migration `013_active_workspace_invites_audit.sql` ก่อนใช้ฟีเจอร์ workspace / invite / audit:
+
+```bash
+task supabase:push
+```
 
 ### อัปโหลดไฟล์ไม่ได้
 

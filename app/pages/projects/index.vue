@@ -4,35 +4,24 @@ definePageMeta({ middleware: "auth" });
 const { t } = useI18n();
 const { projects, loading, fetchProjects, createProject } = useProjects();
 const { fetchWorkspace } = useWorkspace();
-const { customers, fetchCustomers } = useCustomers();
-
 const showCreate = ref(false);
 const newName = ref("");
 const newDescription = ref("");
-const newCustomerId = ref<string | null>(null);
 const creating = ref(false);
-
-const customerItems = computed(() => [
-  { label: t("common.none"), value: null },
-  ...customers.value
-    .filter((c) => c.status === "active")
-    .map((c) => ({ label: c.name, value: c.id })),
-]);
 
 onMounted(async () => {
   await fetchWorkspace();
-  await Promise.all([fetchProjects(), fetchCustomers()]);
+  await fetchProjects();
 });
 
 async function handleCreate() {
   if (!newName.value.trim()) return;
   creating.value = true;
-  await createProject(newName.value.trim(), newDescription.value.trim(), newCustomerId.value);
+  await createProject(newName.value.trim(), newDescription.value.trim(), null);
   creating.value = false;
   showCreate.value = false;
   newName.value = "";
   newDescription.value = "";
-  newCustomerId.value = null;
 }
 </script>
 
@@ -59,30 +48,39 @@ async function handleCreate() {
     </div>
 
     <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <NuxtLink
+      <div
         v-for="project in projects"
         :key="project.id"
-        :to="`/projects/${project.id}/board`"
-        class="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+        class="group relative rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
       >
-        <div class="mb-3 flex items-center gap-3">
+        <NuxtLink :to="`/projects/${project.id}`" class="absolute inset-0 z-0 rounded-xl" />
+        <div class="relative z-10 mb-3 flex items-start gap-3">
           <div
             class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white"
             :style="{ backgroundColor: project.color }"
           >
             {{ project.name[0]?.toUpperCase() }}
           </div>
-          <div class="min-w-0">
+          <div class="min-w-0 flex-1">
             <h3 class="font-semibold text-slate-900 group-hover:text-slate-700">{{ project.name }}</h3>
-            <p v-if="project.customers" class="text-xs text-ocean-800">
-              {{ project.customers.name }}
-            </p>
-            <p v-else-if="project.description" class="text-xs text-slate-500 line-clamp-1">
+            <p v-if="project.description" class="text-xs text-slate-500 line-clamp-1">
               {{ stripMarkdownForPreview(project.description) }}
             </p>
+            <p v-if="project.owner" class="mt-1 text-xs text-slate-400">
+              {{ project.owner.full_name || project.owner.email }}
+            </p>
           </div>
+          <UButton
+            :to="`/projects/${project.id}?edit=1`"
+            icon="i-lucide-pencil"
+            size="xs"
+            variant="ghost"
+            color="neutral"
+            class="relative z-10 shrink-0"
+            :aria-label="t('projects.editProject')"
+          />
         </div>
-      </NuxtLink>
+      </div>
     </div>
 
     <UModal v-model:open="showCreate" :title="t('projects.newProject')">
@@ -97,14 +95,6 @@ async function handleCreate() {
               :placeholder="t('projects.descriptionPlaceholder')"
               :rows="2"
               variant="full"
-            />
-          </UFormField>
-          <UFormField :label="t('projects.customer')">
-            <USelect
-              v-model="newCustomerId"
-              :items="customerItems"
-              :placeholder="t('projects.selectCustomer')"
-              class="w-full"
             />
           </UFormField>
         </div>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Task } from "~/types";
-import { isTaskClosed } from "~/types";
+import { isTaskClosed, PROJECT_COLORS } from "~/types";
 import { format, parseISO, isBefore, startOfDay } from "date-fns";
 
 definePageMeta({ middleware: "auth" });
@@ -8,36 +8,81 @@ definePageMeta({ middleware: "auth" });
 const { t } = useI18n();
 const { dateFnsLocale } = useDateLocale();
 const route = useRoute();
+const user = useSupabaseUser();
 const projectId = computed(() => route.params.id as string);
 
 const { getProject, fetchProjects, updateProject } = useProjects();
 const { tasks, fetchTasks } = useTasks(projectId);
-const { fetchWorkspace } = useWorkspace();
-const { customers, fetchCustomers } = useCustomers();
+const { fetchWorkspace, members, canManageMembers, myMembership } = useWorkspace();
+const { fetchCustomers } = useCustomers();
 
 const project = computed(() => getProject(projectId.value));
 const showModal = ref(false);
 const selectedTask = ref<Task | null>(null);
-const savingCustomer = ref(false);
+const showEdit = ref(false);
+const savingEdit = ref(false);
+const editError = ref("");
 
-const customerItems = computed(() => [
-  { label: t("common.none"), value: null },
-  ...customers.value
-    .filter((c) => c.status === "active")
-    .map((c) => ({ label: c.name, value: c.id })),
+const editName = ref("");
+const editDescription = ref("");
+const editColor = ref(PROJECT_COLORS[0]!);
+const editOwnerId = ref<string | null>(null);
+
+const canEditProject = computed(() => {
+  if (!project.value) return false;
+  if (project.value.owner_id && project.value.owner_id === user.value?.id) return true;
+  const role = myMembership.value?.role;
+  return role === "admin" || role === "manager" || role === "member";
+});
+
+const ownerItems = computed(() => [
+  { label: t("projects.ownerUnassigned"), value: null },
+  ...members.value.map((member) => ({
+    label: member.profiles?.full_name || member.profiles?.email || t("common.none"),
+    value: member.user_id,
+  })),
 ]);
 
 onMounted(async () => {
   await fetchWorkspace();
   await Promise.all([fetchProjects(), fetchCustomers()]);
   await fetchTasks(projectId.value);
+  if (route.query.edit === "1" && canEditProject.value) {
+    openEditProject();
+    navigateTo({ path: route.path, query: {} }, { replace: true });
+  }
 });
 
-async function handleCustomerChange(value: string | null) {
+function openEditProject() {
   if (!project.value) return;
-  savingCustomer.value = true;
-  await updateProject(project.value.id, { customer_id: value });
-  savingCustomer.value = false;
+  editName.value = project.value.name;
+  editDescription.value = project.value.description ?? "";
+  editColor.value = project.value.color || PROJECT_COLORS[0]!;
+  editOwnerId.value = project.value.owner_id;
+  editError.value = "";
+  showEdit.value = true;
+}
+
+async function handleSaveProject() {
+  if (!project.value || !editName.value.trim()) return;
+  savingEdit.value = true;
+  editError.value = "";
+
+  const { error } = await updateProject(project.value.id, {
+    name: editName.value.trim(),
+    description: editDescription.value.trim() || null,
+    color: editColor.value,
+    owner_id: editOwnerId.value,
+  });
+
+  savingEdit.value = false;
+
+  if (error) {
+    editError.value = error;
+    return;
+  }
+
+  showEdit.value = false;
 }
 
 const stats = computed(() => ({
@@ -86,6 +131,17 @@ function formatDue(date: string) {
     <LayoutProjectHeader v-if="project" :project="project">
       <template #actions>
         <UButton
+          v-if="canEditProject"
+          icon="i-lucide-pencil"
+          size="sm"
+          variant="soft"
+          color="neutral"
+          class="shrink-0"
+          @click="openEditProject"
+        >
+          {{ t("projects.editProject") }}
+        </UButton>
+        <UButton
           icon="i-lucide-plus"
           size="sm"
           class="shrink-0"
@@ -102,17 +158,17 @@ function formatDue(date: string) {
       :content="project.description"
     />
 
-    <div v-if="project" class="mb-4 max-w-xs">
-      <UFormField :label="t('projects.customer')">
-        <USelect
-          :model-value="project.customer_id"
-          :items="customerItems"
-          :placeholder="t('projects.selectCustomer')"
-          :disabled="savingCustomer"
-          class="w-full"
-          @update:model-value="(v) => handleCustomerChange(v as string | null)"
-        />
-      </UFormField>
+    <div v-if="project" class="mb-4 grid max-w-2xl gap-4 sm:grid-cols-2">
+      <div>
+        <p class="mb-1 text-xs font-medium text-slate-500">{{ t("projects.owner") }}</p>
+        <p class="text-sm text-slate-800">
+          {{
+            project.owner?.full_name
+              || project.owner?.email
+              || t("projects.ownerUnassigned")
+          }}
+        </p>
+      </div>
     </div>
 
     <LayoutProjectNav class="mb-6" />
@@ -174,6 +230,68 @@ function formatDue(date: string) {
         </button>
       </div>
     </div>
+
+    <UModal v-model:open="showEdit" :title="t('projects.editProject')">
+      <template #body>
+        <div class="space-y-4">
+          <UAlert v-if="editError" color="error" variant="subtle" :title="editError" />
+          <UFormField :label="t('projects.name')" required>
+            <UInput
+              v-model="editName"
+              :placeholder="t('projects.namePlaceholder')"
+              class="w-full"
+            />
+          </UFormField>
+          <UFormField :label="t('projects.description')">
+            <RichTextEditor
+              v-model="editDescription"
+              :placeholder="t('projects.descriptionPlaceholder')"
+              :rows="3"
+              variant="full"
+            />
+          </UFormField>
+          <UFormField :label="t('projects.color')">
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="color in PROJECT_COLORS"
+                :key="color"
+                type="button"
+                class="h-8 w-8 rounded-lg ring-offset-2 transition"
+                :class="editColor === color ? 'ring-2 ring-ocean-700' : 'hover:opacity-80'"
+                :style="{ backgroundColor: color }"
+                :aria-label="color"
+                @click="editColor = color"
+              />
+            </div>
+          </UFormField>
+          <UFormField
+            v-if="canManageMembers || project?.owner_id === user?.id"
+            :label="t('projects.owner')"
+          >
+            <USelect
+              v-model="editOwnerId"
+              :items="ownerItems"
+              :placeholder="t('projects.selectOwner')"
+              class="w-full"
+            />
+          </UFormField>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UButton variant="ghost" color="neutral" @click="showEdit = false">
+            {{ t("common.cancel") }}
+          </UButton>
+          <UButton
+            :loading="savingEdit"
+            :disabled="!editName.trim()"
+            @click="handleSaveProject"
+          >
+            {{ t("common.save") }}
+          </UButton>
+        </div>
+      </template>
+    </UModal>
 
     <TasksTaskModal
       :task="selectedTask"

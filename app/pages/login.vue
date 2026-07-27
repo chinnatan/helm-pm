@@ -2,6 +2,7 @@
 definePageMeta({ layout: "auth", middleware: "guest" });
 
 const { t, locale, setLocale } = useI18n();
+const route = useRoute();
 const supabase = useSupabaseClient();
 const { uploadAvatarFile } = useAvatarUpload();
 
@@ -9,11 +10,20 @@ const email = ref("");
 const password = ref("");
 const firstName = ref("");
 const lastName = ref("");
+const workspaceName = ref("");
 const avatarFile = ref<File | null>(null);
 const avatarPreview = ref<string | null>(null);
-const isSignUp = ref(false);
+const isSignUp = ref(route.query.signup === "1");
 const loading = ref(false);
 const error = ref("");
+
+function safeRedirect(): string {
+  const redirect = route.query.redirect;
+  if (typeof redirect === "string" && redirect.startsWith("/") && !redirect.startsWith("//")) {
+    return redirect;
+  }
+  return "/planner";
+}
 
 function onAvatarChange(event: Event) {
   const input = event.target as HTMLInputElement;
@@ -43,6 +53,7 @@ async function handleEmailAuth() {
     const first = firstName.value.trim();
     const last = lastName.value.trim();
     const fullName = `${first} ${last}`;
+    const trimmedWorkspace = workspaceName.value.trim();
 
     const { data, error: authError } = await supabase.auth.signUp({
       email: email.value,
@@ -52,6 +63,7 @@ async function handleEmailAuth() {
           first_name: first,
           last_name: last,
           full_name: fullName,
+          ...(trimmedWorkspace ? { workspace_name: trimmedWorkspace } : {}),
         },
       },
     });
@@ -76,7 +88,7 @@ async function handleEmailAuth() {
     loading.value = false;
 
     if (data.session) {
-      navigateTo("/planner");
+      navigateTo(safeRedirect());
     } else {
       error.value = t("auth.checkEmail");
     }
@@ -95,13 +107,14 @@ async function handleEmailAuth() {
     return;
   }
 
-  navigateTo("/planner");
+  navigateTo(safeRedirect());
 }
 
 watch(isSignUp, (signingUp) => {
   if (!signingUp) {
     firstName.value = "";
     lastName.value = "";
+    workspaceName.value = "";
     clearAvatar();
   }
   error.value = "";
@@ -167,6 +180,15 @@ onUnmounted(() => {
             />
           </UFormField>
         </div>
+
+        <UFormField :label="t('auth.workspaceName')" :hint="t('auth.workspaceOptional')">
+          <UInput
+            v-model="workspaceName"
+            :placeholder="t('auth.workspaceNamePlaceholder')"
+            autocomplete="organization"
+            class="w-full"
+          />
+        </UFormField>
 
         <UFormField :label="t('auth.avatar')" :hint="t('auth.avatarOptional')">
           <div class="flex items-center gap-3">

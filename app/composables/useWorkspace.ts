@@ -1,11 +1,19 @@
-import type { Workspace, WorkspaceMember, JobRole, MemberRole } from "~/types";
+import type {
+  Workspace,
+  WorkspaceMember,
+  WorkspaceMembership,
+  JobRole,
+  MemberRole,
+} from "~/types";
 
 export function useWorkspace() {
   const supabase = useSupabaseClient();
   const user = useSupabaseUser();
 
   const workspace = useState<Workspace | null>("workspace", () => null);
+  const workspaces = useState<WorkspaceMembership[]>("workspaces", () => []);
   const members = useState<WorkspaceMember[]>("workspaceMembers", () => []);
+  const loading = useState("workspaceLoading", () => false);
 
   const myMembership = computed(() =>
     members.value.find((m) => m.user_id === user.value?.id) ?? null,
@@ -16,24 +24,51 @@ export function useWorkspace() {
     return role === "admin" || role === "manager";
   });
 
-  async function fetchWorkspace() {
+  const isWorkspaceAdmin = computed(() => myMembership.value?.role === "admin");
+
+  function clearWorkspaceCaches() {
+    members.value = [];
+    const projects = useState("projects", () => [] as unknown[]);
+    projects.value = [];
+    const customers = useState("customers", () => [] as unknown[]);
+    customers.value = [];
+    const openTaskCounts = useState<Record<string, number>>(
+      "customer-open-counts",
+      () => ({}),
+    );
+    openTaskCounts.value = {};
+    const plannerTasks = useState("plannerTasks", () => [] as unknown[]);
+    plannerTasks.value = [];
+    const workspaceInvites = useState("workspaceInvites", () => [] as unknown[]);
+    workspaceInvites.value = [];
+    const auditLogEntries = useState("auditLogEntries", () => [] as unknown[]);
+    auditLogEntries.value = [];
+  }
+
+  async function fetchWorkspaces() {
     if (!user.value) return;
 
-    const { data: membership } = await supabase
+    const { data } = await supabase
       .from("workspace_members")
-      .select("workspace_id, workspaces(*)")
+      .select("id, role, workspace_id, workspaces(*)")
       .eq("user_id", user.value.id)
-      .limit(1)
-      .single();
+      .order("created_at", { ascending: true });
 
-    const row = membership as { workspaces?: Workspace } | null;
-    if (row?.workspaces) {
-      workspace.value = row.workspaces;
-    }
-
-    if (workspace.value) {
-      await fetchMembers();
-    }
+    workspaces.value = ((data ?? []) as unknown as Array<{
+      id: string;
+      role: MemberRole;
+      workspaces?: Workspace | Workspace[] | null;
+    }>)
+      .map((r) => {
+        const ws = Array.isArray(r.workspaces) ? r.workspaces[0] : r.workspaces;
+        if (!ws) return null;
+        return {
+          membershipId: r.id,
+          role: r.role,
+          workspace: ws,
+        } satisfies WorkspaceMembership;
+      })
+      .filter((m): m is WorkspaceMembership => m !== null);
   }
 
   async function fetchMembers() {
@@ -45,7 +80,95 @@ export function useWorkspace() {
       .eq("workspace_id", workspace.value.id)
       .order("created_at");
 
-    members.value = (data ?? []) as WorkspaceMember[];
+    members.value = (data ?? []) as unknown as WorkspaceMember[];
+  }
+
+  async function resolveActiveWorkspaceId(): Promise<string | null> {
+    if (!user.value) return null;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("active_workspace_id")
+      .eq("id", user.value.id)
+      .maybeSingle();
+
+    const activeId = profile?.active_workspace_id ?? null;
+    if (activeId && workspaces.value.some((w) => w.workspace.id === activeId)) {
+      return activeId;
+    }
+
+    const first = workspaces.value[0]?.workspace.id ?? null;
+    if (first) {
+      await supabase.rpc("set_active_workspace", { ws_id: first });
+    }
+    return first;
+  }
+
+  async function fetchWorkspace() {
+    if (!user.value) return;
+    loading.value = true;
+
+    try {
+      await fetchWorkspaces();
+      const activeId = await resolveActiveWorkspaceId();
+      const selected =
+        workspaces.value.find((w) => w.workspace.id === activeId)?.workspace ??
+        null;
+      workspace.value = selected;
+
+      if (workspace.value) {
+        await fetchMembers();
+      } else {
+        members.value = [];
+      }
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  async function setActiveWorkspace(id: string) {
+    if (!user.value) return { error: "Not authenticated" };
+    if (workspace.value?.id === id) return { error: null };
+
+    const { error } = await supabase.rpc("set_active_workspace", { ws_id: id });
+    if (error) return { error: error.message };
+
+    clearWorkspaceCaches();
+
+    const selected =
+      workspaces.value.find((w) => w.workspace.id === id)?.workspace ?? null;
+    workspace.value = selected;
+
+    if (workspace.value) {
+      await fetchMembers();
+    }
+
+    return { error: null };
+  }
+
+  async function createWorkspace(name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) return { data: null, error: "Workspace name is required" };
+
+    const { data, error } = await supabase.rpc("create_workspace", {
+      ws_name: trimmed,
+    });
+
+    if (error) return { data: null, error: error.message };
+
+    clearWorkspaceCaches();
+
+    await fetchWorkspaces();
+    const wsId = data as string;
+    const selected =
+      workspaces.value.find((w) => w.workspace.id === wsId)?.workspace ?? null;
+    workspace.value = selected;
+
+    if (workspace.value) {
+      await fetchMembers();
+    }
+
+    return { data: selected, error: null };
   }
 
   async function inviteMember(
@@ -91,19 +214,26 @@ export function useWorkspace() {
 
     if (!error && data) {
       const idx = members.value.findIndex((m) => m.id === id);
-      if (idx >= 0) members.value[idx] = data as WorkspaceMember;
+      if (idx >= 0) members.value[idx] = data as unknown as WorkspaceMember;
     }
     return { error: error?.message };
   }
 
   return {
     workspace,
+    workspaces,
     members,
+    loading,
     myMembership,
     canManageMembers,
+    isWorkspaceAdmin,
     fetchWorkspace,
+    fetchWorkspaces,
     fetchMembers,
+    setActiveWorkspace,
+    createWorkspace,
     inviteMember,
     updateMember,
+    clearWorkspaceCaches,
   };
 }

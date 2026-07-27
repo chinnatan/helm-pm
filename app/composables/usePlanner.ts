@@ -16,7 +16,7 @@ const PLANNER_SELECT = `
   tester:tester_id(id, email, full_name, avatar_url),
   milestones:milestone_id(id, title, date, start_date, due_date),
   customers:customer_id(id, name),
-  projects(id, name, color, customer_id),
+  projects!inner(id, name, color, customer_id, workspace_id),
   subtasks(*),
   task_labels(label_id, labels(*)),
   user_task_preferences!inner(*)
@@ -28,7 +28,7 @@ const TASK_SELECT = `
   tester:tester_id(id, email, full_name, avatar_url),
   milestones:milestone_id(id, title, date, start_date, due_date),
   customers:customer_id(id, name),
-  projects(id, name, color, customer_id),
+  projects!inner(id, name, color, customer_id, workspace_id),
   subtasks(*),
   task_labels(label_id, labels(*)),
   user_task_preferences(*)
@@ -38,6 +38,7 @@ export function usePlanner() {
   const supabase = useSupabaseClient();
   const user = useSupabaseUser();
   const { t } = useI18n();
+  const { workspace } = useWorkspace();
 
   const activeTab = ref<PlannerTab>("today");
   const tasks = useState<Task[]>("plannerTasks", () => []);
@@ -57,11 +58,15 @@ export function usePlanner() {
   }
 
   async function fetchPlannerTasks() {
-    if (!user.value) return;
+    if (!user.value || !workspace.value) {
+      tasks.value = [];
+      return;
+    }
     loading.value = true;
 
     const today = new Date();
     const todayStr = format(today, "yyyy-MM-dd");
+    const wsId = workspace.value.id;
 
     if (activeTab.value === "focus") {
       const { data } = await supabase
@@ -69,15 +74,17 @@ export function usePlanner() {
         .select(PLANNER_SELECT)
         .or(mineFilter())
         .eq("user_task_preferences.is_pinned", true)
+        .eq("projects.workspace_id", wsId)
         .not("status", "in", `(${TASK_CLOSED_STATUSES.join(",")})`)
         .order("sort_order");
 
-      tasks.value = (data ?? []) as Task[];
+      tasks.value = (data ?? []) as unknown as Task[];
     } else {
       let query = supabase
         .from("tasks")
         .select(TASK_SELECT)
         .or(mineFilter())
+        .eq("projects.workspace_id", wsId)
         .not("status", "in", `(${TASK_CLOSED_STATUSES.join(",")})`);
 
       if (activeTab.value === "inbox") {
@@ -85,7 +92,7 @@ export function usePlanner() {
       }
 
       const { data } = await query.order("due_date", { ascending: true, nullsFirst: false });
-      let result = (data ?? []) as Task[];
+      let result = (data ?? []) as unknown as Task[];
 
       if (activeTab.value === "today") {
         result = result.filter((t) => {

@@ -3,6 +3,7 @@ import { PROJECT_COLORS } from "~/types";
 
 export function useProjects() {
   const supabase = useSupabaseClient();
+  const user = useSupabaseUser();
   const { workspace } = useWorkspace();
 
   const projects = useState<Project[]>("projects", () => []);
@@ -14,7 +15,7 @@ export function useProjects() {
 
     const { data } = await supabase
       .from("projects")
-      .select("*, customers:customer_id(id, name)")
+      .select("*, customers:customer_id(id, name), owner:owner_id(id, email, full_name, avatar_url)")
       .eq("workspace_id", workspace.value.id)
       .is("archived_at", null)
       .order("created_at", { ascending: false });
@@ -40,8 +41,9 @@ export function useProjects() {
         description: description || null,
         color,
         customer_id: customerId || null,
+        owner_id: user.value?.id ?? null,
       })
-      .select("*, customers:customer_id(id, name)")
+      .select("*, customers:customer_id(id, name), owner:owner_id(id, email, full_name, avatar_url)")
       .single();
 
     if (!error && data) {
@@ -57,6 +59,7 @@ export function useProjects() {
       description?: string | null;
       color?: string;
       customer_id?: string | null;
+      owner_id?: string | null;
       archived_at?: string | null;
     },
   ) {
@@ -64,7 +67,7 @@ export function useProjects() {
       .from("projects")
       .update(updates)
       .eq("id", id)
-      .select("*, customers:customer_id(id, name)")
+      .select("*, customers:customer_id(id, name), owner:owner_id(id, email, full_name, avatar_url)")
       .single();
 
     if (!error && data) {
