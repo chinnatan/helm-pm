@@ -1,8 +1,19 @@
-/** Remembers the last selected project across menu switches and reloads. */
+/** Remembers the last selected project per workspace across menu switches and reloads. */
 export function useLastProject() {
   const { projects, getProject } = useProjects();
+  const { workspace } = useWorkspace();
 
-  const stored = useCookie<string | null>("helm-last-project-id", {
+  const storedByWorkspace = useCookie<Record<string, string>>(
+    "helm-last-project-by-workspace",
+    {
+      default: () => ({}),
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: "lax",
+    },
+  );
+
+  /** Legacy single cookie — migrate once then clear. */
+  const legacyStored = useCookie<string | null>("helm-last-project-id", {
     default: () => null,
     maxAge: 60 * 60 * 24 * 365,
     sameSite: "lax",
@@ -15,6 +26,31 @@ export function useLastProject() {
   });
 
   const route = useRoute();
+
+  const stored = computed({
+    get() {
+      const wsId = workspace.value?.id;
+      if (!wsId) return null;
+      const map = storedByWorkspace.value ?? {};
+      if (map[wsId]) return map[wsId];
+      // Migrate legacy cookie into the active workspace once
+      if (legacyStored.value) {
+        const next = { ...map, [wsId]: legacyStored.value };
+        storedByWorkspace.value = next;
+        legacyStored.value = null;
+        return next[wsId] ?? null;
+      }
+      return null;
+    },
+    set(projectId: string | null) {
+      const wsId = workspace.value?.id;
+      if (!wsId) return;
+      const map = { ...(storedByWorkspace.value ?? {}) };
+      if (projectId) map[wsId] = projectId;
+      else delete map[wsId];
+      storedByWorkspace.value = map;
+    },
+  });
 
   const routeProjectId = computed(() => {
     if (!route.path.startsWith("/projects/")) return null;
@@ -74,6 +110,10 @@ export function useLastProject() {
     stored.value = projectId;
   }
 
+  function clearRememberedProject() {
+    stored.value = null;
+  }
+
   watch(
     routeProjectId,
     (id) => {
@@ -107,5 +147,6 @@ export function useLastProject() {
     projectsHomePath,
     projectWorkPath,
     rememberProject,
+    clearRememberedProject,
   };
 }

@@ -5,7 +5,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const route = useRoute();
-const { fetchWorkspace } = useWorkspace();
+const { fetchWorkspace, workspace } = useWorkspace();
 const { projects, fetchProjects } = useProjects();
 const { routeProjectId, activeProjectId, activeProject, rememberProject, projectWorkPath } =
   useLastProject();
@@ -39,6 +39,15 @@ onMounted(async () => {
   await fetchWorkspace();
   await fetchProjects();
 });
+
+watch(
+  () => workspace.value?.id,
+  async (id: string | undefined, prev: string | undefined) => {
+    if (id && prev && id !== prev) {
+      await fetchProjects();
+    }
+  },
+);
 </script>
 
 <template>
