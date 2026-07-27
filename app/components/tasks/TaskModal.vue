@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { JobRole, Task, TaskStatus, TaskPriority } from "~/types";
+import { PRIORITY_DEFAULT_HOURS } from "~/types";
 
 const props = defineProps<{
   task?: Task | null;
@@ -24,7 +25,8 @@ const { labels, fetchLabels } = useLabels();
 const projectIdRef = toRef(() => props.projectId);
 const { milestones, fetchMilestones } = useMilestones(projectIdRef);
 const { customers, fetchCustomers } = useCustomers();
-const { getProject, fetchProjects } = useProjects();
+const { getProject, fetchProjects, projects } = useProjects();
+const { scheduleCapacityAlerts } = useCapacityAlerts();
 
 const form = reactive({
   title: "",
@@ -37,6 +39,7 @@ const form = reactive({
   priority: "medium" as TaskPriority,
   due_date: "",
   start_date: "",
+  estimate_hours: "" as string,
   label_ids: [] as string[],
 });
 
@@ -126,6 +129,8 @@ watch(
       form.priority = props.task.priority;
       form.due_date = props.task.due_date ?? "";
       form.start_date = props.task.start_date ?? "";
+      form.estimate_hours =
+        props.task.estimate_hours != null ? String(props.task.estimate_hours) : "";
       form.label_ids =
         props.task.task_labels?.map((tl) => tl.labels?.id).filter(Boolean) as string[] ?? [];
       activity.value = await fetchActivity(props.task.id);
@@ -140,6 +145,7 @@ watch(
       form.priority = "medium";
       form.due_date = props.defaultDueDate ?? "";
       form.start_date = "";
+      form.estimate_hours = "";
       form.label_ids = [];
       activity.value = [];
     }
@@ -149,6 +155,13 @@ watch(
 
 async function save() {
   saving.value = true;
+
+  const estimateRaw = form.estimate_hours.trim();
+  const estimateParsed = estimateRaw === "" ? null : Number(estimateRaw);
+  const estimate_hours =
+    estimateParsed != null && Number.isFinite(estimateParsed) && estimateParsed > 0
+      ? estimateParsed
+      : null;
 
   const payload = {
     title: form.title,
@@ -161,6 +174,7 @@ async function save() {
     priority: form.priority,
     due_date: form.due_date || null,
     start_date: form.start_date || null,
+    estimate_hours,
   };
 
   if (isEdit.value && props.task) {
@@ -176,7 +190,12 @@ async function save() {
   saving.value = false;
   emit("update:open", false);
   emit("saved");
+  scheduleCapacityAlerts({ projects: projects.value });
 }
+
+const defaultEstimateHours = computed(
+  () => PRIORITY_DEFAULT_HOURS[form.priority] ?? PRIORITY_DEFAULT_HOURS.medium,
+);
 
 async function handleAddSubtask() {
   if (!props.task || !newSubtask.value.trim()) return;
@@ -338,6 +357,20 @@ const customerItems = computed(() => [
 
           <UFormField :label="t('tasks.dueDate')">
             <UInput v-model="form.due_date" type="date" class="w-full" />
+          </UFormField>
+
+          <UFormField
+            :label="t('tasks.estimateHours')"
+            :hint="t('tasks.estimateHoursHint', { hours: defaultEstimateHours })"
+          >
+            <UInput
+              v-model="form.estimate_hours"
+              type="number"
+              min="0.5"
+              step="0.5"
+              class="w-full"
+              :placeholder="t('tasks.estimateHoursPlaceholder')"
+            />
           </UFormField>
 
           <UFormField :label="t('projects.milestone')">

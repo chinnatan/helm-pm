@@ -11,10 +11,18 @@ const route = useRoute();
 const user = useSupabaseUser();
 const projectId = computed(() => route.params.id as string);
 
-const { getProject, fetchProjects, updateProject } = useProjects();
+const { getProject, fetchProjects, updateProject, projects } = useProjects();
 const { tasks, fetchTasks } = useTasks(projectId);
 const { fetchWorkspace, members, canManageMembers, myMembership } = useWorkspace();
 const { fetchCustomers } = useCustomers();
+const {
+  fetchCapacityData,
+  projectAssigneeLoads,
+  upcomingMilestones,
+} = useTeamCapacity();
+const projectIdRef = toRef(() => projectId.value);
+const { milestones, fetchMilestones } = useMilestones(projectIdRef);
+const { scheduleCapacityAlerts } = useCapacityAlerts();
 
 const project = computed(() => getProject(projectId.value));
 const showModal = ref(false);
@@ -27,6 +35,13 @@ const editName = ref("");
 const editDescription = ref("");
 const editColor = ref(PROJECT_COLORS[0]!);
 const editOwnerId = ref<string | null>(null);
+
+const assigneeLoads = computed(() => projectAssigneeLoads(projectId.value));
+const nearMilestones = computed(() => upcomingMilestones(milestones.value, 3));
+
+const projectRemainingHours = computed(() =>
+  assigneeLoads.value.reduce((s, r) => s + r.remainingHours, 0),
+);
 
 const canEditProject = computed(() => {
   if (!project.value) return false;
@@ -46,7 +61,8 @@ const ownerItems = computed(() => [
 onMounted(async () => {
   await fetchWorkspace();
   await Promise.all([fetchProjects(), fetchCustomers()]);
-  await fetchTasks(projectId.value);
+  await Promise.all([fetchTasks(projectId.value), fetchMilestones(), fetchCapacityData()]);
+  scheduleCapacityAlerts({ projects: projects.value });
   if (route.query.edit === "1" && canEditProject.value) {
     openEditProject();
     navigateTo({ path: route.path, query: {} }, { replace: true });
@@ -119,6 +135,12 @@ function openTask(task: Task) {
 function openNewTask() {
   selectedTask.value = null;
   showModal.value = true;
+}
+
+async function onTaskSaved() {
+  await fetchTasks(projectId.value);
+  await fetchCapacityData();
+  scheduleCapacityAlerts({ projects: projects.value });
 }
 
 function formatDue(date: string) {
@@ -231,6 +253,81 @@ function formatDue(date: string) {
       </div>
     </div>
 
+    <div class="mt-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+      <div class="mb-1 flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h2 class="text-sm font-semibold text-slate-700">
+            {{ t("capacity.projectTitle") }}
+          </h2>
+          <p class="text-xs text-slate-400">{{ t("capacity.projectHint") }}</p>
+        </div>
+        <p class="text-sm text-slate-600">
+          {{ t("capacity.remainingHours") }}:
+          <span class="font-semibold text-slate-900">
+            {{ Math.round(projectRemainingHours * 10) / 10 }}
+            {{ t("capacity.hoursUnit") }}
+          </span>
+        </p>
+      </div>
+
+      <div class="mt-4 grid gap-4 lg:grid-cols-2">
+        <div>
+          <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            {{ t("capacity.assigneeLoad") }}
+          </h3>
+          <p v-if="assigneeLoads.length === 0" class="text-sm text-slate-400">
+            {{ t("capacity.noAssignees") }}
+          </p>
+          <div v-else class="space-y-3">
+            <div
+              v-for="row in assigneeLoads"
+              :key="row.userId"
+              class="rounded-lg border border-slate-100 p-3"
+            >
+              <div class="mb-2 flex items-center justify-between gap-2">
+                <p class="truncate text-sm font-medium text-slate-800">{{ row.name }}</p>
+                <p class="shrink-0 text-xs text-slate-500">
+                  {{ row.remainingHours }}{{ t("capacity.hoursUnit") }} ·
+                  {{ row.activeTaskCount }}
+                </p>
+              </div>
+              <CapacityLoadBar
+                :pct="row.thisWeekPct"
+                :label="`${t('capacity.thisWeek')} · ${row.thisWeekHours}${t('capacity.hoursUnit')}`"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            {{ t("capacity.upcomingMilestones") }}
+          </h3>
+          <p v-if="nearMilestones.length === 0" class="text-sm text-slate-400">
+            {{ t("capacity.noMilestones") }}
+          </p>
+          <ul v-else class="space-y-2">
+            <li
+              v-for="ms in nearMilestones"
+              :key="ms.id"
+              class="flex items-center justify-between gap-3 rounded-lg border border-slate-100 px-3 py-2"
+            >
+              <span class="truncate text-sm font-medium text-slate-800">{{ ms.title }}</span>
+              <span class="shrink-0 text-xs text-slate-500">
+                {{ formatDue(ms.due_date || ms.date) }}
+              </span>
+            </li>
+          </ul>
+          <NuxtLink
+            :to="`/projects/${projectId}/gantt`"
+            class="mt-3 inline-block text-xs text-slate-500 hover:text-slate-800"
+          >
+            {{ t("projectNav.gantt") }}
+          </NuxtLink>
+        </div>
+      </div>
+    </div>
+
     <UModal v-model:open="showEdit" :title="t('projects.editProject')">
       <template #body>
         <div class="space-y-4">
@@ -298,7 +395,7 @@ function formatDue(date: string) {
       :project-id="projectId"
       :open="showModal"
       @update:open="showModal = $event"
-      @saved="fetchTasks(projectId)"
+      @saved="onTaskSaved"
     />
   </div>
 </template>

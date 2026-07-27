@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { InviteType, JobRole, MemberRole } from "~/types";
-import { JOB_ROLE_VALUES } from "~/types";
+import { DEFAULT_WEEKLY_CAPACITY_HOURS, JOB_ROLE_VALUES } from "~/types";
 import { addDays, format, parseISO } from "date-fns";
 
 definePageMeta({ middleware: "auth" });
@@ -23,7 +23,24 @@ const {
   revokeInvite,
   inviteUrl,
 } = useWorkspaceInvites();
-const supabase = useSupabaseClient();
+const {
+  loading: capacityLoading,
+  fetchCapacityData,
+  memberRows,
+  workspaceSummary,
+  forwardWeekBuckets,
+  burnWeekBuckets,
+  avgWeeklyBurn,
+  runwayWeeks,
+  memberCapacity,
+} = useTeamCapacity();
+const { scheduleCapacityAlerts } = useCapacityAlerts();
+
+function baselineWeeklyFor(userId: string) {
+  return memberCapacity(userId) || DEFAULT_WEEKLY_CAPACITY_HOURS;
+}
+
+const activeTab = ref<"members" | "capacity">("capacity");
 
 const inviteEmail = ref("");
 const inviteRole = ref<MemberRole>("member");
@@ -42,13 +59,15 @@ const linkError = ref("");
 const lastCreatedUrl = ref<string | null>(null);
 const copied = ref(false);
 
-const memberTasks = ref<Record<string, number>>({});
-const memberOverdue = ref<Record<string, number>>({});
+async function refreshCapacity() {
+  await fetchCapacityData();
+  scheduleCapacityAlerts({ projects: projects.value });
+}
 
 onMounted(async () => {
   await fetchWorkspace();
   await fetchProjects();
-  await fetchWorkload();
+  await refreshCapacity();
   if (isWorkspaceAdmin.value) await fetchInvites();
 });
 
@@ -57,7 +76,7 @@ watch(
   async (id, prev) => {
     if (id && prev && id !== prev) {
       await fetchProjects();
-      await fetchWorkload();
+      await refreshCapacity();
       if (isWorkspaceAdmin.value) await fetchInvites();
     }
   },
@@ -67,37 +86,8 @@ watch(isWorkspaceAdmin, async (admin) => {
   if (admin) await fetchInvites();
 });
 
-async function fetchWorkload() {
-  const projectIds = projects.value.map((p) => p.id);
-  if (projectIds.length === 0) {
-    memberTasks.value = {};
-    memberOverdue.value = {};
-    return;
-  }
-
-  const { data: tasks } = await supabase
-    .from("tasks")
-    .select("assignee_id, tester_id, status, due_date")
-    .in("project_id", projectIds)
-    .not("status", "in", "(done,release,cancelled)");
-
-  const counts: Record<string, number> = {};
-  const overdue: Record<string, number> = {};
-  const today = format(new Date(), "yyyy-MM-dd");
-
-  for (const task of tasks ?? []) {
-    const ids = [task.assignee_id, task.tester_id].filter(Boolean) as string[];
-    const unique = [...new Set(ids)];
-    for (const id of unique) {
-      counts[id] = (counts[id] ?? 0) + 1;
-      if (task.due_date && task.due_date < today) {
-        overdue[id] = (overdue[id] ?? 0) + 1;
-      }
-    }
-  }
-
-  memberTasks.value = counts;
-  memberOverdue.value = overdue;
+function rowFor(userId: string) {
+  return memberRows.value.find((r) => r.userId === userId);
 }
 
 async function handleInvite() {
@@ -117,7 +107,7 @@ async function handleInvite() {
   } else {
     inviteEmail.value = "";
     inviteJobRole.value = null;
-    await fetchWorkload();
+    await refreshCapacity();
   }
 }
 
@@ -210,6 +200,15 @@ async function handlePermissionRoleChange(memberId: string, role: unknown) {
   await updateMember(memberId, { role });
 }
 
+async function handleCapacityChange(memberId: string, raw: unknown) {
+  const n = typeof raw === "number" ? raw : Number(raw);
+  if (!Number.isFinite(n) || n < 8 || n > 60) return;
+  const current = members.value.find((m) => m.id === memberId)?.weekly_capacity_hours;
+  if (current != null && Number(current) === n) return;
+  await updateMember(memberId, { weekly_capacity_hours: n });
+  await refreshCapacity();
+}
+
 function inviteStatus(inv: {
   revoked_at: string | null;
   accepted_at: string | null;
@@ -265,6 +264,11 @@ const expiryOptions = computed(() => [
 ]);
 
 const listedInvites = computed(() => invites.value);
+
+const tabItems = computed(() => [
+  { label: t("team.tabCapacity"), value: "capacity" as const },
+  { label: t("team.tabMembers"), value: "members" as const },
+]);
 </script>
 
 <template>
@@ -277,185 +281,360 @@ const listedInvites = computed(() => invites.value);
       </p>
     </div>
 
-    <!-- Invite links (admin) -->
-    <div
-      v-if="isWorkspaceAdmin"
-      class="mb-8 rounded-xl border border-slate-200 bg-white p-4 sm:p-5"
-    >
-      <h2 class="mb-1 text-sm font-semibold text-slate-700">{{ t("team.inviteLinkTitle") }}</h2>
-      <p class="mb-4 text-xs text-slate-400">{{ t("team.inviteLinkHint") }}</p>
-
-      <UAlert v-if="linkError" color="error" variant="subtle" class="mb-3" :title="linkError" />
-
-      <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-        <UFormField :label="t('team.inviteType')" class="w-full sm:w-40">
-          <USelect v-model="linkType" :items="typeOptions" class="w-full" />
-        </UFormField>
-        <UFormField
-          v-if="linkType === 'email'"
-          :label="t('team.email')"
-          class="w-full sm:w-56"
-        >
-          <UInput v-model="linkEmail" placeholder="email@example.com" class="w-full" />
-        </UFormField>
-        <UFormField :label="t('team.permissionRole')" class="w-full sm:w-36">
-          <USelect v-model="linkRole" :items="roleOptions" class="w-full" />
-        </UFormField>
-        <UFormField :label="t('team.jobRole')" class="w-full sm:w-40">
-          <USelect v-model="linkJobRole" :items="jobRoleOptions" class="w-full" />
-        </UFormField>
-        <UFormField :label="t('team.expires')" class="w-full sm:w-40">
-          <USelect v-model="expiryPreset" :items="expiryOptions" class="w-full" />
-        </UFormField>
-        <UFormField
-          v-if="expiryPreset === 'custom'"
-          :label="t('team.expiresCustom')"
-          class="w-full sm:w-52"
-        >
-          <UInput v-model="customExpiry" type="datetime-local" class="w-full" />
-        </UFormField>
-        <UButton :loading="creatingLink" class="w-full sm:w-auto" @click="handleCreateLink">
-          {{ t("team.createLink") }}
-        </UButton>
-      </div>
-
-      <div
-        v-if="lastCreatedUrl"
-        class="mt-4 flex flex-col gap-2 rounded-lg bg-ocean-50 p-3 sm:flex-row sm:items-center"
+    <div class="mb-6 flex gap-2 border-b border-slate-200 pb-2">
+      <UButton
+        v-for="tab in tabItems"
+        :key="tab.value"
+        :variant="activeTab === tab.value ? 'solid' : 'ghost'"
+        color="neutral"
+        size="sm"
+        @click="activeTab = tab.value"
       >
-        <code class="min-w-0 flex-1 truncate text-xs text-ocean-900">{{ lastCreatedUrl }}</code>
-        <UButton size="sm" variant="soft" @click="copyUrl(lastCreatedUrl!)">
-          {{ copied ? t("team.copied") : t("team.copyLink") }}
-        </UButton>
-      </div>
-
-      <h3 class="mb-2 mt-6 text-xs font-semibold uppercase tracking-wide text-slate-400">
-        {{ t("team.activeLinks") }}
-      </h3>
-      <div v-if="listedInvites.length === 0" class="text-sm text-slate-400">
-        {{ t("team.noLinks") }}
-      </div>
-      <ul v-else class="divide-y divide-slate-100 rounded-lg border border-slate-100">
-        <li
-          v-for="inv in listedInvites"
-          :key="inv.id"
-          class="flex flex-col gap-2 px-3 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
-        >
-          <div class="min-w-0">
-            <div class="flex flex-wrap items-center gap-2">
-              <UBadge
-                :color="inviteStatus(inv) === 'valid' ? 'success' : 'neutral'"
-                variant="subtle"
-                size="xs"
-              >
-                {{ inviteStatusLabel(inviteStatus(inv)) }}
-              </UBadge>
-              <span class="text-slate-700">
-                {{ inv.invite_type === "email" ? inv.email : t("team.inviteTypeOpen") }}
-              </span>
-              <span class="text-slate-400">· {{ t(`team.roles.${inv.role}`) }}</span>
-            </div>
-            <p class="mt-0.5 text-xs text-slate-400">
-              {{ t("team.expires") }}: {{ formatWhen(inv.expires_at) }}
-            </p>
-          </div>
-          <div class="flex shrink-0 gap-2">
-            <UButton
-              v-if="inviteStatus(inv) === 'valid'"
-              size="xs"
-              variant="ghost"
-              @click="copyUrl(inviteUrl(inv.token))"
-            >
-              {{ t("team.copyLink") }}
-            </UButton>
-            <UButton
-              v-if="inviteStatus(inv) === 'valid'"
-              size="xs"
-              color="error"
-              variant="ghost"
-              @click="handleRevoke(inv.id)"
-            >
-              {{ t("team.revoke") }}
-            </UButton>
-          </div>
-        </li>
-      </ul>
-    </div>
-    <p v-else class="mb-6 text-sm text-slate-400">{{ t("team.adminsOnly") }}</p>
-
-    <!-- Add existing member -->
-    <div
-      v-if="isWorkspaceAdmin"
-      class="mb-8 rounded-xl border border-slate-200 bg-white p-4 sm:p-5"
-    >
-      <h2 class="mb-4 text-sm font-semibold text-slate-700">{{ t("team.inviteMember") }}</h2>
-      <UAlert v-if="inviteError" color="error" variant="subtle" class="mb-3" :title="inviteError" />
-      <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-        <UFormField :label="t('team.email')" class="w-full sm:w-64">
-          <UInput v-model="inviteEmail" placeholder="email@example.com" class="w-full" />
-        </UFormField>
-        <UFormField :label="t('team.permissionRole')" class="w-full sm:w-36">
-          <USelect v-model="inviteRole" :items="roleOptions" class="w-full" />
-        </UFormField>
-        <UFormField :label="t('team.jobRole')" class="w-full sm:w-40">
-          <USelect v-model="inviteJobRole" :items="jobRoleOptions" class="w-full" />
-        </UFormField>
-        <UButton :loading="inviting" class="w-full sm:w-auto" @click="handleInvite">
-          {{ t("team.invite") }}
-        </UButton>
-      </div>
-      <p class="mt-2 text-xs text-slate-400">{{ t("team.inviteHint") }}</p>
+        {{ tab.label }}
+      </UButton>
     </div>
 
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <div
-        v-for="member in members"
-        :key="member.id"
-        class="rounded-xl border border-slate-200 bg-white p-5"
-      >
-        <div class="mb-3 flex items-center gap-3">
-          <UserAvatar
-            size="md"
-            :src="member.profiles?.avatar_url"
-            :name="member.profiles?.full_name"
-            :email="member.profiles?.email"
-          />
-          <div class="min-w-0 flex-1">
-            <p class="truncate font-medium text-slate-900">
-              {{ member.profiles?.full_name || member.profiles?.email }}
-            </p>
-            <div class="mt-1 flex flex-wrap gap-1.5">
-              <UBadge color="neutral" variant="subtle" size="xs">
-                {{ t(`team.roles.${member.role}`) }}
-              </UBadge>
-              <UBadge
-                v-if="member.job_role"
-                color="info"
-                variant="subtle"
-                size="xs"
-              >
-                {{ t(`team.jobRoles.${member.job_role}`) }}
-              </UBadge>
-              <UBadge v-else color="neutral" variant="outline" size="xs">
-                {{ t("team.jobRoleNone") }}
-              </UBadge>
+    <template v-if="activeTab === 'capacity'">
+      <p class="mb-4 max-w-3xl text-sm text-slate-500">{{ t("capacity.hint") }}</p>
+
+      <div class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-xl border border-slate-200 bg-white p-4">
+          <p class="text-sm text-slate-500">{{ t("capacity.remainingHours") }}</p>
+          <p class="text-2xl font-bold text-slate-900">
+            {{ workspaceSummary.remainingHours }}
+            <span class="text-sm font-normal text-slate-400">{{ t("capacity.hoursUnit") }}</span>
+          </p>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-white p-4">
+          <p class="text-sm text-slate-500">{{ t("capacity.activeTasks") }}</p>
+          <p class="text-2xl font-bold text-slate-900">{{ workspaceSummary.activeTaskCount }}</p>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-white p-4">
+          <p class="text-sm text-slate-500">{{ t("capacity.teamThisWeek") }}</p>
+          <p class="text-2xl font-bold text-slate-900">{{ workspaceSummary.thisWeekPct }}%</p>
+          <p class="mt-0.5 text-xs text-slate-400">
+            {{ workspaceSummary.thisWeekHours }} / {{ workspaceSummary.teamCapacity }}
+            {{ t("capacity.hoursUnit") }}
+          </p>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-white p-4">
+          <p class="text-sm text-slate-500">{{ t("capacity.overdue") }}</p>
+          <p class="text-2xl font-bold text-red-500">{{ workspaceSummary.overdueCount }}</p>
+        </div>
+      </div>
+
+      <div class="mb-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+        <p class="text-sm text-slate-500">{{ t("capacity.avgBurn") }}</p>
+        <p class="text-xl font-semibold text-slate-900">
+          {{ avgWeeklyBurn }}
+          <span class="text-sm font-normal text-slate-400">{{ t("capacity.hoursUnit") }}</span>
+        </p>
+        <p v-if="runwayWeeks != null" class="mt-2 text-sm font-medium text-ocean-800">
+          {{ t("capacity.runway", { weeks: runwayWeeks }) }}
+        </p>
+        <p v-else class="mt-2 text-sm text-slate-400">{{ t("capacity.runwayUnknown") }}</p>
+        <p class="mt-1 text-xs text-slate-400">{{ t("capacity.runwayHint") }}</p>
+      </div>
+
+      <div class="mb-6 grid gap-4 lg:grid-cols-2">
+        <CapacityWeekChart
+          :title="t('capacity.weeklyLoad')"
+          :planned-label="t('capacity.thisWeek')"
+          :burn-label="t('capacity.burn')"
+          :buckets="forwardWeekBuckets"
+          mode="forward"
+        />
+        <CapacityWeekChart
+          :title="t('capacity.burnTitle')"
+          :planned-label="t('capacity.intake')"
+          :burn-label="t('capacity.burn')"
+          :buckets="burnWeekBuckets"
+          mode="burn"
+        >
+          <template #hint>
+            <p class="text-xs text-slate-400">{{ t("capacity.burnHint") }}</p>
+          </template>
+        </CapacityWeekChart>
+      </div>
+
+      <div class="mb-6">
+        <CapacityMonthSpreadsheet @saved="refreshCapacity" />
+      </div>
+
+      <div v-if="capacityLoading" class="text-sm text-slate-400">{{ t("common.loading") }}</div>
+
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          v-for="row in memberRows"
+          :key="row.userId"
+          class="rounded-xl border border-slate-200 bg-white p-5"
+        >
+          <div class="mb-3 flex items-center gap-3">
+            <UserAvatar size="md" :name="row.name" />
+            <div class="min-w-0 flex-1">
+              <p class="truncate font-medium text-slate-900">{{ row.name }}</p>
+              <p class="text-xs text-slate-400">
+                {{ row.activeTaskCount }} {{ t("capacity.activeTasks").toLowerCase() }}
+                · {{ row.overdueCount }} {{ t("capacity.overdue").toLowerCase() }}
+              </p>
             </div>
           </div>
+
+          <UFormField
+            v-if="canManageMembers"
+            :label="t('capacity.weeklyCapacity')"
+            :hint="t('capacity.weeklyCapacityHint')"
+            class="mb-3"
+          >
+            <UInput
+              type="number"
+              min="8"
+              max="60"
+              step="1"
+              :model-value="baselineWeeklyFor(row.userId)"
+              class="w-full"
+              @update:model-value="(v) => handleCapacityChange(row.membershipId, v)"
+            />
+          </UFormField>
+          <p v-else class="mb-3 text-sm text-slate-500">
+            {{ t("capacity.weeklyCapacity") }}:
+            <span class="font-medium text-slate-800">
+              {{ baselineWeeklyFor(row.userId) }}
+            </span>
+            {{ t("capacity.hoursUnit") }}
+          </p>
+          <p class="mb-3 text-xs text-slate-400">
+            {{ t("capacity.thisWeekCap") }}:
+            <span class="font-medium text-slate-700">
+              {{ row.capacityHours }}{{ t("capacity.hoursUnit") }}
+            </span>
+          </p>
+
+          <div class="mb-3 grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <p class="text-slate-500">{{ t("capacity.remaining") }}</p>
+              <p class="font-semibold">
+                {{ row.remainingHours }} {{ t("capacity.hoursUnit") }}
+              </p>
+            </div>
+            <div v-if="row.unplannedCount > 0">
+              <p class="text-slate-500" :title="t('capacity.unplannedHint')">
+                {{ t("capacity.unplanned") }}
+              </p>
+              <p class="font-semibold text-amber-600">{{ row.unplannedCount }}</p>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <CapacityLoadBar
+              :pct="row.thisWeekPct"
+              :label="`${t('capacity.thisWeek')} · ${row.thisWeekHours}${t('capacity.hoursUnit')}`"
+            />
+            <CapacityLoadBar
+              :pct="row.nextWeekPct"
+              :label="`${t('capacity.nextWeek')} · ${row.nextWeekHours}${t('capacity.hoursUnit')}`"
+            />
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <template v-else>
+      <!-- Invite links (admin) -->
+      <div
+        v-if="isWorkspaceAdmin"
+        class="mb-8 rounded-xl border border-slate-200 bg-white p-4 sm:p-5"
+      >
+        <h2 class="mb-1 text-sm font-semibold text-slate-700">{{ t("team.inviteLinkTitle") }}</h2>
+        <p class="mb-4 text-xs text-slate-400">{{ t("team.inviteLinkHint") }}</p>
+
+        <UAlert v-if="linkError" color="error" variant="subtle" class="mb-3" :title="linkError" />
+
+        <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+          <UFormField :label="t('team.inviteType')" class="w-full sm:w-40">
+            <USelect v-model="linkType" :items="typeOptions" class="w-full" />
+          </UFormField>
+          <UFormField
+            v-if="linkType === 'email'"
+            :label="t('team.email')"
+            class="w-full sm:w-56"
+          >
+            <UInput v-model="linkEmail" placeholder="email@example.com" class="w-full" />
+          </UFormField>
+          <UFormField :label="t('team.permissionRole')" class="w-full sm:w-36">
+            <USelect v-model="linkRole" :items="roleOptions" class="w-full" />
+          </UFormField>
+          <UFormField :label="t('team.jobRole')" class="w-full sm:w-40">
+            <USelect v-model="linkJobRole" :items="jobRoleOptions" class="w-full" />
+          </UFormField>
+          <UFormField :label="t('team.expires')" class="w-full sm:w-40">
+            <USelect v-model="expiryPreset" :items="expiryOptions" class="w-full" />
+          </UFormField>
+          <UFormField
+            v-if="expiryPreset === 'custom'"
+            :label="t('team.expiresCustom')"
+            class="w-full sm:w-52"
+          >
+            <UInput v-model="customExpiry" type="datetime-local" class="w-full" />
+          </UFormField>
+          <UButton :loading="creatingLink" class="w-full sm:w-auto" @click="handleCreateLink">
+            {{ t("team.createLink") }}
+          </UButton>
         </div>
 
         <div
-          v-if="isWorkspaceAdmin"
-          class="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2"
+          v-if="lastCreatedUrl"
+          class="mt-4 flex flex-col gap-2 rounded-lg bg-ocean-50 p-3 sm:flex-row sm:items-center"
         >
-          <UFormField :label="t('team.permissionRole')">
-            <USelect
-              :model-value="member.role"
-              :items="roleOptions"
-              class="w-full"
-              @update:model-value="(v) => handlePermissionRoleChange(member.id, v)"
-            />
+          <code class="min-w-0 flex-1 truncate text-xs text-ocean-900">{{ lastCreatedUrl }}</code>
+          <UButton
+            size="sm"
+            variant="soft"
+            @click="lastCreatedUrl && copyUrl(lastCreatedUrl)"
+          >
+            {{ copied ? t("team.copied") : t("team.copyLink") }}
+          </UButton>
+        </div>
+
+        <h3 class="mb-2 mt-6 text-xs font-semibold uppercase tracking-wide text-slate-400">
+          {{ t("team.activeLinks") }}
+        </h3>
+        <div v-if="listedInvites.length === 0" class="text-sm text-slate-400">
+          {{ t("team.noLinks") }}
+        </div>
+        <ul v-else class="divide-y divide-slate-100 rounded-lg border border-slate-100">
+          <li
+            v-for="inv in listedInvites"
+            :key="inv.id"
+            class="flex flex-col gap-2 px-3 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <UBadge
+                  :color="inviteStatus(inv) === 'valid' ? 'success' : 'neutral'"
+                  variant="subtle"
+                  size="xs"
+                >
+                  {{ inviteStatusLabel(inviteStatus(inv)) }}
+                </UBadge>
+                <span class="text-slate-700">
+                  {{ inv.invite_type === "email" ? inv.email : t("team.inviteTypeOpen") }}
+                </span>
+                <span class="text-slate-400">· {{ t(`team.roles.${inv.role}`) }}</span>
+              </div>
+              <p class="mt-0.5 text-xs text-slate-400">
+                {{ t("team.expires") }}: {{ formatWhen(inv.expires_at) }}
+              </p>
+            </div>
+            <div class="flex shrink-0 gap-2">
+              <UButton
+                v-if="inviteStatus(inv) === 'valid'"
+                size="xs"
+                variant="ghost"
+                @click="copyUrl(inviteUrl(inv.token))"
+              >
+                {{ t("team.copyLink") }}
+              </UButton>
+              <UButton
+                v-if="inviteStatus(inv) === 'valid'"
+                size="xs"
+                color="error"
+                variant="ghost"
+                @click="handleRevoke(inv.id)"
+              >
+                {{ t("team.revoke") }}
+              </UButton>
+            </div>
+          </li>
+        </ul>
+      </div>
+      <p v-else class="mb-6 text-sm text-slate-400">{{ t("team.adminsOnly") }}</p>
+
+      <div
+        v-if="isWorkspaceAdmin"
+        class="mb-8 rounded-xl border border-slate-200 bg-white p-4 sm:p-5"
+      >
+        <h2 class="mb-4 text-sm font-semibold text-slate-700">{{ t("team.inviteMember") }}</h2>
+        <UAlert v-if="inviteError" color="error" variant="subtle" class="mb-3" :title="inviteError" />
+        <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+          <UFormField :label="t('team.email')" class="w-full sm:w-64">
+            <UInput v-model="inviteEmail" placeholder="email@example.com" class="w-full" />
           </UFormField>
-          <UFormField :label="t('team.jobRole')">
+          <UFormField :label="t('team.permissionRole')" class="w-full sm:w-36">
+            <USelect v-model="inviteRole" :items="roleOptions" class="w-full" />
+          </UFormField>
+          <UFormField :label="t('team.jobRole')" class="w-full sm:w-40">
+            <USelect v-model="inviteJobRole" :items="jobRoleOptions" class="w-full" />
+          </UFormField>
+          <UButton :loading="inviting" class="w-full sm:w-auto" @click="handleInvite">
+            {{ t("team.invite") }}
+          </UButton>
+        </div>
+        <p class="mt-2 text-xs text-slate-400">{{ t("team.inviteHint") }}</p>
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div
+          v-for="member in members"
+          :key="member.id"
+          class="rounded-xl border border-slate-200 bg-white p-5"
+        >
+          <div class="mb-3 flex items-center gap-3">
+            <UserAvatar
+              size="md"
+              :src="member.profiles?.avatar_url"
+              :name="member.profiles?.full_name"
+              :email="member.profiles?.email"
+            />
+            <div class="min-w-0 flex-1">
+              <p class="truncate font-medium text-slate-900">
+                {{ member.profiles?.full_name || member.profiles?.email }}
+              </p>
+              <div class="mt-1 flex flex-wrap gap-1.5">
+                <UBadge color="neutral" variant="subtle" size="xs">
+                  {{ t(`team.roles.${member.role}`) }}
+                </UBadge>
+                <UBadge
+                  v-if="member.job_role"
+                  color="info"
+                  variant="subtle"
+                  size="xs"
+                >
+                  {{ t(`team.jobRoles.${member.job_role}`) }}
+                </UBadge>
+                <UBadge v-else color="neutral" variant="outline" size="xs">
+                  {{ t("team.jobRoleNone") }}
+                </UBadge>
+              </div>
+            </div>
+          </div>
+
+          <div
+            v-if="isWorkspaceAdmin"
+            class="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2"
+          >
+            <UFormField :label="t('team.permissionRole')">
+              <USelect
+                :model-value="member.role"
+                :items="roleOptions"
+                class="w-full"
+                @update:model-value="(v) => handlePermissionRoleChange(member.id, v)"
+              />
+            </UFormField>
+            <UFormField :label="t('team.jobRole')">
+              <USelect
+                :model-value="member.job_role"
+                :items="jobRoleOptions"
+                class="w-full"
+                @update:model-value="(v) => handleJobRoleChange(member.id, v)"
+              />
+            </UFormField>
+          </div>
+          <UFormField
+            v-else-if="canManageMembers"
+            :label="t('team.jobRole')"
+            class="mb-3"
+          >
             <USelect
               :model-value="member.job_role"
               :items="jobRoleOptions"
@@ -463,31 +642,23 @@ const listedInvites = computed(() => invites.value);
               @update:model-value="(v) => handleJobRoleChange(member.id, v)"
             />
           </UFormField>
-        </div>
-        <UFormField
-          v-else-if="canManageMembers"
-          :label="t('team.jobRole')"
-          class="mb-3"
-        >
-          <USelect
-            :model-value="member.job_role"
-            :items="jobRoleOptions"
-            class="w-full"
-            @update:model-value="(v) => handleJobRoleChange(member.id, v)"
-          />
-        </UFormField>
 
-        <div class="flex gap-4 text-sm">
-          <div>
-            <p class="text-slate-500">{{ t("team.activeTasks") }}</p>
-            <p class="text-lg font-semibold">{{ memberTasks[member.user_id] ?? 0 }}</p>
-          </div>
-          <div>
-            <p class="text-slate-500">{{ t("team.overdue") }}</p>
-            <p class="text-lg font-semibold text-red-500">{{ memberOverdue[member.user_id] ?? 0 }}</p>
+          <div class="flex gap-4 text-sm">
+            <div>
+              <p class="text-slate-500">{{ t("team.activeTasks") }}</p>
+              <p class="text-lg font-semibold">
+                {{ rowFor(member.user_id)?.activeTaskCount ?? 0 }}
+              </p>
+            </div>
+            <div>
+              <p class="text-slate-500">{{ t("team.overdue") }}</p>
+              <p class="text-lg font-semibold text-red-500">
+                {{ rowFor(member.user_id)?.overdueCount ?? 0 }}
+              </p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>

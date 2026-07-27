@@ -203,7 +203,11 @@ export function useWorkspace() {
 
   async function updateMember(
     id: string,
-    updates: { role?: MemberRole; job_role?: JobRole | null },
+    updates: {
+      role?: MemberRole;
+      job_role?: JobRole | null;
+      weekly_capacity_hours?: number;
+    },
   ) {
     const { data, error } = await supabase
       .from("workspace_members")

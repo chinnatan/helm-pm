@@ -47,6 +47,7 @@ const entityOptions = computed(() => [
   { label: t("audit.entities.customer"), value: "customer" },
   { label: t("audit.entities.member"), value: "member" },
   { label: t("audit.entities.invite"), value: "invite" },
+  { label: t("audit.entities.capacity"), value: "capacity" },
 ]);
 
 function actionLabel(action: string) {

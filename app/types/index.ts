@@ -82,8 +82,54 @@ export interface WorkspaceMember {
   user_id: string;
   role: MemberRole;
   job_role: JobRole | null;
+  weekly_capacity_hours: number;
   created_at: string;
   profiles?: Profile;
+}
+
+export interface MemberMonthCapacity {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  month_start: string;
+  hours: number;
+  updated_at: string;
+  created_at: string;
+}
+
+export interface WorkspaceMonthCalendar {
+  id: string;
+  workspace_id: string;
+  month_start: string;
+  working_days: number | null;
+  holiday_days: number;
+  meeting_days: number;
+  company_event_days: number;
+  leave_days: number;
+  hours_per_day: number;
+  notes: string | null;
+  updated_at: string;
+  created_at: string;
+}
+
+/** Default effort (hours) when task.estimate_hours is null */
+export const PRIORITY_DEFAULT_HOURS: Record<TaskPriority, number> = {
+  low: 2,
+  medium: 4,
+  high: 6,
+  urgent: 8,
+};
+
+export const DEFAULT_WEEKLY_CAPACITY_HOURS = 32;
+
+export function effectiveTaskHours(task: {
+  estimate_hours?: number | null;
+  priority: TaskPriority;
+}): number {
+  if (task.estimate_hours != null && task.estimate_hours > 0) {
+    return Number(task.estimate_hours);
+  }
+  return PRIORITY_DEFAULT_HOURS[task.priority] ?? PRIORITY_DEFAULT_HOURS.medium;
 }
 
 export type InviteType = "open" | "email";
@@ -125,7 +171,8 @@ export type AuditEntityType =
   | "member"
   | "invite"
   | "project"
-  | "customer";
+  | "customer"
+  | "capacity";
 
 export interface AuditLogEntry {
   id: string;
@@ -197,6 +244,7 @@ export interface Task {
   priority: TaskPriority;
   due_date: string | null;
   start_date: string | null;
+  estimate_hours: number | null;
   sort_order: number;
   created_at: string;
   updated_at: string;

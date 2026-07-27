@@ -52,6 +52,7 @@ export interface Database {
           user_id: string;
           role: string;
           job_role: string | null;
+          weekly_capacity_hours: number;
           created_at: string;
         };
         Insert: {
@@ -60,6 +61,7 @@ export interface Database {
           user_id: string;
           role?: string;
           job_role?: string | null;
+          weekly_capacity_hours?: number;
           created_at?: string;
         };
         Update: {
@@ -68,6 +70,82 @@ export interface Database {
           user_id?: string;
           role?: string;
           job_role?: string | null;
+          weekly_capacity_hours?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      member_month_capacities: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          user_id: string;
+          month_start: string;
+          hours: number;
+          updated_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          user_id: string;
+          month_start: string;
+          hours: number;
+          updated_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          workspace_id?: string;
+          user_id?: string;
+          month_start?: string;
+          hours?: number;
+          updated_at?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      workspace_month_calendars: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          month_start: string;
+          working_days: number | null;
+          holiday_days: number;
+          meeting_days: number;
+          company_event_days: number;
+          leave_days: number;
+          hours_per_day: number;
+          notes: string | null;
+          updated_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          month_start: string;
+          working_days?: number | null;
+          holiday_days?: number;
+          meeting_days?: number;
+          company_event_days?: number;
+          leave_days?: number;
+          hours_per_day?: number;
+          notes?: string | null;
+          updated_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          workspace_id?: string;
+          month_start?: string;
+          working_days?: number | null;
+          holiday_days?: number;
+          meeting_days?: number;
+          company_event_days?: number;
+          leave_days?: number;
+          hours_per_day?: number;
+          notes?: string | null;
+          updated_at?: string;
           created_at?: string;
         };
         Relationships: [];
@@ -249,6 +327,7 @@ export interface Database {
           priority: string;
           due_date: string | null;
           start_date: string | null;
+          estimate_hours: number | null;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -267,6 +346,7 @@ export interface Database {
           priority?: string;
           due_date?: string | null;
           start_date?: string | null;
+          estimate_hours?: number | null;
           sort_order?: number;
           created_at?: string;
           updated_at?: string;
@@ -285,6 +365,7 @@ export interface Database {
           priority?: string;
           due_date?: string | null;
           start_date?: string | null;
+          estimate_hours?: number | null;
           sort_order?: number;
           created_at?: string;
           updated_at?: string;

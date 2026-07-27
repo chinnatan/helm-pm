@@ -61,6 +61,7 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     priority?: TaskPriority;
     due_date?: string | null;
     start_date?: string | null;
+    estimate_hours?: number | null;
   }) {
     const maxSort = tasks.value.reduce((max, t) => Math.max(max, t.sort_order), -1);
 
