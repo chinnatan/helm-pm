@@ -3,6 +3,7 @@ definePageMeta({ layout: "auth", middleware: "guest" });
 
 const { t, locale, setLocale } = useI18n();
 const route = useRoute();
+const config = useRuntimeConfig();
 const supabase = useSupabaseClient();
 const { uploadAvatarFile } = useAvatarUpload();
 
@@ -59,6 +60,7 @@ async function handleEmailAuth() {
       email: email.value,
       password: password.value,
       options: {
+        emailRedirectTo: `${config.public.appUrl}/confirm`,
         data: {
           first_name: first,
           last_name: last,

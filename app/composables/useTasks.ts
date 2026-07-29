@@ -191,6 +191,7 @@ export function useTasks(projectId?: Ref<string | undefined>) {
 
   const tasksByStatus = computed(() => {
     const grouped: Record<TaskStatus, Task[]> = {
+      backlog: [],
       todo: [],
       in_progress: [],
       ready_for_test: [],

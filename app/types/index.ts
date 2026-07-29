@@ -1,4 +1,5 @@
 export type TaskStatus =
+  | "backlog"
   | "todo"
   | "in_progress"
   | "ready_for_test"
@@ -19,6 +20,7 @@ export const TASK_CARD_DENSITY_VALUES: TaskCardDensity[] = [
   "detailed",
 ];
 export type RequirementStatus = "open" | "in_progress" | "done" | "cancelled";
+export type MilestoneStatus = "planned" | "in_progress" | "done" | "cancelled";
 
 export const JOB_ROLE_VALUES: JobRole[] = [
   "developer",
@@ -29,6 +31,7 @@ export const JOB_ROLE_VALUES: JobRole[] = [
 ];
 
 export const TASK_STATUS_VALUES: TaskStatus[] = [
+  "backlog",
   "todo",
   "in_progress",
   "ready_for_test",
@@ -51,6 +54,15 @@ export const REQUIREMENT_STATUS_VALUES: RequirementStatus[] = [
   "done",
   "cancelled",
 ];
+
+export const MILESTONE_STATUS_VALUES: MilestoneStatus[] = [
+  "planned",
+  "in_progress",
+  "done",
+  "cancelled",
+];
+
+export const MILESTONE_CLOSED_STATUSES: MilestoneStatus[] = ["done", "cancelled"];
 
 export interface NotificationPreferences {
   web_push_enabled?: boolean;
@@ -239,6 +251,7 @@ export interface Milestone {
   date: string;
   start_date: string;
   due_date: string;
+  status: MilestoneStatus;
   created_at: string;
 }
 
