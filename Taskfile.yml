@@ -140,7 +140,7 @@ tasks:
       - "{{.BUN}} run dev"
 
   notifications:deploy:
-    desc: deploy notifications worker ขึ้น Cloudflare
+    desc: deploy notifications worker ขึ้น Cloudflare (secrets จาก .env.production)
     dir: workers/notifications
     deps: [notifications:install]
     cmds:
