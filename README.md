@@ -145,6 +145,8 @@ http://localhost:5100/**
 
 เมื่อ deploy production ให้เพิ่ม URL จริงด้วย เช่น `https://helm.yourdomain.com/confirm`
 
+ตั้ง **Site URL** เป็น origin ของแอป (เช่น `https://helm.zkcnt.com`) และให้ Redirect URLs ครอบคลุม `/confirm` — แอปส่ง `emailRedirectTo` ไปที่ `{NUXT_PUBLIC_APP_URL}/confirm` ตอนสมัคร
+
 ---
 
 ## 5. สร้าง Storage Bucket
@@ -445,6 +447,7 @@ task supabase:push
 - OneSignal: `NUXT_PUBLIC_ONESIGNAL_APP_ID` ใน `.env` — **ต้องเป็น App ID ที่ Site URL ตรงกับ origin ที่เปิด** (localhost ต้องใช้แอป OneSignal แยกจาก production)
 - ข้อความ `Can only be used on: https://…` = ใช้ App ID ของ production บน localhost → ดูหัวข้อทดสอบบน localhost ด้านบน
 - PWA: บน iOS แนะนำ Add to Home Screen สำหรับ push
+- Service worker refresh วน: OneSignal ใช้ scope `/push/onesignal/` แยกจาก PWA `sw.js` ที่ `/` — ถ้ายังวนหลัง deploy ให้ใน DevTools → Application → Service Workers กด **Unregister** แล้ว hard refresh
 
 ---
 

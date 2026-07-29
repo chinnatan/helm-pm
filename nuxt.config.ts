@@ -122,7 +122,15 @@ export default defineNuxtConfig({
     },
     workbox: {
       navigateFallback: "/",
+      // Keep auth callback / login out of SPA offline fallback so PKCE/hash
+      // exchange is not interrupted by a cached shell reload.
+      navigateFallbackDenylist: [/^\/confirm/, /^\/login/, /^\/invite\//],
     },
+  },
+
+  routeRules: {
+    // Auth callback must run on the client so Supabase can read ?code= / hash tokens.
+    "/confirm": { ssr: false },
   },
 
   supabase: {
