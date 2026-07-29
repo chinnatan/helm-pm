@@ -190,9 +190,6 @@
   "team": {
     "title": "Team",
     "subtitle": "Workspace members and workload",
-    "inviteMember": "Add existing member",
-    "invite": "Add",
-    "inviteHint": "User must already have an account. Prefer invite links below for new teammates.",
     "inviteLinkTitle": "Invite link",
     "inviteLinkHint": "Share a link that expires. Open links work for anyone logged in; email links only for that address.",
     "inviteType": "Link type",
@@ -221,7 +218,6 @@
     "activeTasks": "Active tasks",
     "overdue": "Overdue",
     "noWorkspace": "No workspace",
-    "userNotFound": "User not found. They must sign up first.",
     "tabMembers": "Members",
     "tabCapacity": "Capacity",
     "roles": {

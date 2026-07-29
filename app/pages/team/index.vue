@@ -10,7 +10,6 @@ const {
   workspace,
   members,
   fetchWorkspace,
-  inviteMember,
   updateMember,
   canManageMembers,
   isWorkspaceAdmin,
@@ -41,12 +40,6 @@ function baselineWeeklyFor(userId: string) {
 }
 
 const activeTab = ref<"members" | "capacity">("capacity");
-
-const inviteEmail = ref("");
-const inviteRole = ref<MemberRole>("member");
-const inviteJobRole = ref<JobRole | null>(null);
-const inviting = ref(false);
-const inviteError = ref("");
 
 const linkType = ref<InviteType>("open");
 const linkEmail = ref("");
@@ -88,27 +81,6 @@ watch(isWorkspaceAdmin, async (admin) => {
 
 function rowFor(userId: string) {
   return memberRows.value.find((r) => r.userId === userId);
-}
-
-async function handleInvite() {
-  if (!inviteEmail.value.trim()) return;
-  inviting.value = true;
-  inviteError.value = "";
-
-  const { error } = await inviteMember(
-    inviteEmail.value.trim(),
-    inviteRole.value,
-    inviteJobRole.value,
-  );
-  inviting.value = false;
-
-  if (error) {
-    inviteError.value = error;
-  } else {
-    inviteEmail.value = "";
-    inviteJobRole.value = null;
-    await refreshCapacity();
-  }
 }
 
 function resolveExpiresAt(): string | null {
@@ -549,29 +521,6 @@ const tabItems = computed(() => [
         </ul>
       </div>
       <p v-else class="mb-6 text-sm text-slate-400">{{ t("team.adminsOnly") }}</p>
-
-      <div
-        v-if="isWorkspaceAdmin"
-        class="mb-8 rounded-xl border border-slate-200 bg-white p-4 sm:p-5"
-      >
-        <h2 class="mb-4 text-sm font-semibold text-slate-700">{{ t("team.inviteMember") }}</h2>
-        <UAlert v-if="inviteError" color="error" variant="subtle" class="mb-3" :title="inviteError" />
-        <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-          <UFormField :label="t('team.email')" class="w-full sm:w-64">
-            <UInput v-model="inviteEmail" placeholder="email@example.com" class="w-full" />
-          </UFormField>
-          <UFormField :label="t('team.permissionRole')" class="w-full sm:w-36">
-            <USelect v-model="inviteRole" :items="roleOptions" class="w-full" />
-          </UFormField>
-          <UFormField :label="t('team.jobRole')" class="w-full sm:w-40">
-            <USelect v-model="inviteJobRole" :items="jobRoleOptions" class="w-full" />
-          </UFormField>
-          <UButton :loading="inviting" class="w-full sm:w-auto" @click="handleInvite">
-            {{ t("team.invite") }}
-          </UButton>
-        </div>
-        <p class="mt-2 text-xs text-slate-400">{{ t("team.inviteHint") }}</p>
-      </div>
 
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div

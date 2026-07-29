@@ -171,36 +171,6 @@ export function useWorkspace() {
     return { data: selected, error: null };
   }
 
-  async function inviteMember(
-    email: string,
-    role: string = "member",
-    jobRole: JobRole | null = null,
-  ) {
-    const { t } = useI18n();
-
-    if (!workspace.value) return { error: t("team.noWorkspace") };
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("email", email)
-      .single();
-
-    if (!profile) {
-      return { error: t("team.userNotFound") };
-    }
-
-    const { error } = await supabase.from("workspace_members").insert({
-      workspace_id: workspace.value.id,
-      user_id: profile.id,
-      role,
-      job_role: jobRole,
-    });
-
-    if (!error) await fetchMembers();
-    return { error: error?.message };
-  }
-
   async function updateMember(
     id: string,
     updates: {
@@ -236,7 +206,6 @@ export function useWorkspace() {
     fetchMembers,
     setActiveWorkspace,
     createWorkspace,
-    inviteMember,
     updateMember,
     clearWorkspaceCaches,
   };
