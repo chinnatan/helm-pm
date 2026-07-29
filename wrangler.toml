@@ -3,4 +3,8 @@ compatibility_date = "2025-05-01"
 pages_build_output_dir = "dist"
 
 [vars]
-# Set in Cloudflare dashboard: SUPABASE_URL, SUPABASE_KEY (sb_publishable_...), NUXT_PUBLIC_APP_URL
+# Non-secret vars here. Pages does not support wrangler [secrets] — set in dashboard
+# (Settings → Environment variables): SUPABASE_KEY, SUPABASE_SERVICE_KEY (encrypt).
+SUPABASE_URL = "https://ymkgraummbuearuhkesa.supabase.co"
+NUXT_PUBLIC_APP_URL = "https://helm.zkcnt.com"
+NUXT_PUBLIC_ONESIGNAL_APP_ID = "b0d44e34-255a-4dc6-8082-53301bd4cb8a"
