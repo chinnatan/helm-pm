@@ -10,7 +10,13 @@ export default defineNuxtConfig({
   compatibilityDate: "2025-05-01",
   devtools: { enabled: true },
 
-  modules: ["@nuxt/ui", "@nuxtjs/supabase", "@nuxtjs/i18n"],
+  typescript: {
+    tsConfig: {
+      exclude: ["../workers/**"],
+    },
+  },
+
+  modules: ["@nuxt/ui", "@nuxtjs/supabase", "@nuxtjs/i18n", "@vite-pwa/nuxt"],
 
   i18n: {
     locales: [
@@ -88,6 +94,34 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       appUrl: process.env.NUXT_PUBLIC_APP_URL || "http://localhost:5100",
+      onesignalAppId: process.env.NUXT_PUBLIC_ONESIGNAL_APP_ID || "",
+    },
+  },
+
+  pwa: {
+    registerType: "autoUpdate",
+    devOptions: {
+      enabled: false,
+    },
+    manifest: {
+      name: "Helm PM",
+      short_name: "Helm",
+      description: "Project Management — steer the ship",
+      theme_color: "#0B6E7A",
+      background_color: "#ffffff",
+      display: "standalone",
+      start_url: "/",
+      icons: [
+        {
+          src: "/icon.svg",
+          sizes: "any",
+          type: "image/svg+xml",
+          purpose: "any maskable",
+        },
+      ],
+    },
+    workbox: {
+      navigateFallback: "/",
     },
   },
 

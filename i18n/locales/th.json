@@ -90,6 +90,30 @@
       "standardDesc": "โปรเจกต์ ลูกค้า (ตามบริบท) ป้าย และผู้รับผิดชอบ",
       "detailed": "ละเอียด",
       "detailedDesc": "แสดงครบ รวมรายการย่อยและลูกค้าที่เลือกไว้"
+    },
+    "webPush": {
+      "title": "แจ้งเตือนเบราว์เซอร์",
+      "hint": "รับ push เมื่อถูกมอบหมายงานหรือถูก mention",
+      "pwaHint": "บน iPhone แนะนำเพิ่ม Helm ไปหน้าจอหลัก (iOS 16.4+) เพื่อ push ที่เสถียร",
+      "enable": "เปิดการแจ้งเตือน",
+      "subscribed": "เปิดแจ้งเตือนในเบราว์เซอร์นี้แล้ว",
+      "notSubscribed": "ยังไม่เปิด — กดปุ่มด้านบน",
+      "unknown": "ไม่ทราบสถานะ",
+      "notConfigured": "ยังไม่ได้ตั้งค่า OneSignal สำหรับ environment นี้",
+      "permissionDenied": "เบราว์เซอร์บล็อกการแจ้งเตือน — เปิดในการตั้งค่าเว็บไซต์แล้วลองใหม่",
+      "sdkTimeout": "OneSignal ไม่ตอบสนอง (มักเป็น init ล้มหรือ service worker) — ดู Console แล้วตรวจ Site URL ใน OneSignal Dashboard",
+      "wrongSite": "App ID นี้ผูกกับโดเมน production ใน OneSignal (เช่น helm.zkcnt.com) — ทดสอบบน localhost ต้องสร้างแอป OneSignal แยก ตั้ง Site URL เป็น http://localhost:5100 แล้วใส่ App ID ชุดนั้นใน .env (NUXT_PUBLIC_ONESIGNAL_APP_ID)",
+      "prefsTitle": "แจ้งเตือนเมื่อ",
+      "webPushEnabled": "เปิดรับ web push",
+      "types": {
+        "mention": "ถูก mention ในคอมเมนต์",
+        "task_assigned": "ถูกมอบหมายงาน",
+        "task_tester_assigned": "ถูกมอบหมายเป็น tester",
+        "task_status_changed": "สถานะงานของฉันเปลี่ยน",
+        "task_due_date_changed": "วันครบกำหนดเปลี่ยน",
+        "task_priority_changed": "ความสำคัญเปลี่ยน",
+        "capacity": "แจ้งเตือนโหลดงาน / โปรเจกต์ค้าง"
+      }
     }
   },
   "planner": {

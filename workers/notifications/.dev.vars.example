@@ -1,0 +1,17 @@
+# คัดลอกเป็น .dev.vars แล้วเติมค่า (หรือรัน: task notifications:setup จาก repo root)
+# Wrangler อ่านไฟล์นี้ตอน `task notifications:dev` — ไม่ใช้ชื่อ SUPABASE_WEBHOOK_SECRET
+
+# คุณเป็นคนกำหนดเอง (ไม่ได้มาจาก supabase status) — ต้องตรงกับ header ใน Database Webhook
+WEBHOOK_SECRET=
+
+ONESIGNAL_APP_ID=
+ONESIGNAL_REST_API_KEY=
+
+# จาก .env รากโปรเจกต์: SUPABASE_URL และ SUPABASE_SERVICE_KEY
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+
+NUXT_PUBLIC_APP_URL=http://localhost:5100
+
+# ไม่บังคับ — ป้องกัน POST /cron/capacity
+# CRON_SECRET=

@@ -31,6 +31,12 @@ export function useComments(taskId: Ref<string | undefined>) {
     // Create notification for assignee mentions
     const mentions = content.match(/@(\S+)/g);
     if (mentions) {
+      const { data: taskRow } = await supabase
+        .from("tasks")
+        .select("project_id")
+        .eq("id", taskId.value)
+        .single();
+
       for (const mention of mentions) {
         const email = mention.slice(1);
         const { data: profile } = await supabase
@@ -45,6 +51,9 @@ export function useComments(taskId: Ref<string | undefined>) {
             task_id: taskId.value,
             type: "mention",
             message: `${user.value.email} mentioned you in a comment`,
+            metadata: taskRow?.project_id
+              ? { project_id: taskRow.project_id }
+              : {},
           });
         }
       }
@@ -186,6 +195,7 @@ export function useDependencies(projectId: Ref<string | undefined>) {
 /** Shared realtime channel — NotificationBell remounts between desktop/mobile layout. */
 let notificationsChannel: ReturnType<ReturnType<typeof useSupabaseClient>["channel"]> | null =
   null;
+let notificationsChannelUserId: string | null = null;
 
 export function useNotifications() {
   const supabase = useSupabaseClient();
@@ -196,12 +206,17 @@ export function useNotifications() {
   async function fetchNotifications() {
     if (!user.value) return;
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("notifications")
       .select("*")
       .eq("user_id", user.value.id)
       .order("created_at", { ascending: false })
       .limit(50);
+
+    if (error) {
+      console.error("fetchNotifications failed:", error.message);
+      return;
+    }
 
     notifications.value = (data ?? []) as Notification[];
   }
@@ -222,13 +237,22 @@ export function useNotifications() {
     notifications.value.forEach((n) => (n.read = true));
   }
 
+  function teardownChannel() {
+    if (notificationsChannel) {
+      void supabase.removeChannel(notificationsChannel);
+      notificationsChannel = null;
+      notificationsChannelUserId = null;
+    }
+  }
+
   function subscribe() {
-    if (!user.value || notificationsChannel) return;
+    const uid = user.value?.id;
+    if (!uid) return;
+    if (notificationsChannel && notificationsChannelUserId === uid) return;
 
-    const uid = user.value.id;
+    teardownChannel();
+    notificationsChannelUserId = uid;
 
-    // ไม่ใส่ filter บน user_id — Realtime จำกัด filter ตาม column privilege / replica identity
-    // อาศัย RLS + กรองฝั่ง client แทน
     notificationsChannel = supabase
       .channel(`notifications:${uid}`)
       .on(
@@ -239,12 +263,30 @@ export function useNotifications() {
           table: "notifications",
         },
         (payload) => {
-          const row = payload.new as { user_id?: string };
-          if (row.user_id === uid) fetchNotifications();
+          const row = payload.new as Notification;
+          if (row.user_id !== uid) return;
+          if (notifications.value.some((n) => n.id === row.id)) return;
+          notifications.value = [row, ...notifications.value].slice(0, 50);
         },
       )
       .subscribe();
   }
+
+  watch(
+    () => user.value?.id,
+    (uid, prevUid) => {
+      if (!uid) {
+        if (prevUid) {
+          teardownChannel();
+          notifications.value = [];
+        }
+        return;
+      }
+      void fetchNotifications();
+      subscribe();
+    },
+    { immediate: true },
+  );
 
   return {
     notifications,

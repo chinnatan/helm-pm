@@ -52,6 +52,17 @@ export const REQUIREMENT_STATUS_VALUES: RequirementStatus[] = [
   "cancelled",
 ];
 
+export interface NotificationPreferences {
+  web_push_enabled?: boolean;
+  mention?: boolean;
+  task_assigned?: boolean;
+  task_tester_assigned?: boolean;
+  task_status_changed?: boolean;
+  task_due_date_changed?: boolean;
+  task_priority_changed?: boolean;
+  capacity?: boolean;
+}
+
 export interface Profile {
   id: string;
   email: string;
@@ -61,6 +72,7 @@ export interface Profile {
   avatar_url: string | null;
   active_workspace_id?: string | null;
   task_card_density?: TaskCardDensity;
+  notification_preferences?: NotificationPreferences | null;
   created_at: string;
 }
 
@@ -332,6 +344,7 @@ export interface Notification {
   message: string;
   read: boolean;
   created_at: string;
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface Attachment {

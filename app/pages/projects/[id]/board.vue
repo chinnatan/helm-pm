@@ -9,7 +9,7 @@ const route = useRoute();
 const projectId = computed(() => route.params.id as string);
 
 const { getProject, fetchProjects } = useProjects();
-const { fetchTasks } = useTasks(projectId);
+const { fetchTasks, tasks } = useTasks(projectId);
 const { fetchWorkspace } = useWorkspace();
 const { fetchLabels } = useLabels();
 const { taskCardDensity, updateTaskCardDensity } = useProfile();
@@ -46,7 +46,15 @@ onMounted(async () => {
   await fetchProjects();
   await fetchLabels();
   await fetchTasks(projectId.value);
+  await openTaskFromQuery();
 });
+
+async function openTaskFromQuery() {
+  const taskId = route.query.task;
+  if (typeof taskId !== "string" || !taskId) return;
+  const task = tasks.value.find((t) => t.id === taskId);
+  if (task) openTask(task);
+}
 
 function openNewTask(status?: TaskStatus) {
   selectedTask.value = null;

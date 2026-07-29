@@ -113,3 +113,35 @@ tasks:
     desc: ลบ build cache และ output
     cmds:
       - rm -rf .nuxt .output dist node_modules/.cache
+
+  notifications:install:
+    desc: ติดตั้ง dependencies ของ notifications worker
+    dir: workers/notifications
+    cmds:
+      - "{{.BUN}} install"
+
+  notifications:setup:
+    desc: สร้าง workers/notifications/.dev.vars + แสดงวิธีตั้ง Supabase Webhook
+    dir: workers/notifications
+    cmds:
+      - bash scripts/setup-dev-vars.sh
+
+  notifications:webhook-hint:
+    desc: แสดง URL และ Authorization สำหรับ Database Webhook (อ่านจาก .dev.vars)
+    dir: workers/notifications
+    cmds:
+      - bash scripts/print-webhook-setup.sh
+
+  notifications:dev:
+    desc: รัน notifications worker local (Wrangler dev, webhook + cron)
+    dir: workers/notifications
+    deps: [notifications:install]
+    cmds:
+      - "{{.BUN}} run dev"
+
+  notifications:deploy:
+    desc: deploy notifications worker ขึ้น Cloudflare
+    dir: workers/notifications
+    deps: [notifications:install]
+    cmds:
+      - "{{.BUN}} run deploy"

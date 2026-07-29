@@ -1,0 +1,11 @@
+name = "helm-pm-notifications"
+main = "src/index.ts"
+compatibility_date = "2025-05-01"
+
+[triggers]
+crons = ["0 * * * *"]
+
+# Secrets: ONESIGNAL_APP_ID, ONESIGNAL_REST_API_KEY, SUPABASE_SERVICE_ROLE_KEY,
+# SUPABASE_URL, WEBHOOK_SECRET, NUXT_PUBLIC_APP_URL, CRON_SECRET (optional)
+[secrets]
+required = [ "ONESIGNAL_APP_ID", "ONESIGNAL_REST_API_KEY",  "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_URL", "WEBHOOK_SECRET", "NUXT_PUBLIC_APP_URL"]

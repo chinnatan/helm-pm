@@ -1,4 +1,4 @@
-import type { Profile, TaskCardDensity } from "~/types";
+import type { Profile, TaskCardDensity, NotificationPreferences } from "~/types";
 import { TASK_CARD_DENSITY_VALUES } from "~/types";
 
 export function useProfile() {
@@ -127,6 +127,25 @@ export function useProfile() {
     return { error: error?.message };
   }
 
+  async function updateNotificationPreferences(prefs: NotificationPreferences) {
+    if (!user.value) return { error: "Not signed in" };
+
+    const merged = {
+      ...(profile.value?.notification_preferences ?? {}),
+      ...prefs,
+    };
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ notification_preferences: merged })
+      .eq("id", user.value.id)
+      .select()
+      .single();
+
+    if (!error && data) profile.value = data as Profile;
+    return { data: data as Profile | null, error: error?.message };
+  }
+
   return {
     profile,
     loading,
@@ -138,5 +157,6 @@ export function useProfile() {
     updateTaskCardDensity,
     uploadAvatar,
     changePassword,
+    updateNotificationPreferences,
   };
 }

@@ -13,6 +13,7 @@ export interface Database {
           avatar_url: string | null;
           active_workspace_id: string | null;
           task_card_density: string;
+          notification_preferences: Json;
           created_at: string;
         };
         Insert: {
@@ -24,6 +25,7 @@ export interface Database {
           avatar_url?: string | null;
           active_workspace_id?: string | null;
           task_card_density?: string;
+          notification_preferences?: Json;
           created_at?: string;
         };
         Update: {
@@ -35,6 +37,7 @@ export interface Database {
           avatar_url?: string | null;
           active_workspace_id?: string | null;
           task_card_density?: string;
+          notification_preferences?: Json;
           created_at?: string;
         };
         Relationships: [];
@@ -545,6 +548,7 @@ export interface Database {
           type: string;
           message: string;
           read: boolean;
+          metadata: Json;
           created_at: string;
         };
         Insert: {
@@ -554,6 +558,7 @@ export interface Database {
           type: string;
           message: string;
           read?: boolean;
+          metadata?: Json;
           created_at?: string;
         };
         Update: {
@@ -563,6 +568,37 @@ export interface Database {
           type?: string;
           message?: string;
           read?: boolean;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      notification_deliveries: {
+        Row: {
+          id: string;
+          notification_id: string;
+          channel: string;
+          status: string;
+          error: string | null;
+          sent_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          notification_id: string;
+          channel?: string;
+          status: string;
+          error?: string | null;
+          sent_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          notification_id?: string;
+          channel?: string;
+          status?: string;
+          error?: string | null;
+          sent_at?: string | null;
           created_at?: string;
         };
         Relationships: [];

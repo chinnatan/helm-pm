@@ -1,15 +1,26 @@
 <script setup lang="ts">
+import type { Notification } from "~/types";
+
 const { t } = useI18n();
 const { toLocaleString } = useDateLocale();
-const { notifications, unreadCount, fetchNotifications, markRead, markAllRead, subscribe } =
-  useNotifications();
+const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
 
 const open = ref(false);
 
-onMounted(async () => {
-  await fetchNotifications();
-  subscribe();
-});
+async function onNotificationClick(n: Notification) {
+  await markRead(n.id);
+  open.value = false;
+
+  const meta = n.metadata as { project_id?: string } | null | undefined;
+  const projectId = meta?.project_id;
+
+  if (projectId && n.task_id) {
+    await navigateTo(`/projects/${projectId}/board?task=${n.task_id}`);
+  } else if (projectId) {
+    await navigateTo(`/projects/${projectId}`);
+  }
+}
+
 </script>
 
 <template>
@@ -48,7 +59,7 @@ onMounted(async () => {
           :key="n.id"
           class="cursor-pointer rounded-lg px-2 py-2 text-sm hover:bg-slate-50"
           :class="!n.read ? 'bg-blue-50' : ''"
-          @click="markRead(n.id)"
+          @click="onNotificationClick(n)"
         >
           <p class="text-slate-700">{{ n.message }}</p>
           <p class="text-xs text-slate-400">{{ toLocaleString(n.created_at) }}</p>

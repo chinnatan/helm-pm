@@ -8,14 +8,6 @@ import {
   workdaysInMonth,
 } from "~/utils/capacityCalendar";
 
-export {
-  defaultMonthHoursFromWeekly,
-  monthKeyToStart,
-  toMonthKey,
-  weekCapacityFromMonths,
-  workdaysInMonth,
-} from "~/utils/capacityCalendar";
-
 export function useMemberMonthCapacities() {
   const supabase = useSupabaseClient();
   const { workspace, members } = useWorkspace();

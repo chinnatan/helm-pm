@@ -277,6 +277,10 @@ helm-pm/
 | `task supabase:push` | push migrations ขึ้น remote |
 | `task supabase:link -- <project-ref>` | เชื่อม Supabase CLI กับ project |
 | `task clean` | ลบ build cache |
+| `task notifications:dev` | รัน notifications worker local (Wrangler) |
+| `task notifications:setup` | สร้าง `.dev.vars` + แสดงค่า Webhook สำหรับ Supabase |
+| `task notifications:webhook-hint` | แสดง URL/header ของ Webhook อีกครั้ง |
+| `task notifications:deploy` | deploy notifications worker ขึ้น Cloudflare |
 
 หรือใช้ Bun โดยตรง:
 
@@ -288,8 +292,51 @@ helm-pm/
 | `bun run typecheck` | ตรวจ TypeScript |
 | `bun run preview` | preview build local |
 | `bun run deploy` | build + deploy Cloudflare |
+| `bun run notifications:dev` | รัน notifications worker local |
+| `bun run notifications:deploy` | deploy notifications worker |
 | `supabase db push` | push migrations ขึ้น remote |
 | `supabase db reset` | reset DB local (ถ้าใช้ Supabase local) |
+
+---
+
+## ทดสอบบน localhost
+
+แอป Nuxt กับ **notifications worker** เป็นคนละ process — ถ้าจะทดสอบ **in-app กระดิ่ง + Web Push (OneSignal)** ให้เปิด **สองเทอร์มินัล**:
+
+| เทอร์มินัล | คำสั่ง | ทำอะไร |
+|------------|--------|--------|
+| 1 | `task dev` **หรือ** `task dev:local` | แอปที่ `http://localhost:5100` |
+| 2 | `task notifications:dev` | Worker ที่ `http://localhost:8787` (รับ webhook จาก Supabase → ส่ง OneSignal) |
+
+### เลือก `dev` หรือ `dev:local`?
+
+| คำสั่ง | Supabase ที่แอปใช้ | เหมาะเมื่อ |
+|--------|---------------------|------------|
+| **`task dev`** | ตาม `.env` รากโปรเจกต์ (มักเป็น **โปรเจกต์ cloud**) | ทดสอบกับ DB จริง / ทีมใช้ร่วมกันอยู่แล้ว |
+| **`task dev:local`** | **Supabase ใน Docker** (`task supabase:start` ให้อัตโนมัติ) | ไม่อยากยิง cloud / ทดสอบ migration บนเครื่อง |
+
+**เข้าใจคร่าวๆ:** ใช่ — รัน **`task notifications:dev` เสมอ** เมื่อทดสอบ push; คู่กับ **`task dev:local`** ถ้าต้องการ stack ทั้งหมดบนเครื่อง หรือ **`task dev`** ถ้าแอปชี้ Supabase cloud
+
+Worker ต้องคุยกับ **Supabase ตัวเดียวกับที่แอปใช้** — ดู `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` ใน `workers/notifications/.dev.vars`:
+
+- ใช้ **`task dev`** → `.dev.vars` ควรชี้ URL/key **cloud** (มักได้จาก `task notifications:setup` ที่อ่าน `.env` ราก)
+- ใช้ **`task dev:local`** → หลัง `supabase start` ให้ใส่ค่าจาก `task supabase:status` (หรือ `supabase status -o env`) ลง `.dev.vars` แล้วตั้ง **Database Webhook ใน Studio local** (`http://127.0.0.1:54323`)
+
+### ครั้งแรก (ก่อนเทส push)
+
+1. `task notifications:setup` — สร้าง `.dev.vars` + สุ่ม `WEBHOOK_SECRET`
+2. `task notifications:webhook-hint` — copy URL + header ไปวางใน **Database → Webhooks** (ตาราง `notifications`, event **Insert**)
+3. ใส่ `NUXT_PUBLIC_ONESIGNAL_APP_ID` ใน `.env` รากโปรเจกต์; ในแอป **Edit profile → Enable notifications**
+
+**OneSignal กับ localhost:** `NUXT_PUBLIC_APP_URL=http://localhost:5100` ใน `.env` **ไม่ได้** เปลี่ยนโดเมนที่ OneSignal อนุญาต — แต่ละ App ID ผูกกับ **Site URL ใน OneSignal Dashboard** เท่านั้น (เช่น `https://helm.zkcnt.com`) ถ้าเปิดแอปที่ `http://localhost:5100` แล้วขึ้น *Can only be used on: …* ให้สร้าง **แอป OneSignal แยกสำหรับ dev**:
+
+1. Dashboard → New App/Website → Web → Custom Code  
+2. **Site URL** = `http://localhost:5100` (ต้องตรงกับที่เปิดในเบราว์เซอร์)  
+3. เปิด **Treat HTTP localhost as HTTPS for testing** (ถ้ามี)  
+4. ใส่ App ID ชุด dev ใน `.env` และ `ONESIGNAL_APP_ID` / REST key ใน `workers/notifications/.dev.vars`  
+5. Production ยังใช้ App ID เดิมบน `helm.zkcnt.com`
+
+รายละเอียด: [OneSignal — test on localhost](https://documentation.onesignal.com/docs/web-sdk-setup#localhost-testing)
 
 ---
 
@@ -390,6 +437,14 @@ task supabase:push
 - ตั้ง env variables ครบ (`SUPABASE_URL`, `SUPABASE_KEY` เป็น publishable key)
 - อย่าใส่ secret key (`sb_secret_...`) ใน Cloudflare Pages public vars
 - เปิด **Node.js compatibility** ใน Cloudflare Pages settings ถ้าจำเป็น
+
+### แจ้งเตือนและ Web Push
+
+- Task events สร้างแถวใน `notifications` ผ่าน migration `016` / `017` (ดู [`supabase/migrations/`](supabase/migrations/))
+- ทดสอบ local: ดูหัวข้อ **[ทดสอบบน localhost](#ทดสอบบน-localhost)** — สรุปคือ `task dev` หรือ `task dev:local` **คู่กับ** `task notifications:dev`
+- OneSignal: `NUXT_PUBLIC_ONESIGNAL_APP_ID` ใน `.env` — **ต้องเป็น App ID ที่ Site URL ตรงกับ origin ที่เปิด** (localhost ต้องใช้แอป OneSignal แยกจาก production)
+- ข้อความ `Can only be used on: https://…` = ใช้ App ID ของ production บน localhost → ดูหัวข้อทดสอบบน localhost ด้านบน
+- PWA: บน iOS แนะนำ Add to Home Screen สำหรับ push
 
 ---
 
