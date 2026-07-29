@@ -25,6 +25,7 @@ const suppressClick = ref(false);
 
 function emptyColumns(): Record<TaskStatus, Task[]> {
   return {
+    backlog: [],
     todo: [],
     in_progress: [],
     ready_for_test: [],

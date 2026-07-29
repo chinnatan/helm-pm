@@ -13,6 +13,7 @@ import {
   DEFAULT_WEEKLY_CAPACITY_HOURS,
   effectiveTaskHours,
   isTaskClosed,
+  MILESTONE_CLOSED_STATUSES,
 } from "~/types";
 import {
   toMonthKey,
@@ -501,7 +502,11 @@ export function useTeamCapacity() {
   ): Milestone[] {
     const todayStr = today.value;
     return [...milestones]
-      .filter((m) => (m.due_date || m.date) >= todayStr)
+      .filter(
+        (m) =>
+          (m.due_date || m.date) >= todayStr &&
+          !MILESTONE_CLOSED_STATUSES.includes(m.status),
+      )
       .sort((a, b) =>
         (a.due_date || a.date).localeCompare(b.due_date || b.date),
       )

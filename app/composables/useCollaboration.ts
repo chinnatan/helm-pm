@@ -1,4 +1,4 @@
-import type { Comment, Milestone, TaskDependency, Notification, Attachment } from "~/types";
+import type { Comment, Milestone, MilestoneStatus, TaskDependency, Notification, Attachment } from "~/types";
 
 export function useComments(taskId: Ref<string | undefined>) {
   const supabase = useSupabaseClient();
@@ -83,7 +83,12 @@ export function useMilestones(projectId: Ref<string | undefined>) {
     milestones.value = (data ?? []) as Milestone[];
   }
 
-  async function createMilestone(title: string, startDate: string, dueDate: string) {
+  async function createMilestone(
+    title: string,
+    startDate: string,
+    dueDate: string,
+    status: MilestoneStatus = "planned",
+  ) {
     if (!projectId.value) return;
 
     const { data, error } = await supabase
@@ -94,6 +99,7 @@ export function useMilestones(projectId: Ref<string | undefined>) {
         start_date: startDate,
         due_date: dueDate,
         date: dueDate,
+        status,
       })
       .select()
       .single();
@@ -104,7 +110,12 @@ export function useMilestones(projectId: Ref<string | undefined>) {
 
   async function updateMilestone(
     id: string,
-    updates: { title?: string; start_date?: string; due_date?: string },
+    updates: {
+      title?: string;
+      start_date?: string;
+      due_date?: string;
+      status?: MilestoneStatus;
+    },
   ) {
     const payload = {
       ...updates,

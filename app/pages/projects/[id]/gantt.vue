@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import type { Milestone, Task } from "~/types";
+import {
+  MILESTONE_STATUS_VALUES,
+  type MilestoneStatus,
+} from "~/types";
 
 definePageMeta({ middleware: "auth" });
 
@@ -28,7 +32,15 @@ const editingMilestone = ref<Milestone | null>(null);
 const milestoneTitle = ref("");
 const milestoneStart = ref("");
 const milestoneDue = ref("");
+const milestoneStatus = ref<MilestoneStatus>("planned");
 const savingMilestone = ref(false);
+
+const milestoneStatusItems = computed(() =>
+  MILESTONE_STATUS_VALUES.map((s) => ({
+    label: t(`projects.milestoneStatus.${s}`),
+    value: s,
+  })),
+);
 
 const linkedTasks = computed(() => {
   if (!editingMilestone.value) return [];
@@ -61,6 +73,7 @@ function openCreateMilestone() {
   milestoneTitle.value = "";
   milestoneStart.value = "";
   milestoneDue.value = "";
+  milestoneStatus.value = "planned";
   showMilestone.value = true;
 }
 
@@ -69,6 +82,7 @@ function openEditMilestone(ms: Milestone) {
   milestoneTitle.value = ms.title;
   milestoneStart.value = ms.start_date || ms.date;
   milestoneDue.value = ms.due_date || ms.date;
+  milestoneStatus.value = ms.status ?? "planned";
   showMilestone.value = true;
 }
 
@@ -81,9 +95,15 @@ async function handleSaveMilestone() {
       title: milestoneTitle.value,
       start_date: milestoneStart.value,
       due_date: milestoneDue.value,
+      status: milestoneStatus.value,
     });
   } else {
-    await createMilestone(milestoneTitle.value, milestoneStart.value, milestoneDue.value);
+    await createMilestone(
+      milestoneTitle.value,
+      milestoneStart.value,
+      milestoneDue.value,
+      milestoneStatus.value,
+    );
   }
 
   savingMilestone.value = false;
@@ -92,6 +112,7 @@ async function handleSaveMilestone() {
   milestoneTitle.value = "";
   milestoneStart.value = "";
   milestoneDue.value = "";
+  milestoneStatus.value = "planned";
 }
 
 function closeMilestoneModal() {
@@ -156,6 +177,13 @@ async function handleDeleteMilestone() {
         <div class="space-y-4">
           <UFormField :label="t('projects.milestoneTitle')">
             <UInput v-model="milestoneTitle" class="w-full" />
+          </UFormField>
+          <UFormField :label="t('tasks.status')">
+            <USelect
+              v-model="milestoneStatus"
+              :items="milestoneStatusItems"
+              class="w-full"
+            />
           </UFormField>
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <UFormField :label="t('projects.milestoneStart')">

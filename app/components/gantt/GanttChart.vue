@@ -100,6 +100,8 @@ function statusDotClass(status: TaskStatus) {
       return "bg-sky-500";
     case "cancelled":
       return "bg-slate-400";
+    case "backlog":
+      return "bg-slate-300";
     default:
       return "bg-slate-300";
   }
@@ -110,7 +112,7 @@ function statusToProgress(status: string) {
   if (status === "testing") return 80;
   if (status === "ready_for_test") return 65;
   if (status === "in_progress") return 40;
-  if (status === "cancelled") return 0;
+  if (status === "cancelled" || status === "backlog") return 0;
   return 0;
 }
 
@@ -387,7 +389,11 @@ onUnmounted(() => {
           </div>
           <div class="flex items-center justify-center">
             <span class="text-[10px] font-medium uppercase tracking-wide text-ocean-800">
-              {{ t("projects.milestone") }}
+              {{
+                row.milestone?.status
+                  ? t(`projects.milestoneStatus.${row.milestone.status}`)
+                  : t("projects.milestone")
+              }}
             </span>
           </div>
           <div class="flex items-center justify-end text-right text-[11px] text-slate-500">

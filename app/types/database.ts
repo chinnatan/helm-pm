@@ -518,6 +518,7 @@ export interface Database {
           date: string;
           start_date: string;
           due_date: string;
+          status: string;
           created_at: string;
         };
         Insert: {
@@ -527,6 +528,7 @@ export interface Database {
           date?: string;
           start_date: string;
           due_date: string;
+          status?: string;
           created_at?: string;
         };
         Update: {
@@ -536,6 +538,7 @@ export interface Database {
           date?: string;
           start_date?: string;
           due_date?: string;
+          status?: string;
           created_at?: string;
         };
         Relationships: [];

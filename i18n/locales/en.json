@@ -153,6 +153,12 @@
     "linkedTasks": "Linked tasks",
     "noLinkedTasks": "No tasks linked to this milestone",
     "milestone": "Milestone",
+    "milestoneStatus": {
+      "planned": "Planned",
+      "in_progress": "In progress",
+      "done": "Done",
+      "cancelled": "Cancelled"
+    },
     "selectMilestone": "Select milestone",
     "customer": "Customer",
     "selectCustomer": "Select customer",
@@ -463,6 +469,7 @@
     "empty": "No notifications"
   },
   "status": {
+    "backlog": "Backlog",
     "todo": "To Do",
     "in_progress": "In Progress",
     "ready_for_test": "Ready for Test",
