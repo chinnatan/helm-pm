@@ -100,6 +100,10 @@ export default defineNuxtConfig({
 
   pwa: {
     registerType: "autoUpdate",
+    // Pick up new SW even when the tab stays open a long time (capacity page etc.).
+    client: {
+      periodicSyncForUpdates: 3600,
+    },
     devOptions: {
       enabled: false,
     },
@@ -121,10 +125,14 @@ export default defineNuxtConfig({
       ],
     },
     workbox: {
-      navigateFallback: "/",
-      // Keep auth callback / login out of SPA offline fallback so PKCE/hash
-      // exchange is not interrupted by a cached shell reload.
-      navigateFallbackDenylist: [/^\/confirm/, /^\/login/, /^\/invite\//],
+      // Override vite-plugin-pwa default ("index.html"). Nuxt SSR on Cloudflare
+      // does not precache "/" or "index.html", so createHandlerBoundToURL throws
+      // non-precached-url and the new SW stays "waiting", blocking app updates.
+      navigateFallback: undefined,
+      // Activate immediately so updates are not stuck behind an open tab.
+      skipWaiting: true,
+      clientsClaim: true,
+      cleanupOutdatedCaches: true,
     },
   },
 
