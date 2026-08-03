@@ -95,10 +95,7 @@ const projectItems = computed(() => {
 
 const createTaskDialogTitle = computed(() => {
   if (!customer.value) return t("customers.createAsTask");
-  const name = customer.value.name.trim();
-  const company = customer.value.company?.trim();
-  if (company && name) return `${company} (${name})`;
-  return company || name || t("customers.createAsTask");
+  return formatCustomerLabel(customer.value) || t("customers.createAsTask");
 });
 
 const meetingItems = computed(() => [

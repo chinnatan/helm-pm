@@ -8,6 +8,17 @@ import type {
 } from "~/types";
 import { isTaskClosed, TASK_CLOSED_STATUSES } from "~/types";
 
+/** Display as "company (name)", falling back to whichever is present. */
+export function formatCustomerLabel(customer: {
+  name?: string | null;
+  company?: string | null;
+}) {
+  const name = customer.name?.trim() || "";
+  const company = customer.company?.trim() || "";
+  if (company && name) return `${company} (${name})`;
+  return company || name;
+}
+
 export function useCustomers() {
   const supabase = useSupabaseClient();
   const { workspace } = useWorkspace();

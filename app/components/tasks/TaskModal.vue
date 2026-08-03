@@ -294,7 +294,7 @@ const customerItems = computed(() => [
   { label: t("common.none"), value: null },
   ...customers.value
     .filter((c) => c.status === "active")
-    .map((c) => ({ label: c.name, value: c.id })),
+    .map((c) => ({ label: formatCustomerLabel(c), value: c.id })),
 ]);
 </script>
 
