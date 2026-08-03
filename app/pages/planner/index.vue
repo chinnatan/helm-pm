@@ -5,6 +5,7 @@ const { t } = useI18n();
 const { activeTab, tabs, tasks, loading, fetchPlannerTasks, togglePin, markDone } = usePlanner();
 const { fetchWorkspace } = useWorkspace();
 const { deleteTask } = useTasks();
+const { confirm } = useConfirmDialog();
 
 const selectedTask = ref<import("~/types").Task | null>(null);
 const showModal = ref(false);
@@ -24,7 +25,13 @@ function handlePin(task: import("~/types").Task, pinned: boolean) {
 }
 
 async function handleDelete(task: import("~/types").Task) {
-  if (!window.confirm(t("tasks.deleteConfirm"))) return;
+  const ok = await confirm({
+    title: t("tasks.delete"),
+    description: t("tasks.deleteConfirm"),
+    confirmLabel: t("common.delete"),
+    color: "error",
+  });
+  if (!ok) return;
   await deleteTask(task.id);
   if (selectedTask.value?.id === task.id) {
     showModal.value = false;

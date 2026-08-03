@@ -21,6 +21,7 @@ const { statuses, priorities } = useTaskLabels();
 const { createTask, updateTask, deleteTask, addSubtask, toggleSubtask, setTaskLabels, fetchActivity } =
   useTasks();
 const { members, canManageMembers } = useWorkspace();
+const { confirm } = useConfirmDialog();
 const { labels, fetchLabels } = useLabels();
 const projectIdRef = toRef(() => props.projectId);
 const { milestones, fetchMilestones } = useMilestones(projectIdRef);
@@ -197,7 +198,13 @@ const deleting = ref(false);
 
 async function handleDelete() {
   if (!props.task || !canManageMembers.value) return;
-  if (!window.confirm(t("tasks.deleteConfirm"))) return;
+  const ok = await confirm({
+    title: t("tasks.delete"),
+    description: t("tasks.deleteConfirm"),
+    confirmLabel: t("common.delete"),
+    color: "error",
+  });
+  if (!ok) return;
   deleting.value = true;
   const { error } = await deleteTask(props.task.id);
   deleting.value = false;

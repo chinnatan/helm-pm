@@ -11,6 +11,7 @@ const props = defineProps<{
 const { statuses } = useTaskLabels();
 const user = useSupabaseUser();
 const { t } = useI18n();
+const { confirm } = useConfirmDialog();
 const { tasksByStatus, updateTaskStatus, deleteTask, subscribeToProject, fetchTasks } = useTasks(
   toRef(props, "projectId"),
 );
@@ -106,7 +107,13 @@ function openTask(task: Task) {
 }
 
 async function handleDeleteTask(task: Task) {
-  if (!window.confirm(t("tasks.deleteConfirm"))) return;
+  const ok = await confirm({
+    title: t("tasks.delete"),
+    description: t("tasks.deleteConfirm"),
+    confirmLabel: t("common.delete"),
+    color: "error",
+  });
+  if (!ok) return;
   await deleteTask(task.id);
   await fetchTasks(props.projectId);
 }

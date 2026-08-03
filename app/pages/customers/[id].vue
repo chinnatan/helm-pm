@@ -21,6 +21,7 @@ const {
   fetchOpenTasksForCustomer,
   fetchCustomers,
 } = useCustomers();
+const { confirm } = useConfirmDialog();
 const { meetings, createMeeting, updateMeeting: updateMeetingApi, deleteMeeting: deleteMeetingApi, fetchMeetings } = useMeetings(customerIdRef);
 const {
   requirements,
@@ -139,7 +140,14 @@ async function handleSaveCustomer() {
 
 async function handleArchive() {
   if (!customer.value) return;
-  if (!window.confirm(t("customers.archiveConfirm"))) return;
+  const ok = await confirm({
+    title: t("customers.archive"),
+    description: t("customers.archiveConfirm"),
+    confirmLabel: t("customers.archive"),
+    color: "warning",
+    icon: "i-lucide-archive",
+  });
+  if (!ok) return;
   await archiveCustomer(customer.value.id);
   navigateTo("/customers");
 }
@@ -152,7 +160,13 @@ async function handleRestore() {
 
 async function handleDelete() {
   if (!customer.value || !isWorkspaceAdmin.value) return;
-  if (!window.confirm(t("customers.deleteConfirm"))) return;
+  const ok = await confirm({
+    title: t("customers.delete"),
+    description: t("customers.deleteConfirm"),
+    confirmLabel: t("common.delete"),
+    color: "error",
+  });
+  if (!ok) return;
   const { error } = await deleteCustomer(customer.value.id);
   if (!error) navigateTo("/customers");
 }

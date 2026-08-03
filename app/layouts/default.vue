@@ -234,5 +234,7 @@ watch(
         </div>
       </template>
     </USlideover>
+
+    <ConfirmDialog />
   </div>
 </template>
