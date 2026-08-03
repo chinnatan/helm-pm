@@ -301,6 +301,7 @@ export interface Subtask {
   due_date: string | null;
   profiles?: Profile;
   tester?: Profile;
+  subtask_labels?: { labels: Label }[];
 }
 
 export interface Comment {

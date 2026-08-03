@@ -16,9 +16,10 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const { statuses } = useTaskLabels();
-const { updateSubtask, deleteSubtask } = useTasks();
+const { updateSubtask, deleteSubtask, setSubtaskLabels } = useTasks();
 const { members, canManageMembers } = useWorkspace();
 const { confirm } = useConfirmDialog();
+const { labels, fetchLabels } = useLabels();
 const { projects } = useProjects();
 const { scheduleCapacityAlerts } = useCapacityAlerts();
 
@@ -30,6 +31,7 @@ const form = reactive({
   tester_id: null as string | null,
   due_date: "",
   estimate_hours: "",
+  label_ids: [] as string[],
 });
 
 const saving = ref(false);
@@ -77,8 +79,9 @@ function parseEstimate(raw: string): number | null {
 
 watch(
   () => [props.open, props.subtask] as const,
-  ([open]) => {
+  async ([open]) => {
     if (!open || !props.subtask) return;
+    await fetchLabels();
     const sub = props.subtask;
     form.title = sub.title;
     form.description = sub.description ?? "";
@@ -88,6 +91,9 @@ watch(
     form.due_date = sub.due_date ?? "";
     form.estimate_hours =
       sub.estimate_hours != null ? String(sub.estimate_hours) : "";
+    form.label_ids =
+      (sub.subtask_labels?.map((tl) => tl.labels?.id).filter(Boolean) as string[]) ??
+      [];
   },
 );
 
@@ -116,6 +122,10 @@ const testerItems = computed(() => [
   })),
 ]);
 
+const labelOptions = computed(() =>
+  labels.value.map((l) => ({ label: l.name, value: l.id })),
+);
+
 async function save() {
   if (!props.subtask || !form.title.trim()) return;
   saving.value = true;
@@ -128,6 +138,7 @@ async function save() {
     due_date: form.due_date || null,
     estimate_hours: parseEstimate(form.estimate_hours),
   });
+  await setSubtaskLabels(props.subtask.id, form.label_ids);
   saving.value = false;
   emit("update:open", false);
   emit("saved");
@@ -237,6 +248,16 @@ function openParent() {
 
           <UFormField :label="t('tasks.dueDate')">
             <UInput v-model="form.due_date" type="date" class="w-full" />
+          </UFormField>
+
+          <UFormField :label="t('tasks.labels')">
+            <USelect
+              v-model="form.label_ids"
+              :items="labelOptions"
+              multiple
+              :placeholder="t('tasks.selectLabels')"
+              class="w-full"
+            />
           </UFormField>
         </div>
       </div>

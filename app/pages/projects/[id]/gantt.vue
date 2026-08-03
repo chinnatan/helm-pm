@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Milestone, Task } from "~/types";
+import type { Milestone, Subtask, Task } from "~/types";
 import {
   MILESTONE_STATUS_VALUES,
   type MilestoneStatus,
@@ -13,7 +13,7 @@ const projectId = computed(() => route.params.id as string);
 const projectIdRef = toRef(() => route.params.id as string);
 
 const { getProject, fetchProjects } = useProjects();
-const { tasks, fetchTasks, updateTask } = useTasks(projectId);
+const { tasks, fetchTasks, updateTask, updateSubtask } = useTasks(projectId);
 const { fetchWorkspace } = useWorkspace();
 const {
   milestones,
@@ -27,6 +27,9 @@ const { dependencies } = useDependencies(projectIdRef);
 const project = computed(() => getProject(projectId.value));
 const showModal = ref(false);
 const selectedTask = ref<Task | null>(null);
+const showSubtaskModal = ref(false);
+const selectedSubtask = ref<Subtask | null>(null);
+const selectedSubtaskParent = ref<Task | null>(null);
 const showMilestone = ref(false);
 const editingMilestone = ref<Milestone | null>(null);
 const milestoneTitle = ref("");
@@ -58,14 +61,41 @@ async function handleDateUpdate(taskId: string, startDate: string, endDate: stri
   await updateTask(taskId, { start_date: startDate, due_date: endDate });
 }
 
+async function handleSubtaskDateUpdate(
+  subtaskId: string,
+  _startDate: string,
+  endDate: string,
+) {
+  await updateSubtask(subtaskId, { due_date: endDate });
+}
+
 function openTask(task: Task) {
   selectedTask.value = task;
+  showSubtaskModal.value = false;
   showModal.value = true;
+}
+
+function openSubtask(payload: { subtask: Subtask; parent: Task }) {
+  selectedSubtask.value = payload.subtask;
+  selectedSubtaskParent.value = payload.parent;
+  showModal.value = false;
+  showSubtaskModal.value = true;
 }
 
 function openNewTask() {
   selectedTask.value = null;
+  showSubtaskModal.value = false;
   showModal.value = true;
+}
+
+async function onSaved() {
+  await fetchTasks(projectId.value);
+  if (selectedSubtask.value) {
+    const parent = tasks.value.find((t) => t.id === selectedSubtaskParent.value?.id);
+    const fresh = parent?.subtasks?.find((s) => s.id === selectedSubtask.value?.id);
+    selectedSubtask.value = fresh ?? null;
+    selectedSubtaskParent.value = parent ?? null;
+  }
 }
 
 function openCreateMilestone() {
@@ -157,7 +187,9 @@ async function handleDeleteMilestone() {
       :milestones="milestones"
       :dependencies="dependencies"
       @update-dates="handleDateUpdate"
+      @update-subtask-dates="handleSubtaskDateUpdate"
       @task-click="openTask"
+      @subtask-click="openSubtask"
       @milestone-click="openEditMilestone"
     />
 
@@ -166,7 +198,16 @@ async function handleDeleteMilestone() {
       :project-id="projectId"
       :open="showModal"
       @update:open="showModal = $event"
-      @saved="fetchTasks(projectId)"
+      @saved="onSaved"
+    />
+
+    <TasksSubtaskModal
+      :subtask="selectedSubtask"
+      :parent="selectedSubtaskParent"
+      :open="showSubtaskModal"
+      @update:open="showSubtaskModal = $event"
+      @saved="onSaved"
+      @open-parent="openTask"
     />
 
     <UModal

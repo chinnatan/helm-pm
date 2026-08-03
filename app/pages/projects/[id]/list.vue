@@ -1,8 +1,15 @@
 <script setup lang="ts">
-import type { Task, TaskStatus, TaskPriority } from "~/types";
+import type { Subtask, Task, TaskStatus, TaskPriority } from "~/types";
 import { TASK_STATUS_VALUES } from "~/types";
 import { format, parseISO } from "date-fns";
-import { taskMatchesPerson } from "~/utils/taskPeople";
+import {
+  flattenProjectItems,
+  projectItemDueDate,
+  projectItemMatchesPerson,
+  projectItemPriority,
+  projectItemStatus,
+  type ProjectItem,
+} from "~/utils/projectItems";
 
 definePageMeta({ middleware: "auth" });
 
@@ -23,6 +30,9 @@ const assigneeFilter = ref<string | "all">("all");
 
 const showModal = ref(false);
 const selectedTask = ref<Task | null>(null);
+const showSubtaskModal = ref(false);
+const selectedSubtask = ref<Subtask | null>(null);
+const selectedSubtaskParent = ref<Task | null>(null);
 
 onMounted(async () => {
   await fetchWorkspace();
@@ -35,12 +45,19 @@ onMounted(async () => {
   }
 });
 
-const filteredTasks = computed(() => {
-  return tasks.value.filter((task) => {
-    if (statusFilter.value !== "all" && task.status !== statusFilter.value) return false;
-    if (priorityFilter.value !== "all" && task.priority !== priorityFilter.value) return false;
+const filteredItems = computed(() => {
+  return flattenProjectItems(tasks.value).filter((item) => {
+    if (statusFilter.value !== "all" && projectItemStatus(item) !== statusFilter.value) {
+      return false;
+    }
+    if (
+      priorityFilter.value !== "all" &&
+      projectItemPriority(item) !== priorityFilter.value
+    ) {
+      return false;
+    }
     if (assigneeFilter.value !== "all") {
-      if (!taskMatchesPerson(task, assigneeFilter.value)) return false;
+      if (!projectItemMatchesPerson(item, assigneeFilter.value)) return false;
     }
     return true;
   });
@@ -68,12 +85,36 @@ watch(searchQuery, () => fetchTasks(projectId.value));
 
 function openTask(task: Task) {
   selectedTask.value = task;
+  showSubtaskModal.value = false;
   showModal.value = true;
+}
+
+function openSubtask(payload: { subtask: Subtask; parent: Task }) {
+  selectedSubtask.value = payload.subtask;
+  selectedSubtaskParent.value = payload.parent;
+  showModal.value = false;
+  showSubtaskModal.value = true;
+}
+
+function openItem(item: ProjectItem) {
+  if (item.kind === "task") openTask(item.task);
+  else openSubtask({ subtask: item.subtask, parent: item.parent });
 }
 
 function openNew() {
   selectedTask.value = null;
+  showSubtaskModal.value = false;
   showModal.value = true;
+}
+
+async function onSaved() {
+  await fetchTasks(projectId.value);
+  if (selectedSubtask.value) {
+    const parent = tasks.value.find((t) => t.id === selectedSubtaskParent.value?.id);
+    const fresh = parent?.subtasks?.find((s) => s.id === selectedSubtask.value?.id);
+    selectedSubtask.value = fresh ?? null;
+    selectedSubtaskParent.value = parent ?? null;
+  }
 }
 
 function formatDueDate(date: string) {
@@ -82,6 +123,20 @@ function formatDueDate(date: string) {
 
 function personName(profile?: { full_name?: string | null; email?: string } | null) {
   return profile?.full_name || profile?.email || t("common.emDash");
+}
+
+function itemAssignee(item: ProjectItem) {
+  return item.kind === "task" ? item.task.profiles : item.subtask.profiles;
+}
+
+function itemTester(item: ProjectItem) {
+  return item.kind === "task" ? item.task.tester : item.subtask.tester;
+}
+
+function itemMilestone(item: ProjectItem) {
+  return item.kind === "task"
+    ? item.task.milestones?.title
+    : item.parent.milestones?.title;
 }
 </script>
 
@@ -136,23 +191,46 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
     <template v-else>
       <div class="space-y-2 md:hidden">
         <button
-          v-for="task in filteredTasks"
-          :key="task.id"
+          v-for="item in filteredItems"
+          :key="item.id"
           type="button"
-          class="w-full rounded-xl border border-slate-200 bg-white p-4 text-left transition-colors hover:bg-slate-50"
-          @click="openTask(task)"
+          class="w-full rounded-xl border bg-white p-4 text-left transition-colors hover:bg-slate-50"
+          :class="
+            item.kind === 'subtask'
+              ? 'border-dashed border-slate-300'
+              : 'border-slate-200'
+          "
+          @click="openItem(item)"
         >
-          <p class="font-medium text-slate-800">{{ task.title }}</p>
+          <p
+            v-if="item.kind === 'subtask'"
+            class="mb-0.5 text-[11px] text-slate-400"
+          >
+            {{ t("tasks.subtaskOf", { title: item.parent.title }) }}
+          </p>
+          <p class="font-medium text-slate-800">
+            {{ item.kind === "task" ? item.task.title : item.subtask.title }}
+          </p>
           <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
-            <span>{{ statusLabel(task.status) }}</span>
-            <span>{{ priorityLabel(task.priority) }}</span>
-            <span v-if="task.profiles">{{ t("tasks.devShort") }} {{ personName(task.profiles) }}</span>
-            <span v-if="task.tester">{{ t("tasks.testerShort") }} {{ personName(task.tester) }}</span>
-            <span v-if="task.milestones">{{ task.milestones.title }}</span>
-            <span>{{ task.due_date ? formatDueDate(task.due_date) : t("common.emDash") }}</span>
+            <span>{{ statusLabel(projectItemStatus(item)) }}</span>
+            <span>{{ priorityLabel(projectItemPriority(item)) }}</span>
+            <span v-if="itemAssignee(item)">
+              {{ t("tasks.devShort") }} {{ personName(itemAssignee(item)) }}
+            </span>
+            <span v-if="itemTester(item)">
+              {{ t("tasks.testerShort") }} {{ personName(itemTester(item)) }}
+            </span>
+            <span v-if="itemMilestone(item)">{{ itemMilestone(item) }}</span>
+            <span>
+              {{
+                projectItemDueDate(item)
+                  ? formatDueDate(projectItemDueDate(item)!)
+                  : t("common.emDash")
+              }}
+            </span>
           </div>
         </button>
-        <p v-if="filteredTasks.length === 0" class="py-8 text-center text-slate-400">
+        <p v-if="filteredItems.length === 0" class="py-8 text-center text-slate-400">
           {{ t("projects.noTasksFound") }}
         </p>
       </div>
@@ -172,26 +250,45 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
           </thead>
           <tbody>
             <tr
-              v-for="task in filteredTasks"
-              :key="task.id"
+              v-for="item in filteredItems"
+              :key="item.id"
               class="cursor-pointer border-b border-slate-100 hover:bg-slate-50"
-              @click="openTask(task)"
+              :class="item.kind === 'subtask' ? 'bg-slate-50/50' : ''"
+              @click="openItem(item)"
             >
-              <td class="px-4 py-3 font-medium text-slate-800">{{ task.title }}</td>
-              <td class="px-4 py-3 text-slate-600">{{ statusLabel(task.status) }}</td>
-              <td class="px-4 py-3 text-slate-600">{{ priorityLabel(task.priority) }}</td>
-              <td class="px-4 py-3 text-slate-600">{{ personName(task.profiles) }}</td>
-              <td class="px-4 py-3 text-slate-600">{{ personName(task.tester) }}</td>
+              <td class="px-4 py-3 font-medium text-slate-800">
+                <span
+                  v-if="item.kind === 'subtask'"
+                  class="mr-1.5 text-[11px] font-normal text-slate-400"
+                >
+                  ↳
+                </span>
+                {{ item.kind === "task" ? item.task.title : item.subtask.title }}
+                <span
+                  v-if="item.kind === 'subtask'"
+                  class="mt-0.5 block text-[11px] font-normal text-slate-400"
+                >
+                  {{ t("tasks.subtaskOf", { title: item.parent.title }) }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-slate-600">{{ statusLabel(projectItemStatus(item)) }}</td>
+              <td class="px-4 py-3 text-slate-600">{{ priorityLabel(projectItemPriority(item)) }}</td>
+              <td class="px-4 py-3 text-slate-600">{{ personName(itemAssignee(item)) }}</td>
+              <td class="px-4 py-3 text-slate-600">{{ personName(itemTester(item)) }}</td>
               <td class="px-4 py-3 text-slate-600">
-                {{ task.milestones?.title || t("common.emDash") }}
+                {{ itemMilestone(item) || t("common.emDash") }}
               </td>
               <td class="px-4 py-3 text-slate-600">
-                {{ task.due_date ? formatDueDate(task.due_date) : t("common.emDash") }}
+                {{
+                  projectItemDueDate(item)
+                    ? formatDueDate(projectItemDueDate(item)!)
+                    : t("common.emDash")
+                }}
               </td>
             </tr>
           </tbody>
         </table>
-        <p v-if="filteredTasks.length === 0" class="p-8 text-center text-slate-400">
+        <p v-if="filteredItems.length === 0" class="p-8 text-center text-slate-400">
           {{ t("projects.noTasksFound") }}
         </p>
       </div>
@@ -202,7 +299,16 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
       :project-id="projectId"
       :open="showModal"
       @update:open="showModal = $event"
-      @saved="fetchTasks(projectId)"
+      @saved="onSaved"
+    />
+
+    <TasksSubtaskModal
+      :subtask="selectedSubtask"
+      :parent="selectedSubtaskParent"
+      :open="showSubtaskModal"
+      @update:open="showSubtaskModal = $event"
+      @saved="onSaved"
+      @open-parent="openTask"
     />
   </div>
 </template>

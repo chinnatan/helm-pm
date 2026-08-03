@@ -8,7 +8,8 @@ type SubtaskUpdate = Database["public"]["Tables"]["subtasks"]["Update"];
 const SUBTASK_SELECT = `
   *,
   profiles:assignee_id(id, email, full_name, avatar_url),
-  tester:tester_id(id, email, full_name, avatar_url)
+  tester:tester_id(id, email, full_name, avatar_url),
+  subtask_labels(label_id, labels(*))
 `;
 
 const TASK_SELECT = `
@@ -253,6 +254,18 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     await fetchTasks();
   }
 
+  async function setSubtaskLabels(subtaskId: string, labelIds: string[]) {
+    await supabase.from("subtask_labels").delete().eq("subtask_id", subtaskId);
+
+    if (labelIds.length > 0) {
+      await supabase
+        .from("subtask_labels")
+        .insert(labelIds.map((label_id) => ({ subtask_id: subtaskId, label_id })));
+    }
+
+    await fetchTasks();
+  }
+
   async function fetchActivity(taskId: string) {
     const { data } = await supabase
       .from("activity_log")
@@ -322,6 +335,7 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     deleteSubtask,
     reorderSubtasks,
     setTaskLabels,
+    setSubtaskLabels,
     fetchActivity,
     subscribeToProject,
   };

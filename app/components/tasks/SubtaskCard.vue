@@ -63,6 +63,15 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
       <span v-if="subtask.estimate_hours != null" class="text-xs text-slate-400">
         {{ subtask.estimate_hours }}h
       </span>
+      <UBadge
+        v-for="tl in subtask.subtask_labels"
+        :key="tl.labels?.id"
+        variant="subtle"
+        size="xs"
+        :style="{ backgroundColor: tl.labels?.color + '20', color: tl.labels?.color }"
+      >
+        {{ tl.labels?.name }}
+      </UBadge>
     </div>
 
     <div

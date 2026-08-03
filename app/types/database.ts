@@ -426,6 +426,12 @@ export interface Database {
         Update: { task_id?: string; label_id?: string };
         Relationships: [];
       };
+      subtask_labels: {
+        Row: { subtask_id: string; label_id: string };
+        Insert: { subtask_id: string; label_id: string };
+        Update: { subtask_id?: string; label_id?: string };
+        Relationships: [];
+      };
       comments: {
         Row: {
           id: string;
