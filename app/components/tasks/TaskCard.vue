@@ -17,11 +17,13 @@ const { display } = useTaskCardDisplay(() => props.task, cardContext);
 const emit = defineEmits<{
   click: [task: Task];
   pin: [task: Task, pinned: boolean];
+  delete: [task: Task];
 }>();
 
 const { t } = useI18n();
 const { dateFnsLocale } = useDateLocale();
 const { priorityMeta } = useTaskLabels();
+const { canManageMembers } = useWorkspace();
 
 const priority = computed(() => priorityMeta(props.task.priority));
 
@@ -65,15 +67,25 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
   >
     <div class="mb-2 flex items-start justify-between gap-2">
       <h4 class="text-sm font-medium text-slate-800 leading-snug">{{ task.title }}</h4>
-      <UButton
-        v-if="showProject !== false"
-        :icon="isPinned ? 'i-lucide-pin' : 'i-lucide-pin-off'"
-        variant="ghost"
-        color="neutral"
-        size="xs"
-        class="shrink-0"
-        @click.stop="emit('pin', task, !isPinned)"
-      />
+      <div class="flex shrink-0 items-center gap-0.5">
+        <UButton
+          v-if="canManageMembers"
+          icon="i-lucide-trash-2"
+          variant="ghost"
+          color="error"
+          size="xs"
+          :aria-label="t('tasks.delete')"
+          @click.stop="emit('delete', task)"
+        />
+        <UButton
+          v-if="showProject !== false"
+          :icon="isPinned ? 'i-lucide-pin' : 'i-lucide-pin-off'"
+          variant="ghost"
+          color="neutral"
+          size="xs"
+          @click.stop="emit('pin', task, !isPinned)"
+        />
+      </div>
     </div>
 
     <div v-if="showProject && task.projects" class="mb-2 flex items-center gap-1.5">

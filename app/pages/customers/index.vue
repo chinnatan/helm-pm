@@ -14,8 +14,11 @@ const form = reactive({
   notes: "",
 });
 
-const activeCustomers = computed(() =>
-  customers.value.filter((c) => c.status === "active"),
+const listedCustomers = computed(() =>
+  [...customers.value].sort((a, b) => {
+    if (a.status !== b.status) return a.status === "active" ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  }),
 );
 
 onMounted(async () => {
@@ -58,7 +61,7 @@ async function handleCreate() {
     </div>
 
     <div
-      v-else-if="activeCustomers.length === 0"
+      v-else-if="listedCustomers.length === 0"
       class="rounded-xl border border-dashed border-slate-300 p-8 text-center sm:p-12"
     >
       <UIcon name="i-lucide-building-2" class="mx-auto mb-3 h-10 w-10 text-slate-300" />
@@ -68,16 +71,34 @@ async function handleCreate() {
 
     <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <NuxtLink
-        v-for="customer in activeCustomers"
+        v-for="customer in listedCustomers"
         :key="customer.id"
         :to="`/customers/${customer.id}`"
-        class="group rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+        class="group rounded-xl border p-5 shadow-sm transition-shadow hover:shadow-md"
+        :class="
+          customer.status === 'archived'
+            ? 'border-slate-200 bg-slate-50 opacity-80'
+            : 'border-slate-200 bg-white'
+        "
       >
         <div class="mb-3 flex items-start justify-between gap-2">
           <div class="min-w-0">
-            <h3 class="font-semibold text-slate-900 group-hover:text-ocean-800">
-              {{ customer.name }}
-            </h3>
+            <div class="flex flex-wrap items-center gap-2">
+              <h3
+                class="font-semibold group-hover:text-ocean-800"
+                :class="customer.status === 'archived' ? 'text-slate-500' : 'text-slate-900'"
+              >
+                {{ customer.name }}
+              </h3>
+              <UBadge
+                v-if="customer.status === 'archived'"
+                color="neutral"
+                variant="subtle"
+                size="sm"
+              >
+                {{ t("customers.archived") }}
+              </UBadge>
+            </div>
             <p v-if="customer.company" class="text-xs text-slate-500">{{ customer.company }}</p>
           </div>
           <UBadge color="primary" variant="subtle" size="sm">

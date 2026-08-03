@@ -12,6 +12,7 @@ const emit = defineEmits<{
   "task-click": [task: Task];
   "mark-done": [taskId: string];
   pin: [task: Task, pinned: boolean];
+  delete: [task: Task];
 }>();
 </script>
 
@@ -33,7 +34,13 @@ const emit = defineEmits<{
     >
       <UCheckbox @update:model-value="emit('mark-done', task.id)" />
       <div class="flex-1 min-w-0" @click="emit('task-click', task)">
-        <TasksTaskCard :task="task" :show-project="true" class="border-0 shadow-none p-0" />
+        <TasksTaskCard
+          :task="task"
+          :show-project="true"
+          class="border-0 shadow-none p-0"
+          @pin="(task, pinned) => emit('pin', task, pinned)"
+          @delete="emit('delete', $event)"
+        />
       </div>
     </div>
   </div>

@@ -13,7 +13,7 @@ const projectId = computed(() => route.params.id as string);
 
 const { getProject, fetchProjects, updateProject, projects } = useProjects();
 const { tasks, fetchTasks } = useTasks(projectId);
-const { fetchWorkspace, members, canManageMembers, myMembership } = useWorkspace();
+const { fetchWorkspace, members, isWorkspaceAdmin } = useWorkspace();
 const { fetchCustomers } = useCustomers();
 const {
   fetchCapacityData,
@@ -44,11 +44,14 @@ const projectRemainingHours = computed(() =>
 );
 
 const canEditProject = computed(() => {
-  if (!project.value) return false;
-  if (project.value.owner_id && project.value.owner_id === user.value?.id) return true;
-  const role = myMembership.value?.role;
-  return role === "admin" || role === "manager" || role === "member";
+  if (!project.value || !user.value?.id) return false;
+  if (project.value.owner_id === user.value.id) return true;
+  return isWorkspaceAdmin.value;
 });
+
+const canChangeOwner = computed(
+  () => isWorkspaceAdmin.value || project.value?.owner_id === user.value?.id,
+);
 
 const ownerItems = computed(() => [
   { label: t("projects.ownerUnassigned"), value: null },
@@ -362,7 +365,7 @@ function formatDue(date: string) {
             </div>
           </UFormField>
           <UFormField
-            v-if="canManageMembers || project?.owner_id === user?.id"
+            v-if="canChangeOwner"
             :label="t('projects.owner')"
           >
             <USelect

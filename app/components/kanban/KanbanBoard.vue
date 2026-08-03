@@ -10,7 +10,8 @@ const props = defineProps<{
 
 const { statuses } = useTaskLabels();
 const user = useSupabaseUser();
-const { tasksByStatus, updateTaskStatus, subscribeToProject, fetchTasks } = useTasks(
+const { t } = useI18n();
+const { tasksByStatus, updateTaskStatus, deleteTask, subscribeToProject, fetchTasks } = useTasks(
   toRef(props, "projectId"),
 );
 
@@ -104,6 +105,12 @@ function openTask(task: Task) {
   emit("task-click", task);
 }
 
+async function handleDeleteTask(task: Task) {
+  if (!window.confirm(t("tasks.deleteConfirm"))) return;
+  await deleteTask(task.id);
+  await fetchTasks(props.projectId);
+}
+
 let unsubscribe: (() => void) | null = null;
 
 onMounted(() => {
@@ -165,6 +172,7 @@ onUnmounted(() => {
             :task="task"
             :show-project="false"
             @click="openTask(task)"
+            @delete="handleDeleteTask"
           />
         </div>
       </VueDraggable>

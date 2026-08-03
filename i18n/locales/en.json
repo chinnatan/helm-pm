@@ -391,7 +391,9 @@
     "commentPlaceholder": "Write a comment... Use {'@'}email to mention",
     "noAttachments": "No attachments",
     "uploadFile": "Upload file",
-    "uploading": "Uploading..."
+    "uploading": "Uploading...",
+    "delete": "Delete task",
+    "deleteConfirm": "Permanently delete this task? Comments, attachments, and activity will be removed."
   },
   "customers": {
     "title": "Customers",
@@ -413,6 +415,11 @@
     "back": "Back to customers",
     "notFound": "Customer not found",
     "archive": "Archive",
+    "archived": "Archived",
+    "restore": "Restore",
+    "archiveConfirm": "Archive this customer? They will still appear in the list with an Archived badge.",
+    "delete": "Delete",
+    "deleteConfirm": "Permanently delete this customer? Meetings and requirements will be deleted. Projects and tasks keep their data but lose the customer link.",
     "meetings": "Meetings",
     "addMeeting": "Add meeting",
     "editMeeting": "Edit meeting",

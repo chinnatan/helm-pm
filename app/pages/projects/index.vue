@@ -3,11 +3,18 @@ definePageMeta({ middleware: "auth" });
 
 const { t } = useI18n();
 const { projects, loading, fetchProjects, createProject } = useProjects();
-const { fetchWorkspace } = useWorkspace();
+const { fetchWorkspace, isWorkspaceAdmin } = useWorkspace();
+const user = useSupabaseUser();
 const showCreate = ref(false);
 const newName = ref("");
 const newDescription = ref("");
 const creating = ref(false);
+
+function canEditListedProject(project: { owner_id?: string | null }) {
+  if (!user.value?.id) return false;
+  if (project.owner_id === user.value.id) return true;
+  return isWorkspaceAdmin.value;
+}
 
 onMounted(async () => {
   await fetchWorkspace();
@@ -71,6 +78,7 @@ async function handleCreate() {
             </p>
           </div>
           <UButton
+            v-if="canEditListedProject(project)"
             :to="`/projects/${project.id}?edit=1`"
             icon="i-lucide-pencil"
             size="xs"

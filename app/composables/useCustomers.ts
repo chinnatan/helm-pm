@@ -142,6 +142,20 @@ export function useCustomers() {
     return updateCustomer(id, { status: "archived" as CustomerStatus });
   }
 
+  async function restoreCustomer(id: string) {
+    return updateCustomer(id, { status: "active" as CustomerStatus });
+  }
+
+  async function deleteCustomer(id: string) {
+    const { error } = await supabase.from("customers").delete().eq("id", id);
+    if (!error) {
+      customers.value = customers.value.filter((c) => c.id !== id);
+      const { [id]: _, ...rest } = openTaskCounts.value;
+      openTaskCounts.value = rest;
+    }
+    return { error: error?.message };
+  }
+
   async function fetchOpenTasksForCustomer(customerId: string) {
     const { data: projects } = await supabase
       .from("projects")
@@ -179,6 +193,8 @@ export function useCustomers() {
     createCustomer,
     updateCustomer,
     archiveCustomer,
+    restoreCustomer,
+    deleteCustomer,
     fetchOpenTasksForCustomer,
     fetchOpenTaskCounts,
   };

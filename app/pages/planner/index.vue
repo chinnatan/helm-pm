@@ -4,6 +4,7 @@ definePageMeta({ middleware: "auth" });
 const { t } = useI18n();
 const { activeTab, tabs, tasks, loading, fetchPlannerTasks, togglePin, markDone } = usePlanner();
 const { fetchWorkspace } = useWorkspace();
+const { deleteTask } = useTasks();
 
 const selectedTask = ref<import("~/types").Task | null>(null);
 const showModal = ref(false);
@@ -20,6 +21,16 @@ function handleTaskClick(task: import("~/types").Task) {
 
 function handlePin(task: import("~/types").Task, pinned: boolean) {
   togglePin(task.id, pinned);
+}
+
+async function handleDelete(task: import("~/types").Task) {
+  if (!window.confirm(t("tasks.deleteConfirm"))) return;
+  await deleteTask(task.id);
+  if (selectedTask.value?.id === task.id) {
+    showModal.value = false;
+    selectedTask.value = null;
+  }
+  await fetchPlannerTasks();
 }
 </script>
 
@@ -50,6 +61,7 @@ function handlePin(task: import("~/types").Task, pinned: boolean) {
       @task-click="handleTaskClick"
       @mark-done="markDone"
       @pin="handlePin"
+      @delete="handleDelete"
     />
 
     <TasksTaskModal

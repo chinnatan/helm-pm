@@ -10,12 +10,14 @@ const route = useRoute();
 const customerId = computed(() => route.params.id as string);
 const customerIdRef = toRef(() => route.params.id as string);
 
-const { fetchWorkspace } = useWorkspace();
+const { fetchWorkspace, isWorkspaceAdmin } = useWorkspace();
 const { projects, fetchProjects } = useProjects();
 const {
   getCustomer,
   updateCustomer,
   archiveCustomer,
+  restoreCustomer,
+  deleteCustomer,
   fetchOpenTasksForCustomer,
   fetchCustomers,
 } = useCustomers();
@@ -137,8 +139,22 @@ async function handleSaveCustomer() {
 
 async function handleArchive() {
   if (!customer.value) return;
+  if (!window.confirm(t("customers.archiveConfirm"))) return;
   await archiveCustomer(customer.value.id);
   navigateTo("/customers");
+}
+
+async function handleRestore() {
+  if (!customer.value) return;
+  const { data } = await restoreCustomer(customer.value.id);
+  if (data) customer.value = data;
+}
+
+async function handleDelete() {
+  if (!customer.value || !isWorkspaceAdmin.value) return;
+  if (!window.confirm(t("customers.deleteConfirm"))) return;
+  const { error } = await deleteCustomer(customer.value.id);
+  if (!error) navigateTo("/customers");
 }
 
 async function handleCreateMeeting() {
@@ -279,12 +295,48 @@ function formatMeetingDate(iso: string) {
     <template v-else>
       <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 class="text-xl font-bold text-slate-900 sm:text-2xl">{{ customer.name }}</h1>
+          <div class="flex flex-wrap items-center gap-2">
+            <h1 class="text-xl font-bold text-slate-900 sm:text-2xl">{{ customer.name }}</h1>
+            <UBadge
+              v-if="customer.status === 'archived'"
+              color="neutral"
+              variant="subtle"
+              size="sm"
+            >
+              {{ t("customers.archived") }}
+            </UBadge>
+          </div>
           <p v-if="customer.company" class="text-sm text-slate-500">{{ customer.company }}</p>
         </div>
-        <UButton variant="ghost" color="error" size="sm" @click="handleArchive">
-          {{ t("customers.archive") }}
-        </UButton>
+        <div class="flex shrink-0 flex-wrap gap-2">
+          <UButton
+            v-if="customer.status === 'archived'"
+            variant="outline"
+            color="neutral"
+            size="sm"
+            @click="handleRestore"
+          >
+            {{ t("customers.restore") }}
+          </UButton>
+          <UButton
+            v-else
+            variant="ghost"
+            color="error"
+            size="sm"
+            @click="handleArchive"
+          >
+            {{ t("customers.archive") }}
+          </UButton>
+          <UButton
+            v-if="isWorkspaceAdmin"
+            variant="soft"
+            color="error"
+            size="sm"
+            @click="handleDelete"
+          >
+            {{ t("customers.delete") }}
+          </UButton>
+        </div>
       </div>
 
       <div class="grid gap-6 lg:grid-cols-3">

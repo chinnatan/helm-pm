@@ -18,9 +18,9 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const { toLocaleString } = useDateLocale();
 const { statuses, priorities } = useTaskLabels();
-const { createTask, updateTask, addSubtask, toggleSubtask, setTaskLabels, fetchActivity } =
+const { createTask, updateTask, deleteTask, addSubtask, toggleSubtask, setTaskLabels, fetchActivity } =
   useTasks();
-const { members } = useWorkspace();
+const { members, canManageMembers } = useWorkspace();
 const { labels, fetchLabels } = useLabels();
 const projectIdRef = toRef(() => props.projectId);
 const { milestones, fetchMilestones } = useMilestones(projectIdRef);
@@ -188,6 +188,20 @@ async function save() {
   }
 
   saving.value = false;
+  emit("update:open", false);
+  emit("saved");
+  scheduleCapacityAlerts({ projects: projects.value });
+}
+
+const deleting = ref(false);
+
+async function handleDelete() {
+  if (!props.task || !canManageMembers.value) return;
+  if (!window.confirm(t("tasks.deleteConfirm"))) return;
+  deleting.value = true;
+  const { error } = await deleteTask(props.task.id);
+  deleting.value = false;
+  if (error) return;
   emit("update:open", false);
   emit("saved");
   scheduleCapacityAlerts({ projects: projects.value });
@@ -461,13 +475,26 @@ const customerItems = computed(() => [
     </template>
 
     <template v-if="activeTab === 'details' || !isEdit" #footer>
-      <div class="flex justify-end gap-2">
-        <UButton variant="ghost" color="neutral" @click="emit('update:open', false)">
-          {{ t("common.cancel") }}
+      <div class="flex items-center justify-between gap-2">
+        <UButton
+          v-if="isEdit && canManageMembers"
+          variant="ghost"
+          color="error"
+          :loading="deleting"
+          :disabled="saving"
+          @click="handleDelete"
+        >
+          {{ t("tasks.delete") }}
         </UButton>
-        <UButton :loading="saving" :disabled="!form.title" @click="save">
-          {{ isEdit ? t("common.save") : t("common.create") }}
-        </UButton>
+        <div v-else />
+        <div class="flex justify-end gap-2">
+          <UButton variant="ghost" color="neutral" @click="emit('update:open', false)">
+            {{ t("common.cancel") }}
+          </UButton>
+          <UButton :loading="saving" :disabled="!form.title || deleting" @click="save">
+            {{ isEdit ? t("common.save") : t("common.create") }}
+          </UButton>
+        </div>
       </div>
     </template>
   </UModal>
