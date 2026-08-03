@@ -93,6 +93,14 @@ const projectItems = computed(() => {
   return list.map((p) => ({ label: p.name, value: p.id }));
 });
 
+const createTaskDialogTitle = computed(() => {
+  if (!customer.value) return t("customers.createAsTask");
+  const name = customer.value.name.trim();
+  const company = customer.value.company?.trim();
+  if (company && name) return `${company} (${name})`;
+  return company || name || t("customers.createAsTask");
+});
+
 const meetingItems = computed(() => [
   { label: t("common.none"), value: null },
   ...meetings.value.map((m) => ({
@@ -660,9 +668,12 @@ function formatMeetingDate(iso: string) {
       </template>
     </UModal>
 
-    <UModal v-model:open="showCreateTask" :title="t('customers.createAsTask')">
+    <UModal v-model:open="showCreateTask" :title="createTaskDialogTitle">
       <template #body>
         <div class="space-y-4">
+          <p class="text-xs font-medium uppercase tracking-wide text-slate-400">
+            {{ t("customers.createAsTask") }}
+          </p>
           <p class="text-sm text-slate-600">
             {{ selectedRequirement?.title }}
           </p>
