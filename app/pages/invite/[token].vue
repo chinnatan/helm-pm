@@ -106,6 +106,17 @@ function formatExpiry(iso?: string) {
           <p class="text-slate-500">
             {{ t("invite.expiresAt") }}: {{ formatExpiry(preview.expires_at) }}
           </p>
+          <p
+            v-if="(preview.max_uses ?? 1) > 1"
+            class="text-slate-500"
+          >
+            {{
+              t("invite.usesRemaining", {
+                remaining: Math.max(0, (preview.max_uses ?? 1) - (preview.uses_count ?? 0)),
+                max: preview.max_uses ?? 1,
+              })
+            }}
+          </p>
         </div>
 
         <template v-if="!user">

@@ -45,12 +45,17 @@ const linkType = ref<InviteType>("open");
 const linkEmail = ref("");
 const linkRole = ref<MemberRole>("member");
 const linkJobRole = ref<JobRole | null>(null);
+const linkMaxUses = ref(1);
 const expiryPreset = ref<"1" | "7" | "30" | "custom">("7");
 const customExpiry = ref("");
 const creatingLink = ref(false);
 const linkError = ref("");
 const lastCreatedUrl = ref<string | null>(null);
 const copied = ref(false);
+
+watch(linkType, (type) => {
+  if (type === "email") linkMaxUses.value = 1;
+});
 
 async function refreshCapacity() {
   await fetchCapacityData();
@@ -113,12 +118,18 @@ async function handleCreateLink() {
     return;
   }
 
+  const maxUses =
+    linkType.value === "email"
+      ? 1
+      : Math.min(500, Math.max(1, Math.floor(Number(linkMaxUses.value) || 1)));
+
   const { data, error } = await createInvite({
     inviteType: linkType.value,
     expiresAt,
     role: linkRole.value,
     jobRole: linkJobRole.value,
     email: linkType.value === "email" ? linkEmail.value.trim() : null,
+    maxUses,
   });
 
   creatingLink.value = false;
@@ -185,9 +196,13 @@ function inviteStatus(inv: {
   revoked_at: string | null;
   accepted_at: string | null;
   expires_at: string;
+  max_uses?: number;
+  uses_count?: number;
 }) {
   if (inv.revoked_at) return "revoked";
-  if (inv.accepted_at) return "accepted";
+  const maxUses = inv.max_uses ?? 1;
+  const uses = inv.uses_count ?? 0;
+  if (uses >= maxUses || inv.accepted_at) return "accepted";
   if (parseISO(inv.expires_at) <= new Date()) return "expired";
   return "valid";
 }
@@ -198,6 +213,12 @@ function inviteStatusLabel(status: string) {
   if (status === "revoked") return t("team.linkRevoked");
   if (status === "accepted") return t("team.linkAccepted");
   return status;
+}
+
+function inviteUsesLabel(inv: { max_uses?: number; uses_count?: number }) {
+  const maxUses = inv.max_uses ?? 1;
+  const uses = inv.uses_count ?? 0;
+  return t("team.usesCount", { used: uses, max: maxUses });
 }
 
 function formatWhen(iso: string) {
@@ -439,6 +460,20 @@ const tabItems = computed(() => [
           <UFormField :label="t('team.jobRole')" class="w-full sm:w-40">
             <USelect v-model="linkJobRole" :items="jobRoleOptions" class="w-full" />
           </UFormField>
+          <UFormField
+            v-if="linkType === 'open'"
+            :label="t('team.maxUses')"
+            :hint="t('team.maxUsesHint')"
+            class="w-full sm:w-28"
+          >
+            <UInput
+              v-model.number="linkMaxUses"
+              type="number"
+              :min="1"
+              :max="500"
+              class="w-full"
+            />
+          </UFormField>
           <UFormField :label="t('team.expires')" class="w-full sm:w-40">
             <USelect v-model="expiryPreset" :items="expiryOptions" class="w-full" />
           </UFormField>
@@ -495,7 +530,8 @@ const tabItems = computed(() => [
                 <span class="text-slate-400">· {{ t(`team.roles.${inv.role}`) }}</span>
               </div>
               <p class="mt-0.5 text-xs text-slate-400">
-                {{ t("team.expires") }}: {{ formatWhen(inv.expires_at) }}
+                {{ inviteUsesLabel(inv) }}
+                · {{ t("team.expires") }}: {{ formatWhen(inv.expires_at) }}
               </p>
             </div>
             <div class="flex shrink-0 gap-2">

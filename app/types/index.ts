@@ -178,6 +178,8 @@ export interface WorkspaceInvite {
   revoked_at: string | null;
   accepted_at: string | null;
   accepted_by: string | null;
+  max_uses: number;
+  uses_count: number;
 }
 
 export interface InvitePreview {
@@ -188,6 +190,8 @@ export interface InvitePreview {
   email?: string | null;
   role?: MemberRole;
   expires_at?: string;
+  max_uses?: number;
+  uses_count?: number;
 }
 
 export type AuditEntityType =

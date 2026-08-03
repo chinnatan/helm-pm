@@ -648,6 +648,8 @@ export interface Database {
           revoked_at: string | null;
           accepted_at: string | null;
           accepted_by: string | null;
+          max_uses: number;
+          uses_count: number;
         };
         Insert: {
           id?: string;
@@ -663,6 +665,8 @@ export interface Database {
           revoked_at?: string | null;
           accepted_at?: string | null;
           accepted_by?: string | null;
+          max_uses?: number;
+          uses_count?: number;
         };
         Update: {
           id?: string;
@@ -678,6 +682,8 @@ export interface Database {
           revoked_at?: string | null;
           accepted_at?: string | null;
           accepted_by?: string | null;
+          max_uses?: number;
+          uses_count?: number;
         };
         Relationships: [];
       };
@@ -736,6 +742,7 @@ export interface Database {
           p_role?: string;
           p_job_role?: string | null;
           p_email?: string | null;
+          p_max_uses?: number;
         };
         Returns: Json;
       };

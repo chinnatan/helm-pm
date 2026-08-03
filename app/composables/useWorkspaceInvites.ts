@@ -42,6 +42,7 @@ export function useWorkspaceInvites() {
     role?: MemberRole;
     jobRole?: JobRole | null;
     email?: string | null;
+    maxUses?: number;
   }) {
     if (!workspace.value) return { data: null, error: "No workspace" };
 
@@ -52,11 +53,17 @@ export function useWorkspaceInvites() {
       p_role: options.role ?? "member",
       p_job_role: options.jobRole ?? null,
       p_email: options.email ?? null,
+      p_max_uses: options.maxUses ?? 1,
     });
 
     if (error) return { data: null, error: error.message };
 
-    const created = data as unknown as { id: string; token: string; expires_at: string };
+    const created = data as unknown as {
+      id: string;
+      token: string;
+      expires_at: string;
+      max_uses?: number;
+    };
     await fetchInvites();
     return {
       data: {
