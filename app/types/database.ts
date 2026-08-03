@@ -380,6 +380,7 @@ export interface Database {
           id: string;
           task_id: string;
           title: string;
+          description: string | null;
           completed: boolean;
           sort_order: number;
           status: string;
@@ -393,6 +394,7 @@ export interface Database {
           id?: string;
           task_id: string;
           title: string;
+          description?: string | null;
           completed?: boolean;
           sort_order?: number;
           status?: string;
@@ -406,6 +408,7 @@ export interface Database {
           id?: string;
           task_id?: string;
           title?: string;
+          description?: string | null;
           completed?: boolean;
           sort_order?: number;
           status?: string;

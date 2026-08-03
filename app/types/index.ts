@@ -291,6 +291,7 @@ export interface Subtask {
   id: string;
   task_id: string;
   title: string;
+  description: string | null;
   completed: boolean;
   sort_order: number;
   status: TaskStatus;

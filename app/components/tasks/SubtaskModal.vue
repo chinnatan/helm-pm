@@ -24,6 +24,7 @@ const { scheduleCapacityAlerts } = useCapacityAlerts();
 
 const form = reactive({
   title: "",
+  description: "",
   status: "todo" as TaskStatus,
   assignee_id: null as string | null,
   tester_id: null as string | null,
@@ -80,6 +81,7 @@ watch(
     if (!open || !props.subtask) return;
     const sub = props.subtask;
     form.title = sub.title;
+    form.description = sub.description ?? "";
     form.status = (sub.status ?? (sub.completed ? "done" : "todo")) as TaskStatus;
     form.assignee_id = sub.assignee_id;
     form.tester_id = sub.tester_id;
@@ -119,6 +121,7 @@ async function save() {
   saving.value = true;
   await updateSubtask(props.subtask.id, {
     title: form.title.trim(),
+    description: form.description || null,
     status: form.status,
     assignee_id: form.assignee_id || null,
     tester_id: form.tester_id || null,
@@ -183,6 +186,15 @@ function openParent() {
             v-model="form.title"
             :placeholder="t('tasks.addSubtask')"
             class="w-full"
+          />
+        </UFormField>
+
+        <UFormField :label="t('tasks.description')">
+          <RichTextEditor
+            v-model="form.description"
+            :placeholder="t('tasks.descriptionPlaceholder')"
+            :rows="3"
+            variant="full"
           />
         </UFormField>
 
