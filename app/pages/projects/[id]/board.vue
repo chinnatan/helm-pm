@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Task, TaskCardDensity, TaskStatus } from "~/types";
+import type { Subtask, Task, TaskCardDensity, TaskStatus } from "~/types";
 import { TASK_CARD_DENSITY_VALUES } from "~/types";
 
 definePageMeta({ middleware: "auth" });
@@ -17,6 +17,9 @@ const { taskCardDensity, updateTaskCardDensity } = useProfile();
 const project = computed(() => getProject(projectId.value));
 const showModal = ref(false);
 const selectedTask = ref<Task | null>(null);
+const showSubtaskModal = ref(false);
+const selectedSubtask = ref<Subtask | null>(null);
+const selectedSubtaskParent = ref<Task | null>(null);
 const defaultStatus = ref<TaskStatus | undefined>(undefined);
 const mineOnly = ref(false);
 const savingDensity = ref(false);
@@ -59,17 +62,32 @@ async function openTaskFromQuery() {
 function openNewTask(status?: TaskStatus) {
   selectedTask.value = null;
   defaultStatus.value = status;
+  showSubtaskModal.value = false;
   showModal.value = true;
 }
 
 function openTask(task: Task) {
   selectedTask.value = task;
   defaultStatus.value = undefined;
+  showSubtaskModal.value = false;
   showModal.value = true;
+}
+
+function openSubtask(payload: { subtask: Subtask; parent: Task }) {
+  selectedSubtask.value = payload.subtask;
+  selectedSubtaskParent.value = payload.parent;
+  showModal.value = false;
+  showSubtaskModal.value = true;
 }
 
 async function onSaved() {
   await fetchTasks(projectId.value);
+  if (selectedSubtask.value) {
+    const parent = tasks.value.find((t) => t.id === selectedSubtaskParent.value?.id);
+    const fresh = parent?.subtasks?.find((s) => s.id === selectedSubtask.value?.id);
+    selectedSubtask.value = fresh ?? null;
+    selectedSubtaskParent.value = parent ?? null;
+  }
 }
 </script>
 
@@ -134,6 +152,7 @@ async function onSaved() {
       :project-id="projectId"
       :mine-only="mineOnly"
       @task-click="openTask"
+      @subtask-click="openSubtask"
       @add-task="openNewTask"
     />
 
@@ -144,6 +163,15 @@ async function onSaved() {
       :default-status="defaultStatus"
       @update:open="showModal = $event"
       @saved="onSaved"
+    />
+
+    <TasksSubtaskModal
+      :subtask="selectedSubtask"
+      :parent="selectedSubtaskParent"
+      :open="showSubtaskModal"
+      @update:open="showSubtaskModal = $event"
+      @saved="onSaved"
+      @open-parent="openTask"
     />
   </div>
 </template>

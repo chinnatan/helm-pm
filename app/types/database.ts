@@ -382,6 +382,11 @@ export interface Database {
           title: string;
           completed: boolean;
           sort_order: number;
+          status: string;
+          assignee_id: string | null;
+          tester_id: string | null;
+          estimate_hours: number | null;
+          due_date: string | null;
           created_at: string;
         };
         Insert: {
@@ -390,6 +395,11 @@ export interface Database {
           title: string;
           completed?: boolean;
           sort_order?: number;
+          status?: string;
+          assignee_id?: string | null;
+          tester_id?: string | null;
+          estimate_hours?: number | null;
+          due_date?: string | null;
           created_at?: string;
         };
         Update: {
@@ -398,6 +408,11 @@ export interface Database {
           title?: string;
           completed?: boolean;
           sort_order?: number;
+          status?: string;
+          assignee_id?: string | null;
+          tester_id?: string | null;
+          estimate_hours?: number | null;
+          due_date?: string | null;
           created_at?: string;
         };
         Relationships: [];

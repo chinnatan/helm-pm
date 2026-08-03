@@ -141,25 +141,33 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
 
     <div
       v-if="display.showSubtaskList && visibleSubtasks.length"
-      class="mt-2 space-y-1 border-t border-slate-100 pt-2"
+      class="mt-2 space-y-0.5 border-t border-slate-100 pt-2"
     >
       <div
         v-for="sub in visibleSubtasks"
         :key="sub.id"
-        class="flex items-start gap-1.5 text-xs"
+        class="flex items-center gap-1.5 text-xs"
       >
         <span
-          class="mt-0.5 shrink-0"
+          class="shrink-0"
           :class="sub.completed ? 'text-green-500' : 'text-slate-300'"
         >
           {{ sub.completed ? "✓" : "○" }}
         </span>
         <span
-          class="leading-snug"
+          class="min-w-0 flex-1 truncate leading-snug"
           :class="sub.completed ? 'text-slate-400 line-through' : 'text-slate-600'"
         >
           {{ sub.title }}
         </span>
+        <UserAvatar
+          v-if="sub.profiles"
+          :src="sub.profiles.avatar_url"
+          :name="sub.profiles.full_name"
+          :email="sub.profiles.email"
+          size="xs"
+          class="shrink-0"
+        />
       </div>
       <p v-if="hiddenSubtaskCount > 0" class="text-[11px] text-slate-400">
         {{ t("tasks.moreSubtasks", { n: hiddenSubtaskCount }) }}

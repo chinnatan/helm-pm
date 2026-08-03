@@ -77,7 +77,7 @@ export function taskCardDisplayFlags(
         showCustomer,
         showMilestone: true,
         showLabels: true,
-        showSubtaskList: false,
+        showSubtaskList: true,
         showPeople: true,
       };
   }

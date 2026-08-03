@@ -1,6 +1,14 @@
 import type { Env } from "./env";
 import { supabaseGet, supabasePost, supabaseRpc } from "./supabase";
 
+type SubtaskRow = {
+  id: string;
+  completed: boolean;
+  assignee_id: string | null;
+  estimate_hours: number | null;
+  due_date: string | null;
+};
+
 type TaskRow = {
   id: string;
   project_id: string;
@@ -11,6 +19,7 @@ type TaskRow = {
   start_date: string | null;
   estimate_hours: number | null;
   title: string;
+  subtasks?: SubtaskRow[] | null;
 };
 
 type MemberRow = {
@@ -27,11 +36,45 @@ const PRIORITY_HOURS: Record<string, number> = {
   urgent: 8,
 };
 
-function effectiveHours(task: TaskRow): number {
-  if (task.estimate_hours != null && task.estimate_hours > 0) {
-    return Number(task.estimate_hours);
+function effectiveHours(input: {
+  estimate_hours?: number | null;
+  priority: string;
+}): number {
+  if (input.estimate_hours != null && input.estimate_hours > 0) {
+    return Number(input.estimate_hours);
   }
-  return PRIORITY_HOURS[task.priority] ?? 4;
+  return PRIORITY_HOURS[input.priority] ?? 4;
+}
+
+function capacitySlices(task: TaskRow): {
+  assignee_id: string;
+  hours: number;
+  start_date: string | null;
+  due_date: string | null;
+}[] {
+  const assignedSubs = (task.subtasks ?? []).filter(
+    (s) => !s.completed && s.assignee_id,
+  );
+  if (assignedSubs.length > 0) {
+    return assignedSubs.map((s) => ({
+      assignee_id: s.assignee_id!,
+      hours: effectiveHours({
+        estimate_hours: s.estimate_hours,
+        priority: task.priority,
+      }),
+      start_date: task.start_date,
+      due_date: s.due_date ?? task.due_date,
+    }));
+  }
+  if (!task.assignee_id) return [];
+  return [
+    {
+      assignee_id: task.assignee_id,
+      hours: effectiveHours(task),
+      start_date: task.start_date,
+      due_date: task.due_date,
+    },
+  ];
 }
 
 function weekKeyMonday(d: Date): string {
@@ -145,7 +188,7 @@ export async function runOverloadAlertsForWorkspace(
 
   const { data: tasks } = await supabaseGet<TaskRow[]>(
     env,
-    `tasks?project_id=in.(${projectIds.join(",")})&select=id,project_id,assignee_id,status,priority,due_date,start_date,estimate_hours,title`,
+    `tasks?project_id=in.(${projectIds.join(",")})&select=id,project_id,assignee_id,status,priority,due_date,start_date,estimate_hours,title,subtasks(id,completed,assignee_id,estimate_hours,due_date)`,
   );
 
   const { data: members } = await supabaseGet<MemberRow[]>(
@@ -162,23 +205,22 @@ export async function runOverloadAlertsForWorkspace(
     return m?.profiles?.full_name || m?.profiles?.email || uid;
   };
 
-  const open = (tasks ?? []).filter(
-    (t) => t.assignee_id && !CLOSED.has(t.status),
-  );
+  const open = (tasks ?? []).filter((t) => !CLOSED.has(t.status));
 
   const planned: Record<string, Record<string, number>> = {};
   for (const task of open) {
-    const uid = task.assignee_id!;
-    const hours = effectiveHours(task);
-    const weeks = distributeHoursByWeek(
-      hours,
-      task.start_date,
-      task.due_date,
-      thisWeek,
-    );
-    if (!planned[uid]) planned[uid] = {};
-    for (const [wk, h] of Object.entries(weeks)) {
-      planned[uid]![wk] = (planned[uid]![wk] ?? 0) + h;
+    for (const slice of capacitySlices(task)) {
+      const weeks = distributeHoursByWeek(
+        slice.hours,
+        slice.start_date,
+        slice.due_date,
+        thisWeek,
+      );
+      if (!planned[slice.assignee_id]) planned[slice.assignee_id] = {};
+      for (const [wk, h] of Object.entries(weeks)) {
+        planned[slice.assignee_id]![wk] =
+          (planned[slice.assignee_id]![wk] ?? 0) + h;
+      }
     }
   }
 

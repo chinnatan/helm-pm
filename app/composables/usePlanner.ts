@@ -9,6 +9,13 @@ import {
   parseISO,
   format,
 } from "date-fns";
+import { taskInvolvesUser } from "~/utils/taskPeople";
+
+const SUBTASK_SELECT = `
+  *,
+  profiles:assignee_id(id, email, full_name, avatar_url),
+  tester:tester_id(id, email, full_name, avatar_url)
+`;
 
 const PLANNER_SELECT = `
   *,
@@ -17,7 +24,7 @@ const PLANNER_SELECT = `
   milestones:milestone_id(id, title, date, start_date, due_date),
   customers:customer_id(id, name),
   projects!inner(id, name, color, customer_id, workspace_id),
-  subtasks(*),
+  subtasks(${SUBTASK_SELECT}),
   task_labels(label_id, labels(*)),
   user_task_preferences!inner(*)
 `;
@@ -29,7 +36,7 @@ const TASK_SELECT = `
   milestones:milestone_id(id, title, date, start_date, due_date),
   customers:customer_id(id, name),
   projects!inner(id, name, color, customer_id, workspace_id),
-  subtasks(*),
+  subtasks(${SUBTASK_SELECT}),
   task_labels(label_id, labels(*)),
   user_task_preferences(*)
 `;
@@ -51,10 +58,46 @@ export function usePlanner() {
     { value: "focus" as PlannerTab, label: t("planner.focus") },
   ]);
 
-  function mineFilter() {
-    if (!user.value) return "assignee_id.eq.null";
-    const id = user.value.id;
-    return `assignee_id.eq.${id},tester_id.eq.${id}`;
+  async function fetchTasksInvolvingUser() {
+    const uid = user.value!.id;
+    const wsId = workspace.value!.id;
+    const closed = `(${TASK_CLOSED_STATUSES.join(",")})`;
+
+    const parentQuery = supabase
+      .from("tasks")
+      .select(TASK_SELECT)
+      .or(`assignee_id.eq.${uid},tester_id.eq.${uid}`)
+      .eq("projects.workspace_id", wsId)
+      .not("status", "in", closed);
+
+    const { data: parentTasks } = await parentQuery;
+    const byId = new Map<string, Task>(
+      ((parentTasks ?? []) as unknown as Task[]).map((t) => [t.id, t]),
+    );
+
+    const { data: subRows } = await supabase
+      .from("subtasks")
+      .select("task_id")
+      .or(`assignee_id.eq.${uid},tester_id.eq.${uid}`);
+
+    const missingIds = [
+      ...new Set((subRows ?? []).map((s) => s.task_id).filter((id) => !byId.has(id))),
+    ];
+
+    if (missingIds.length > 0) {
+      const { data: extra } = await supabase
+        .from("tasks")
+        .select(TASK_SELECT)
+        .in("id", missingIds)
+        .eq("projects.workspace_id", wsId)
+        .not("status", "in", closed);
+
+      for (const t of (extra ?? []) as unknown as Task[]) {
+        byId.set(t.id, t);
+      }
+    }
+
+    return [...byId.values()].filter((t) => taskInvolvesUser(t, uid));
   }
 
   async function fetchPlannerTasks() {
@@ -67,34 +110,27 @@ export function usePlanner() {
     const today = new Date();
     const todayStr = format(today, "yyyy-MM-dd");
     const wsId = workspace.value.id;
+    const uid = user.value.id;
 
     if (activeTab.value === "focus") {
       const { data } = await supabase
         .from("tasks")
         .select(PLANNER_SELECT)
-        .or(mineFilter())
         .eq("user_task_preferences.is_pinned", true)
+        .eq("user_task_preferences.user_id", uid)
         .eq("projects.workspace_id", wsId)
         .not("status", "in", `(${TASK_CLOSED_STATUSES.join(",")})`)
         .order("sort_order");
 
-      tasks.value = (data ?? []) as unknown as Task[];
+      tasks.value = ((data ?? []) as unknown as Task[]).filter((t) =>
+        taskInvolvesUser(t, uid),
+      );
     } else {
-      let query = supabase
-        .from("tasks")
-        .select(TASK_SELECT)
-        .or(mineFilter())
-        .eq("projects.workspace_id", wsId)
-        .not("status", "in", `(${TASK_CLOSED_STATUSES.join(",")})`);
+      let result = await fetchTasksInvolvingUser();
 
       if (activeTab.value === "inbox") {
-        query = query.is("due_date", null);
-      }
-
-      const { data } = await query.order("due_date", { ascending: true, nullsFirst: false });
-      let result = (data ?? []) as unknown as Task[];
-
-      if (activeTab.value === "today") {
+        result = result.filter((t) => !t.due_date);
+      } else if (activeTab.value === "today") {
         result = result.filter((t) => {
           if (!t.due_date) return false;
           const due = parseISO(t.due_date);
@@ -112,6 +148,13 @@ export function usePlanner() {
           return isWithinInterval(due, { start: weekStart, end: weekEnd });
         });
       }
+
+      result.sort((a, b) => {
+        if (!a.due_date && !b.due_date) return 0;
+        if (!a.due_date) return 1;
+        if (!b.due_date) return -1;
+        return a.due_date.localeCompare(b.due_date);
+      });
 
       tasks.value = result;
     }

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import type { JobRole, Task, TaskStatus, TaskPriority } from "~/types";
+import type { JobRole, Subtask, Task, TaskStatus, TaskPriority } from "~/types";
 import { PRIORITY_DEFAULT_HOURS } from "~/types";
+import { VueDraggable } from "vue-draggable-plus";
 
 const props = defineProps<{
   task?: Task | null;
@@ -18,8 +19,18 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const { toLocaleString } = useDateLocale();
 const { statuses, priorities } = useTaskLabels();
-const { createTask, updateTask, deleteTask, addSubtask, toggleSubtask, setTaskLabels, fetchActivity } =
-  useTasks();
+const {
+  createTask,
+  updateTask,
+  deleteTask,
+  addSubtask,
+  updateSubtask,
+  toggleSubtask,
+  deleteSubtask,
+  reorderSubtasks,
+  setTaskLabels,
+  fetchActivity,
+} = useTasks();
 const { members, canManageMembers } = useWorkspace();
 const { confirm } = useConfirmDialog();
 const { labels, fetchLabels } = useLabels();
@@ -44,7 +55,15 @@ const form = reactive({
   label_ids: [] as string[],
 });
 
-const newSubtask = ref("");
+const newSubtask = reactive({
+  title: "",
+  assignee_id: null as string | null,
+  tester_id: null as string | null,
+  due_date: "",
+  estimate_hours: "",
+});
+
+const sortedSubtasks = ref<Subtask[]>([]);
 const activity = ref<Awaited<ReturnType<typeof fetchActivity>>>([]);
 const saving = ref(false);
 const activeTab = ref("details");
@@ -111,6 +130,27 @@ function sortedMembers(prefer: JobRole) {
   });
 }
 
+function syncSortedSubtasks() {
+  sortedSubtasks.value = [...(props.task?.subtasks ?? [])].sort(
+    (a, b) => a.sort_order - b.sort_order,
+  );
+}
+
+function parseEstimate(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (trimmed === "") return null;
+  const n = Number(trimmed);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function resetNewSubtask() {
+  newSubtask.title = "";
+  newSubtask.assignee_id = null;
+  newSubtask.tester_id = null;
+  newSubtask.due_date = "";
+  newSubtask.estimate_hours = "";
+}
+
 watch(
   () => props.open,
   async (open) => {
@@ -135,6 +175,7 @@ watch(
       form.label_ids =
         props.task.task_labels?.map((tl) => tl.labels?.id).filter(Boolean) as string[] ?? [];
       activity.value = await fetchActivity(props.task.id);
+      syncSortedSubtasks();
     } else {
       form.title = "";
       form.description = "";
@@ -149,20 +190,25 @@ watch(
       form.estimate_hours = "";
       form.label_ids = [];
       activity.value = [];
+      sortedSubtasks.value = [];
     }
+    resetNewSubtask();
     activeTab.value = "details";
   },
+);
+
+watch(
+  () => props.task?.subtasks,
+  () => {
+    if (props.open && props.task) syncSortedSubtasks();
+  },
+  { deep: true },
 );
 
 async function save() {
   saving.value = true;
 
-  const estimateRaw = form.estimate_hours.trim();
-  const estimateParsed = estimateRaw === "" ? null : Number(estimateRaw);
-  const estimate_hours =
-    estimateParsed != null && Number.isFinite(estimateParsed) && estimateParsed > 0
-      ? estimateParsed
-      : null;
+  const estimate_hours = parseEstimate(form.estimate_hours);
 
   const payload = {
     title: form.title,
@@ -219,14 +265,66 @@ const defaultEstimateHours = computed(
 );
 
 async function handleAddSubtask() {
-  if (!props.task || !newSubtask.value.trim()) return;
-  await addSubtask(props.task.id, newSubtask.value.trim());
-  newSubtask.value = "";
+  if (!props.task || !newSubtask.title.trim()) return;
+  await addSubtask(props.task.id, newSubtask.title.trim(), {
+    assignee_id: newSubtask.assignee_id,
+    tester_id: newSubtask.tester_id,
+    due_date: newSubtask.due_date || null,
+    estimate_hours: parseEstimate(newSubtask.estimate_hours),
+  });
+  resetNewSubtask();
+  syncSortedSubtasks();
+  scheduleCapacityAlerts({ projects: projects.value });
+}
+
+async function onSubtaskAssignee(sub: Subtask, value: string | null) {
+  await updateSubtask(sub.id, { assignee_id: value });
+  scheduleCapacityAlerts({ projects: projects.value });
+}
+
+async function onSubtaskTester(sub: Subtask, value: string | null) {
+  await updateSubtask(sub.id, { tester_id: value });
+}
+
+async function onSubtaskDueDate(sub: Subtask, value: string) {
+  await updateSubtask(sub.id, { due_date: value || null });
+  scheduleCapacityAlerts({ projects: projects.value });
+}
+
+async function onSubtaskEstimate(sub: Subtask, value: string) {
+  await updateSubtask(sub.id, { estimate_hours: parseEstimate(value) });
+  scheduleCapacityAlerts({ projects: projects.value });
+}
+
+async function handleDeleteSubtask(sub: Subtask) {
+  const ok = await confirm({
+    title: t("tasks.deleteSubtask"),
+    description: t("tasks.deleteSubtaskConfirm"),
+    confirmLabel: t("common.delete"),
+    color: "error",
+  });
+  if (!ok) return;
+  await deleteSubtask(sub.id);
+  syncSortedSubtasks();
+  scheduleCapacityAlerts({ projects: projects.value });
+}
+
+async function onSubtasksReorder() {
+  if (!props.task) return;
+  await reorderSubtasks(
+    props.task.id,
+    sortedSubtasks.value.map((s) => s.id),
+  );
 }
 
 function resolveActivityValue(field: string | null, value: string | null) {
   if (!value) return t("common.none");
-  if (field === "assignee_id" || field === "tester_id") {
+  if (
+    field === "assignee_id" ||
+    field === "tester_id" ||
+    field === "subtask_assignee_id" ||
+    field === "subtask_tester_id"
+  ) {
     return profileNameById.value.get(value) ?? value;
   }
   if (field === "milestone_id") {
@@ -423,25 +521,128 @@ const customerItems = computed(() => [
           </UFormField>
         </div>
 
-        <UFormField v-if="isEdit && task?.subtasks" :label="t('tasks.subtasks')">
-          <div class="space-y-2">
-            <div v-for="sub in task.subtasks" :key="sub.id" class="flex items-center gap-2">
-              <UCheckbox
-                :model-value="sub.completed"
-                @update:model-value="(v) => toggleSubtask(sub.id, !!v)"
-              />
-              <span :class="sub.completed ? 'line-through text-slate-400' : 'text-slate-700'">
-                {{ sub.title }}
-              </span>
-            </div>
-            <div class="flex gap-2">
+        <UFormField v-if="isEdit && task" :label="t('tasks.subtasks')">
+          <div class="space-y-3">
+            <VueDraggable
+              v-model="sortedSubtasks"
+              handle=".subtask-drag-handle"
+              :animation="150"
+              class="space-y-3"
+              @end="onSubtasksReorder"
+            >
+              <div
+                v-for="sub in sortedSubtasks"
+                :key="sub.id"
+                class="rounded-lg border border-slate-200 bg-slate-50/80 p-2.5"
+              >
+                <div class="flex items-start gap-2">
+                  <button
+                    type="button"
+                    class="subtask-drag-handle mt-1.5 shrink-0 cursor-grab text-slate-400 hover:text-slate-600 active:cursor-grabbing"
+                    :aria-label="t('tasks.reorderSubtask')"
+                  >
+                    <UIcon name="i-lucide-grip-vertical" class="size-4" />
+                  </button>
+                  <UCheckbox
+                    class="mt-1.5"
+                    :model-value="sub.completed"
+                    @update:model-value="(v) => toggleSubtask(sub.id, !!v)"
+                  />
+                  <div class="min-w-0 flex-1 space-y-2">
+                    <span
+                      class="block text-sm"
+                      :class="sub.completed ? 'line-through text-slate-400' : 'text-slate-700'"
+                    >
+                      {{ sub.title }}
+                    </span>
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <USelect
+                        :model-value="sub.assignee_id"
+                        :items="developerItems"
+                        :placeholder="t('tasks.selectAssignee')"
+                        size="sm"
+                        class="w-full"
+                        @update:model-value="(v) => onSubtaskAssignee(sub, v as string | null)"
+                      />
+                      <USelect
+                        :model-value="sub.tester_id"
+                        :items="testerItems"
+                        :placeholder="t('tasks.selectTester')"
+                        size="sm"
+                        class="w-full"
+                        @update:model-value="(v) => onSubtaskTester(sub, v as string | null)"
+                      />
+                      <UInput
+                        :model-value="sub.due_date ?? ''"
+                        type="date"
+                        size="sm"
+                        class="w-full"
+                        @update:model-value="(v) => onSubtaskDueDate(sub, String(v ?? ''))"
+                      />
+                      <UInput
+                        :model-value="sub.estimate_hours != null ? String(sub.estimate_hours) : ''"
+                        type="number"
+                        min="0.5"
+                        step="0.5"
+                        size="sm"
+                        class="w-full"
+                        :placeholder="t('tasks.estimateHoursPlaceholder')"
+                        @change="
+                          (e: Event) =>
+                            onSubtaskEstimate(sub, (e.target as HTMLInputElement).value)
+                        "
+                      />
+                    </div>
+                  </div>
+                  <UButton
+                    icon="i-lucide-trash-2"
+                    variant="ghost"
+                    color="error"
+                    size="xs"
+                    class="mt-1 shrink-0"
+                    :aria-label="t('tasks.deleteSubtask')"
+                    @click="handleDeleteSubtask(sub)"
+                  />
+                </div>
+              </div>
+            </VueDraggable>
+
+            <div class="space-y-2 rounded-lg border border-dashed border-slate-300 p-2.5">
               <UInput
-                v-model="newSubtask"
+                v-model="newSubtask.title"
                 :placeholder="t('tasks.addSubtask')"
-                class="flex-1"
+                class="w-full"
                 @keyup.enter="handleAddSubtask"
               />
-              <UButton size="sm" @click="handleAddSubtask">{{ t("common.add") }}</UButton>
+              <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <USelect
+                  v-model="newSubtask.assignee_id"
+                  :items="developerItems"
+                  :placeholder="t('tasks.selectAssignee')"
+                  size="sm"
+                  class="w-full"
+                />
+                <USelect
+                  v-model="newSubtask.tester_id"
+                  :items="testerItems"
+                  :placeholder="t('tasks.selectTester')"
+                  size="sm"
+                  class="w-full"
+                />
+                <UInput v-model="newSubtask.due_date" type="date" size="sm" class="w-full" />
+                <UInput
+                  v-model="newSubtask.estimate_hours"
+                  type="number"
+                  min="0.5"
+                  step="0.5"
+                  size="sm"
+                  class="w-full"
+                  :placeholder="t('tasks.estimateHoursPlaceholder')"
+                />
+              </div>
+              <UButton size="sm" :disabled="!newSubtask.title.trim()" @click="handleAddSubtask">
+                {{ t("common.add") }}
+              </UButton>
             </div>
           </div>
         </UFormField>

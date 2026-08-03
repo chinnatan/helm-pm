@@ -19,6 +19,10 @@ import {
   toMonthKey,
   weekCapacityFromMonths,
 } from "~/utils/capacityCalendar";
+import {
+  capacitySlicesForTask,
+  type CapacitySubtask,
+} from "~/utils/taskPeople";
 import { useMemberMonthCapacities } from "~/composables/useMemberMonthCapacities";
 
 export type CapacityTask = Pick<
@@ -35,6 +39,7 @@ export type CapacityTask = Pick<
   | "created_at"
 > & {
   projects?: { id: string; name: string; color?: string } | null;
+  subtasks?: CapacitySubtask[] | null;
 };
 
 export interface MemberCapacityRow {
@@ -192,7 +197,7 @@ export function useTeamCapacity() {
       const { data: openTasks } = await supabase
         .from("tasks")
         .select(
-          "id, project_id, assignee_id, status, priority, due_date, start_date, estimate_hours, title, created_at",
+          "id, project_id, assignee_id, status, priority, due_date, start_date, estimate_hours, title, created_at, subtasks(id, completed, assignee_id, estimate_hours, due_date)",
         )
         .in("project_id", ids)
         .not("status", "in", "(done,release,cancelled)");
@@ -213,7 +218,7 @@ export function useTeamCapacity() {
         const { data: closedRows } = await supabase
           .from("tasks")
           .select(
-            "id, project_id, assignee_id, status, priority, due_date, start_date, estimate_hours, title, created_at",
+            "id, project_id, assignee_id, status, priority, due_date, start_date, estimate_hours, title, created_at, subtasks(id, completed, assignee_id, estimate_hours, due_date)",
           )
           .in("id", taskIds)
           .in("project_id", ids);
@@ -263,8 +268,32 @@ export function useTeamCapacity() {
   );
 
   const openAssigned = computed(() =>
-    tasks.value.filter((t) => t.assignee_id && !isTaskClosed(t.status as Task["status"])),
+    tasks.value.filter((t) => {
+      if (isTaskClosed(t.status as Task["status"])) return false;
+      const slices = capacitySlicesForTask(t, (input) =>
+        effectiveTaskHours({
+          estimate_hours: input.estimate_hours,
+          priority: input.priority as TaskPriority,
+        }),
+      );
+      return slices.length > 0;
+    }),
   );
+
+  function remainingHoursForUser(task: CapacityTask, userId: string): number {
+    return capacitySlicesForTask(task, (input) =>
+      effectiveTaskHours({
+        estimate_hours: input.estimate_hours,
+        priority: input.priority as TaskPriority,
+      }),
+    )
+      .filter((s) => s.assignee_id === userId)
+      .reduce((sum, s) => sum + s.hours, 0);
+  }
+
+  function taskInvolvesAssignee(task: CapacityTask, userId: string): boolean {
+    return capacitySlicesForTask(task, () => 1).some((s) => s.assignee_id === userId);
+  }
 
   function plannedByMemberWeek(scopeTasks: CapacityTask[]): Record<
     string,
@@ -272,20 +301,24 @@ export function useTeamCapacity() {
   > {
     const out: Record<string, Record<string, number>> = {};
     for (const task of scopeTasks) {
-      if (!task.assignee_id || isTaskClosed(task.status as Task["status"])) continue;
-      const hours = effectiveTaskHours({
-        estimate_hours: task.estimate_hours,
-        priority: task.priority as TaskPriority,
-      });
-      const weeks = distributeHoursByWeek(
-        hours,
-        task.start_date,
-        task.due_date,
-        thisWeekStart.value,
+      if (isTaskClosed(task.status as Task["status"])) continue;
+      const slices = capacitySlicesForTask(task, (input) =>
+        effectiveTaskHours({
+          estimate_hours: input.estimate_hours,
+          priority: input.priority as TaskPriority,
+        }),
       );
-      if (!out[task.assignee_id]) out[task.assignee_id] = {};
-      for (const [wk, h] of Object.entries(weeks)) {
-        out[task.assignee_id]![wk] = (out[task.assignee_id]![wk] ?? 0) + h;
+      for (const slice of slices) {
+        const weeks = distributeHoursByWeek(
+          slice.hours,
+          slice.start_date,
+          slice.due_date,
+          thisWeekStart.value,
+        );
+        if (!out[slice.assignee_id]) out[slice.assignee_id] = {};
+        for (const [wk, h] of Object.entries(weeks)) {
+          out[slice.assignee_id]![wk] = (out[slice.assignee_id]![wk] ?? 0) + h;
+        }
       }
     }
     return out;
@@ -301,22 +334,23 @@ export function useTeamCapacity() {
         uid,
         addWeeks(thisWeekStart.value, 1),
       );
-      const mine = openAssigned.value.filter((t) => t.assignee_id === uid);
+      const mine = openAssigned.value.filter((t) => taskInvolvesAssignee(t, uid));
       const remainingHours = mine.reduce(
-        (sum, t) =>
-          sum +
-          effectiveTaskHours({
-            estimate_hours: t.estimate_hours,
-            priority: t.priority as TaskPriority,
-          }),
+        (sum, t) => sum + remainingHoursForUser(t, uid),
         0,
       );
-      const overdueCount = mine.filter(
-        (t) => t.due_date && t.due_date < today.value,
-      ).length;
-      const unplannedCount = mine.filter(
-        (t) => !t.start_date && !t.due_date,
-      ).length;
+      const overdueCount = mine.filter((t) => {
+        const slices = capacitySlicesForTask(t, () => 1).filter(
+          (s) => s.assignee_id === uid,
+        );
+        return slices.some((s) => s.due_date && s.due_date < today.value);
+      }).length;
+      const unplannedCount = mine.filter((t) => {
+        const slices = capacitySlicesForTask(t, () => 1).filter(
+          (s) => s.assignee_id === uid,
+        );
+        return slices.some((s) => !s.start_date && !s.due_date);
+      }).length;
       const thisWeekHours = plannedMatrix.value[uid]?.[thisWeekKey.value] ?? 0;
       const nextWeekHours = plannedMatrix.value[uid]?.[nextWeekKey.value] ?? 0;
 
@@ -462,20 +496,18 @@ export function useTeamCapacity() {
       (t) => t.project_id === projectId,
     );
     const matrix = plannedByMemberWeek(projectTasks);
-    const userIds = new Set(
-      projectTasks.map((t) => t.assignee_id).filter(Boolean) as string[],
-    );
+    const userIds = new Set<string>();
+    for (const t of projectTasks) {
+      for (const s of capacitySlicesForTask(t, () => 1)) {
+        userIds.add(s.assignee_id);
+      }
+    }
 
     return [...userIds]
       .map((uid) => {
-        const mine = projectTasks.filter((t) => t.assignee_id === uid);
+        const mine = projectTasks.filter((t) => taskInvolvesAssignee(t, uid));
         const remainingHours = mine.reduce(
-          (sum, t) =>
-            sum +
-            effectiveTaskHours({
-              estimate_hours: t.estimate_hours,
-              priority: t.priority as TaskPriority,
-            }),
+          (sum, t) => sum + remainingHoursForUser(t, uid),
           0,
         );
         const capacity = memberCapacityForWeek(uid, thisWeekStart.value);
@@ -485,14 +517,18 @@ export function useTeamCapacity() {
           name: memberName(uid),
           remainingHours: Math.round(remainingHours * 10) / 10,
           activeTaskCount: mine.length,
-          overdueCount: mine.filter(
-            (t) => t.due_date && t.due_date < today.value,
-          ).length,
+          overdueCount: mine.filter((t) => {
+            const slices = capacitySlicesForTask(t, () => 1).filter(
+              (s) => s.assignee_id === uid,
+            );
+            return slices.some((s) => s.due_date && s.due_date < today.value);
+          }).length,
           thisWeekHours: Math.round(thisWeekHours * 10) / 10,
           capacityHours: capacity,
           thisWeekPct: loadPct(thisWeekHours, capacity),
         };
       })
+      .filter((row) => list.some((m) => m.user_id === row.userId) || !scopeMembers)
       .sort((a, b) => b.remainingHours - a.remainingHours);
   }
 

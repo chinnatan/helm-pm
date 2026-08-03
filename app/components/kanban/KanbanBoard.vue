@@ -1,7 +1,18 @@
 <script setup lang="ts">
-import type { Task, TaskStatus } from "~/types";
+import type { Subtask, Task, TaskStatus } from "~/types";
 import { TASK_STATUS_VALUES } from "~/types";
 import { VueDraggable } from "vue-draggable-plus";
+import { taskInvolvesUser } from "~/utils/taskPeople";
+
+export type KanbanItem =
+  | { kind: "task"; id: string; sort_order: number; task: Task }
+  | {
+      kind: "subtask";
+      id: string;
+      sort_order: number;
+      subtask: Subtask;
+      parent: Task;
+    };
 
 const props = defineProps<{
   projectId: string;
@@ -12,12 +23,19 @@ const { statuses } = useTaskLabels();
 const user = useSupabaseUser();
 const { t } = useI18n();
 const { confirm } = useConfirmDialog();
-const { tasksByStatus, updateTaskStatus, deleteTask, subscribeToProject, fetchTasks } = useTasks(
-  toRef(props, "projectId"),
-);
+const {
+  tasks,
+  updateTaskStatus,
+  updateSubtaskStatus,
+  deleteTask,
+  deleteSubtask,
+  subscribeToProject,
+  fetchTasks,
+} = useTasks(toRef(props, "projectId"));
 
 const emit = defineEmits<{
   "task-click": [task: Task];
+  "subtask-click": [payload: { subtask: Subtask; parent: Task }];
   "add-task": [status: TaskStatus];
 }>();
 
@@ -25,7 +43,7 @@ const columns = statuses;
 const isDragging = ref(false);
 const suppressClick = ref(false);
 
-function emptyColumns(): Record<TaskStatus, Task[]> {
+function emptyColumns(): Record<TaskStatus, KanbanItem[]> {
   return {
     backlog: [],
     todo: [],
@@ -38,28 +56,68 @@ function emptyColumns(): Record<TaskStatus, Task[]> {
   };
 }
 
-const localColumns = ref<Record<TaskStatus, Task[]>>(emptyColumns());
+const localColumns = ref<Record<TaskStatus, KanbanItem[]>>(emptyColumns());
 
-function filterMine(tasks: Task[]) {
-  if (!props.mineOnly) return tasks;
+function buildItems(): Record<TaskStatus, KanbanItem[]> {
+  const cols = emptyColumns();
   const uid = user.value?.id;
-  if (!uid) return [];
-  return tasks.filter((t) => t.assignee_id === uid || t.tester_id === uid);
+
+  for (const task of tasks.value) {
+    const includeTask =
+      !props.mineOnly || (uid ? taskInvolvesUser(task, uid) : false);
+
+    if (includeTask) {
+      const list = cols[task.status];
+      if (list) {
+        list.push({
+          kind: "task",
+          id: `task:${task.id}`,
+          sort_order: task.sort_order,
+          task,
+        });
+      }
+    }
+
+    for (const sub of task.subtasks ?? []) {
+      const status = (sub.status ?? (sub.completed ? "done" : "todo")) as TaskStatus;
+      if (props.mineOnly) {
+        if (!uid) continue;
+        const onSub = sub.assignee_id === uid || sub.tester_id === uid;
+        if (!onSub) continue;
+      }
+      const list = cols[status];
+      if (!list) continue;
+      list.push({
+        kind: "subtask",
+        id: `subtask:${sub.id}`,
+        sort_order: sub.sort_order,
+        subtask: sub,
+        parent: task,
+      });
+    }
+  }
+
+  for (const status of TASK_STATUS_VALUES) {
+    cols[status]?.sort((a, b) => a.sort_order - b.sort_order || a.id.localeCompare(b.id));
+  }
+
+  return cols;
 }
 
-function syncFromServer(val: Record<TaskStatus, Task[]>) {
+function syncFromServer() {
+  const next = buildItems();
   for (const status of TASK_STATUS_VALUES) {
     const target = localColumns.value[status];
-    const source = filterMine(val[status] ?? []);
+    const source = next[status] ?? [];
     target.splice(0, target.length, ...source);
   }
 }
 
 watch(
-  tasksByStatus,
-  (val) => {
+  tasks,
+  () => {
     if (isDragging.value) return;
-    syncFromServer(val);
+    syncFromServer();
   },
   { immediate: true, deep: true },
 );
@@ -67,7 +125,7 @@ watch(
 watch(
   () => props.mineOnly,
   () => {
-    if (!isDragging.value) syncFromServer(tasksByStatus.value);
+    if (!isDragging.value) syncFromServer();
   },
 );
 
@@ -83,9 +141,16 @@ async function onDragEnd() {
   for (const status of TASK_STATUS_VALUES) {
     const items = localColumns.value[status] ?? [];
     for (let i = 0; i < items.length; i++) {
-      const task = items[i]!;
-      if (task.status !== status || task.sort_order !== i) {
-        pending.push(updateTaskStatus(task.id, status, i));
+      const item = items[i]!;
+      if (item.kind === "task") {
+        if (item.task.status !== status || item.task.sort_order !== i) {
+          pending.push(updateTaskStatus(item.task.id, status, i));
+        }
+      } else {
+        const subStatus = item.subtask.status ?? (item.subtask.completed ? "done" : "todo");
+        if (subStatus !== status || item.subtask.sort_order !== i) {
+          pending.push(updateSubtaskStatus(item.subtask.id, status, i));
+        }
       }
     }
   }
@@ -106,6 +171,11 @@ function openTask(task: Task) {
   emit("task-click", task);
 }
 
+function openSubtask(subtask: Subtask, parent: Task) {
+  if (suppressClick.value || isDragging.value) return;
+  emit("subtask-click", { subtask, parent });
+}
+
 async function handleDeleteTask(task: Task) {
   const ok = await confirm({
     title: t("tasks.delete"),
@@ -115,6 +185,18 @@ async function handleDeleteTask(task: Task) {
   });
   if (!ok) return;
   await deleteTask(task.id);
+  await fetchTasks(props.projectId);
+}
+
+async function handleDeleteSubtask(sub: Subtask) {
+  const ok = await confirm({
+    title: t("tasks.deleteSubtask"),
+    description: t("tasks.deleteSubtaskConfirm"),
+    confirmLabel: t("common.delete"),
+    color: "error",
+  });
+  if (!ok) return;
+  await deleteSubtask(sub.id);
   await fetchTasks(props.projectId);
 }
 
@@ -171,15 +253,23 @@ onUnmounted(() => {
         @end="onDragEnd"
       >
         <div
-          v-for="task in localColumns[col.value]"
-          :key="task.id"
+          v-for="item in localColumns[col.value]"
+          :key="item.id"
           class="touch-manipulation select-none"
         >
           <TasksTaskCard
-            :task="task"
+            v-if="item.kind === 'task'"
+            :task="item.task"
             :show-project="false"
-            @click="openTask(task)"
+            @click="openTask(item.task)"
             @delete="handleDeleteTask"
+          />
+          <TasksSubtaskCard
+            v-else
+            :subtask="item.subtask"
+            :parent="item.parent"
+            @click="openSubtask(item.subtask, item.parent)"
+            @delete="handleDeleteSubtask(item.subtask)"
           />
         </div>
       </VueDraggable>

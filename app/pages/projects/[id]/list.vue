@@ -2,6 +2,7 @@
 import type { Task, TaskStatus, TaskPriority } from "~/types";
 import { TASK_STATUS_VALUES } from "~/types";
 import { format, parseISO } from "date-fns";
+import { taskMatchesPerson } from "~/utils/taskPeople";
 
 definePageMeta({ middleware: "auth" });
 
@@ -39,10 +40,7 @@ const filteredTasks = computed(() => {
     if (statusFilter.value !== "all" && task.status !== statusFilter.value) return false;
     if (priorityFilter.value !== "all" && task.priority !== priorityFilter.value) return false;
     if (assigneeFilter.value !== "all") {
-      const match =
-        task.assignee_id === assigneeFilter.value ||
-        task.tester_id === assigneeFilter.value;
-      if (!match) return false;
+      if (!taskMatchesPerson(task, assigneeFilter.value)) return false;
     }
     return true;
   });

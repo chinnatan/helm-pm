@@ -1,7 +1,15 @@
 import type { Task, TaskStatus, TaskPriority, Subtask, Label, ActivityLog } from "~/types";
 import type { Database } from "~/types/database";
+import { isTaskClosed } from "~/types";
 
 type TaskUpdate = Database["public"]["Tables"]["tasks"]["Update"];
+type SubtaskUpdate = Database["public"]["Tables"]["subtasks"]["Update"];
+
+const SUBTASK_SELECT = `
+  *,
+  profiles:assignee_id(id, email, full_name, avatar_url),
+  tester:tester_id(id, email, full_name, avatar_url)
+`;
 
 const TASK_SELECT = `
   *,
@@ -9,10 +17,18 @@ const TASK_SELECT = `
   tester:tester_id(id, email, full_name, avatar_url),
   milestones:milestone_id(id, title, date, start_date, due_date),
   customers:customer_id(id, name),
-  subtasks(*),
+  subtasks(${SUBTASK_SELECT}),
   task_labels(label_id, labels(*)),
   user_task_preferences(*)
 `;
+
+export type AddSubtaskInput = {
+  assignee_id?: string | null;
+  tester_id?: string | null;
+  estimate_hours?: number | null;
+  due_date?: string | null;
+  status?: TaskStatus;
+};
 
 export function useTasks(projectId?: Ref<string | undefined>) {
   const supabase = useSupabaseClient();
@@ -115,36 +131,114 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     return updateTask(id, updates);
   }
 
-  async function addSubtask(taskId: string, title: string) {
+  function findSubtask(subtaskId: string): { task: Task; sub: Subtask } | null {
+    for (const task of tasks.value) {
+      const sub = task.subtasks?.find((s) => s.id === subtaskId);
+      if (sub) return { task, sub };
+    }
+    return null;
+  }
+
+  async function addSubtask(taskId: string, title: string, opts: AddSubtaskInput = {}) {
     const task = tasks.value.find((t) => t.id === taskId);
     const maxSort = task?.subtasks?.reduce((max, s) => Math.max(max, s.sort_order), -1) ?? -1;
+    const status = opts.status ?? task?.status ?? "todo";
 
     const { data, error } = await supabase
       .from("subtasks")
-      .insert({ task_id: taskId, title, sort_order: maxSort + 1 })
-      .select()
+      .insert({
+        task_id: taskId,
+        title,
+        sort_order: maxSort + 1,
+        status,
+        assignee_id: opts.assignee_id ?? null,
+        tester_id: opts.tester_id ?? null,
+        estimate_hours: opts.estimate_hours ?? null,
+        due_date: opts.due_date ?? null,
+      })
+      .select(SUBTASK_SELECT)
       .single();
 
     if (!error && data && task) {
       if (!task.subtasks) task.subtasks = [];
       task.subtasks.push(data as Subtask);
     }
-    return { data, error: error?.message };
+    return { data: data as Subtask | null, error: error?.message };
+  }
+
+  async function updateSubtask(subtaskId: string, updates: SubtaskUpdate) {
+    const { data, error } = await supabase
+      .from("subtasks")
+      .update(updates)
+      .eq("id", subtaskId)
+      .select(SUBTASK_SELECT)
+      .single();
+
+    if (error) {
+      console.error("updateSubtask failed:", error.message);
+      return { data: null, error: error.message };
+    }
+
+    if (data) {
+      const found = findSubtask(subtaskId);
+      if (found) {
+        const idx = found.task.subtasks!.findIndex((s) => s.id === subtaskId);
+        if (idx >= 0) found.task.subtasks![idx] = data as Subtask;
+      }
+    }
+    return { data: data as Subtask | null, error: undefined };
+  }
+
+  async function updateSubtaskStatus(
+    subtaskId: string,
+    status: TaskStatus,
+    sortOrder?: number,
+  ) {
+    const updates: SubtaskUpdate = { status };
+    if (sortOrder !== undefined) updates.sort_order = sortOrder;
+    return updateSubtask(subtaskId, updates);
   }
 
   async function toggleSubtask(subtaskId: string, completed: boolean) {
-    const { error } = await supabase
-      .from("subtasks")
-      .update({ completed })
-      .eq("id", subtaskId);
+    const found = findSubtask(subtaskId);
+    const openStatus =
+      found && !isTaskClosed(found.task.status) ? found.task.status : "todo";
+    return updateSubtask(subtaskId, {
+      status: completed ? "done" : openStatus,
+    });
+  }
 
+  async function deleteSubtask(subtaskId: string) {
+    const { error } = await supabase.from("subtasks").delete().eq("id", subtaskId);
     if (!error) {
       for (const task of tasks.value) {
-        const sub = task.subtasks?.find((s) => s.id === subtaskId);
-        if (sub) sub.completed = completed;
+        if (!task.subtasks) continue;
+        task.subtasks = task.subtasks.filter((s) => s.id !== subtaskId);
       }
     }
     return { error: error?.message };
+  }
+
+  async function reorderSubtasks(taskId: string, orderedIds: string[]) {
+    const task = tasks.value.find((t) => t.id === taskId);
+    if (task?.subtasks) {
+      const byId = new Map(task.subtasks.map((s) => [s.id, s]));
+      task.subtasks = orderedIds
+        .map((id, i) => {
+          const sub = byId.get(id);
+          if (sub) sub.sort_order = i;
+          return sub;
+        })
+        .filter(Boolean) as Subtask[];
+    }
+
+    const results = await Promise.all(
+      orderedIds.map((id, i) =>
+        supabase.from("subtasks").update({ sort_order: i }).eq("id", id),
+      ),
+    );
+    const failed = results.find((r) => r.error);
+    return { error: failed?.error?.message };
   }
 
   async function setTaskLabels(taskId: string, labelIds: string[]) {
@@ -222,7 +316,11 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     deleteTask,
     updateTaskStatus,
     addSubtask,
+    updateSubtask,
+    updateSubtaskStatus,
     toggleSubtask,
+    deleteSubtask,
+    reorderSubtasks,
     setTaskLabels,
     fetchActivity,
     subscribeToProject,
