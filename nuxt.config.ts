@@ -94,7 +94,6 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       appUrl: process.env.NUXT_PUBLIC_APP_URL || "http://localhost:5100",
-      onesignalAppId: process.env.NUXT_PUBLIC_ONESIGNAL_APP_ID || "",
     },
   },
 

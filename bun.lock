@@ -8,7 +8,6 @@
         "@nuxt/ui": "^3.1.3",
         "@nuxtjs/i18n": "^10.5.0",
         "@nuxtjs/supabase": "^1.5.0",
-        "@onesignal/onesignal-vue3": "^2.5.4",
         "@tiptap/extension-link": "^3.29.0",
         "@tiptap/extension-placeholder": "^3.29.0",
         "@tiptap/markdown": "^3.29.0",
@@ -531,8 +530,6 @@
     "@nuxtjs/i18n": ["@nuxtjs/i18n@10.5.0", "", { "dependencies": { "@intlify/core": "^11.4.6", "@intlify/h3": "^0.7.4", "@intlify/shared": "^11.4.6", "@intlify/unplugin-vue-i18n": "^11.2.4", "@intlify/utils": "^0.14.1", "@miyaneee/rollup-plugin-json5": "^1.2.0", "@nuxt/kit": "^4.5.0", "@rollup/plugin-yaml": "^4.1.2", "@vue/compiler-sfc": "^3.5.40", "defu": "^6.1.7", "devalue": "^5.8.1", "h3": "^1.15.11", "knitwork": "^1.3.0", "magic-string": "^0.30.21", "mlly": "^1.8.2", "nuxt-define": "^1.0.0", "oxc-parser": "^0.140.0", "oxc-transform": "^0.140.0", "oxc-walker": "^0.7.0", "pathe": "^2.0.3", "ufo": "^1.6.4", "unhead": "^3.2.1", "unplugin": "^3.3.0", "unrouting": "^0.1.7", "unstorage": "^1.17.5", "vue-i18n": "^11.4.6", "vue-router": "^5.2.0" } }, "sha512-Z++CsJEmURmKImETfo5dSN7J1vlDO+mCda6pHhKleEOyhFjlkfdJBLUwJQZTINLNGLX4De5rr+7Ouw4gsmdZ7Q=="],
 
     "@nuxtjs/supabase": ["@nuxtjs/supabase@1.6.2", "", { "dependencies": { "@supabase/ssr": "^0.7.0", "@supabase/supabase-js": "^2.57.2", "defu": "^6.1.4", "pathe": "^2.0.3" } }, "sha512-/ugHRSWfPncCc2F6z5haa/L0hISrPNpfzciOlvSaCKi9079c+75ghf/TbFbjNn2YLu6396f5HTJlROypYyczeA=="],
-
-    "@onesignal/onesignal-vue3": ["@onesignal/onesignal-vue3@2.5.4", "", { "dependencies": { "vue": "^3.2.0" } }, "sha512-vgWrNIdf7DQaqkBPNwbykV6SJtU1iy3Ev5C+ezJPdd3CxBDyETWLIo3uL3WSHEpvmofssgRiiXgEr+j/a4U1WA=="],
 
     "@oxc-minify/binding-android-arm-eabi": ["@oxc-minify/binding-android-arm-eabi@0.117.0", "", { "os": "android", "cpu": "arm" }, "sha512-5Hf2KsGRjxp3HnPU/mse7cQJa5tWfMFUPZQcgSMVsv2JZnGFFOIDzA0Oja2KDD+VPJqMpEJKc2dCHAGZgJxsGg=="],
 

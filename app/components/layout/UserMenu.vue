@@ -1,16 +1,7 @@
 <script setup lang="ts">
-import type { TaskCardDensity, NotificationPreferences } from "~/types";
+import type { TaskCardDensity } from "~/types";
 import { TASK_CARD_DENSITY_VALUES } from "~/types";
 
-const NOTIFICATION_PREF_KEYS = [
-  "mention",
-  "task_assigned",
-  "task_tester_assigned",
-  "task_status_changed",
-  "task_due_date_changed",
-  "task_priority_changed",
-  "capacity",
-] as const;
 const emit = defineEmits<{
   "sign-out": [];
 }>();
@@ -27,11 +18,7 @@ const {
   updateTaskCardDensity,
   uploadAvatar,
   changePassword,
-  updateNotificationPreferences,
 } = useProfile();
-
-const { configured: pushConfigured, browserPushEnabled, subscribed, requestPushPermission, refreshSubscriptionState } =
-  useWebPush();
 
 const open = ref(false);
 const saving = ref(false);
@@ -55,49 +42,6 @@ const passwordForm = reactive({
 
 const avatarFile = ref<File | null>(null);
 const avatarPreview = ref<string | null>(null);
-const pushBusy = ref(false);
-const pushError = ref("");
-
-const notificationPrefs = computed(
-  () => profile.value?.notification_preferences ?? {},
-);
-
-const pushStatusLabel = computed(() => {
-  if (!pushConfigured.value) return t("profile.webPush.notConfigured");
-  if (subscribed.value === true) return t("profile.webPush.subscribed");
-  if (subscribed.value === false) return t("profile.webPush.notSubscribed");
-  return t("profile.webPush.unknown");
-});
-
-async function onEnablePush() {
-  pushError.value = "";
-  pushBusy.value = true;
-  try {
-    const { error: err } = await requestPushPermission();
-    if (err === "not_configured") {
-      pushError.value = t("profile.webPush.notConfigured");
-    } else if (err === "permission_denied") {
-      pushError.value = t("profile.webPush.permissionDenied");
-    } else if (err === "sdk_timeout") {
-      pushError.value = t("profile.webPush.sdkTimeout");
-    } else if (err === "wrong_site") {
-      pushError.value = t("profile.webPush.wrongSite");
-    } else if (err) {
-      pushError.value = err;
-    }
-    await refreshSubscriptionState();
-  } finally {
-    pushBusy.value = false;
-  }
-}
-
-async function toggleWebPushEnabled(enabled: boolean) {
-  await updateNotificationPreferences({ web_push_enabled: enabled });
-}
-
-async function togglePref(key: (typeof NOTIFICATION_PREF_KEYS)[number], enabled: boolean) {
-  await updateNotificationPreferences({ [key]: enabled } as NotificationPreferences);
-}
 
 const shownAvatar = computed(
   () => avatarPreview.value || profile.value?.avatar_url || null,
@@ -108,7 +52,6 @@ function openModal() {
   densityError.value = "";
   passwordError.value = "";
   passwordSuccess.value = "";
-  pushError.value = "";
   form.first_name = profile.value?.first_name ?? "";
   form.last_name = profile.value?.last_name ?? "";
   passwordForm.current = "";
@@ -116,7 +59,6 @@ function openModal() {
   passwordForm.confirm = "";
   clearAvatarPick();
   open.value = true;
-  void refreshSubscriptionState();
 }
 
 function onAvatarChange(event: Event) {
@@ -333,70 +275,6 @@ onUnmounted(() => {
               class="w-full"
             />
           </UFormField>
-
-          <div class="border-t border-slate-100 pt-4">
-            <h3 class="mb-1 text-sm font-semibold text-slate-800">
-              {{ t("profile.webPush.title") }}
-            </h3>
-            <p class="mb-3 text-xs text-slate-500">
-              {{ t("profile.webPush.hint") }}
-            </p>
-            <p class="mb-2 text-xs text-slate-500">
-              {{ t("profile.webPush.pwaHint") }}
-            </p>
-            <UAlert
-              v-if="pushError"
-              color="error"
-              variant="subtle"
-              class="mb-3"
-              :title="pushError"
-            />
-            <p class="mb-3 text-sm text-slate-600">
-              {{ pushStatusLabel }}
-            </p>
-            <div v-if="!browserPushEnabled" class="mb-4 flex flex-wrap gap-2">
-              <UButton
-                variant="outline"
-                color="neutral"
-                :loading="pushBusy"
-                :disabled="!pushConfigured"
-                @click="onEnablePush"
-              >
-                {{ t("profile.webPush.enable") }}
-              </UButton>
-            </div>
-            <template v-if="pushConfigured">
-              <p class="mb-2 text-xs font-medium text-slate-700">
-                {{ t("profile.webPush.prefsTitle") }}
-              </p>
-              <label class="mb-2 flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  :checked="notificationPrefs.web_push_enabled !== false"
-                  @change="
-                    toggleWebPushEnabled(
-                      ($event.target as HTMLInputElement).checked,
-                    )
-                  "
-                >
-                {{ t("profile.webPush.webPushEnabled") }}
-              </label>
-              <label
-                v-for="key in NOTIFICATION_PREF_KEYS"
-                :key="key"
-                class="mb-1 flex items-center gap-2 text-sm text-slate-600"
-              >
-                <input
-                  type="checkbox"
-                  :checked="notificationPrefs[key] !== false"
-                  @change="
-                    togglePref(key, ($event.target as HTMLInputElement).checked)
-                  "
-                >
-                {{ t(`profile.webPush.types.${key}`) }}
-              </label>
-            </template>
-          </div>
 
           <div class="border-t border-slate-100 pt-4">
             <h3 class="mb-1 text-sm font-semibold text-slate-800">

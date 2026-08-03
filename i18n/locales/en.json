@@ -92,30 +92,6 @@
       "standardDesc": "Project, customer (context-aware), labels, and assignees",
       "detailed": "Detailed",
       "detailedDesc": "Everything, including subtasks and customer when set"
-    },
-    "webPush": {
-      "title": "Browser notifications",
-      "hint": "Get push alerts when you are assigned tasks or mentioned.",
-      "pwaHint": "On iPhone, add Helm to your Home Screen (iOS 16.4+) for reliable push.",
-      "enable": "Enable notifications",
-      "subscribed": "Notifications enabled in this browser",
-      "notSubscribed": "Not enabled — tap the button above",
-      "unknown": "Status unknown",
-      "notConfigured": "OneSignal is not configured for this environment",
-      "permissionDenied": "Notifications are blocked in your browser — allow them in site settings and try again",
-      "sdkTimeout": "OneSignal did not respond (often failed init or service worker) — check the Console and Site URL in the OneSignal dashboard",
-      "wrongSite": "This App ID is tied to your production domain in OneSignal (e.g. helm.zkcnt.com). For localhost, create a separate OneSignal app with Site URL http://localhost:5100 and put that App ID in .env (NUXT_PUBLIC_ONESIGNAL_APP_ID)",
-      "prefsTitle": "Notify me for",
-      "webPushEnabled": "Web push enabled",
-      "types": {
-        "mention": "Mentions in comments",
-        "task_assigned": "Task assignments",
-        "task_tester_assigned": "Tester assignments",
-        "task_status_changed": "Status changes on my tasks",
-        "task_due_date_changed": "Due date changes",
-        "task_priority_changed": "Priority changes",
-        "capacity": "Capacity and overdue alerts"
-      }
     }
   },
   "planner": {
