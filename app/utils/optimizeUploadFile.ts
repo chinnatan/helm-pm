@@ -6,6 +6,11 @@ const JPEG_WEBP_QUALITY = 0.82;
 
 const SKIP_TYPES = new Set(["image/svg+xml", "image/gif"]);
 
+export type OptimizeUploadOptions = {
+  /** Always encode as WebP (including alpha). Used by the rich-text editor. */
+  forceWebp?: boolean;
+};
+
 function replaceExtension(filename: string, ext: string): string {
   const base = filename.replace(/\.[^/.]+$/, "") || filename;
   return `${base}.${ext}`;
@@ -40,7 +45,10 @@ function hasTransparency(ctx: CanvasRenderingContext2D, width: number, height: n
  * Non-images and skipped types (SVG, GIF) are returned unchanged.
  * On failure, returns the original file so uploads are never blocked.
  */
-export async function optimizeUploadFile(file: File): Promise<File> {
+export async function optimizeUploadFile(
+  file: File,
+  options?: OptimizeUploadOptions,
+): Promise<File> {
   if (!file.type.startsWith("image/") || SKIP_TYPES.has(file.type)) {
     return file;
   }
@@ -64,25 +72,31 @@ export async function optimizeUploadFile(file: File): Promise<File> {
     ctx.drawImage(bitmap, 0, 0, targetW, targetH);
     bitmap.close();
 
-    const preserveAlpha = hasTransparency(ctx, targetW, targetH);
-
     let blob: Blob | null = null;
     let outType: string;
     let outExt: string;
 
-    if (preserveAlpha) {
-      blob = await canvasToBlob(canvas, "image/png");
-      outType = "image/png";
-      outExt = "png";
-    } else {
+    if (options?.forceWebp) {
       blob = await canvasToBlob(canvas, "image/webp", JPEG_WEBP_QUALITY);
-      if (blob) {
-        outType = "image/webp";
-        outExt = "webp";
+      outType = "image/webp";
+      outExt = "webp";
+    } else {
+      const preserveAlpha = hasTransparency(ctx, targetW, targetH);
+
+      if (preserveAlpha) {
+        blob = await canvasToBlob(canvas, "image/png");
+        outType = "image/png";
+        outExt = "png";
       } else {
-        blob = await canvasToBlob(canvas, "image/jpeg", JPEG_WEBP_QUALITY);
-        outType = "image/jpeg";
-        outExt = "jpg";
+        blob = await canvasToBlob(canvas, "image/webp", JPEG_WEBP_QUALITY);
+        if (blob) {
+          outType = "image/webp";
+          outExt = "webp";
+        } else {
+          blob = await canvasToBlob(canvas, "image/jpeg", JPEG_WEBP_QUALITY);
+          outType = "image/jpeg";
+          outExt = "jpg";
+        }
       }
     }
 

@@ -168,6 +168,14 @@ const preview = computed(() => stripMarkdownForPreview(props.content));
   text-decoration: underline;
 }
 
+.rich-text-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.375rem;
+  margin: 0.5rem 0;
+  display: block;
+}
+
 .rich-text-content strong {
   font-weight: 600;
 }
