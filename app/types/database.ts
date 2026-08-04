@@ -460,6 +460,7 @@ export interface Database {
         Row: {
           id: string;
           task_id: string;
+          subtask_id: string | null;
           user_id: string | null;
           action: string;
           field_name: string | null;
@@ -470,6 +471,7 @@ export interface Database {
         Insert: {
           id?: string;
           task_id: string;
+          subtask_id?: string | null;
           user_id?: string | null;
           action: string;
           field_name?: string | null;
@@ -480,6 +482,7 @@ export interface Database {
         Update: {
           id?: string;
           task_id?: string;
+          subtask_id?: string | null;
           user_id?: string | null;
           action?: string;
           field_name?: string | null;

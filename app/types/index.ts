@@ -316,6 +316,7 @@ export interface Comment {
 export interface ActivityLog {
   id: string;
   task_id: string;
+  subtask_id: string | null;
   user_id: string | null;
   action: string;
   field_name: string | null;

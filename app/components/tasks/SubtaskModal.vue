@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { JobRole, Subtask, Task, TaskStatus } from "~/types";
+import type { ActivityLog, JobRole, Subtask, Task, TaskStatus } from "~/types";
 import { PRIORITY_DEFAULT_HOURS } from "~/types";
 
 const props = defineProps<{
@@ -15,8 +15,9 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const { toLocaleString } = useDateLocale();
 const { statuses } = useTaskLabels();
-const { updateSubtask, deleteSubtask, setSubtaskLabels } = useTasks();
+const { updateSubtask, deleteSubtask, setSubtaskLabels, fetchSubtaskActivity } = useTasks();
 const { members, canManageMembers } = useWorkspace();
 const { confirm } = useConfirmDialog();
 const { labels, fetchLabels } = useLabels();
@@ -36,6 +37,17 @@ const form = reactive({
 
 const saving = ref(false);
 const deleting = ref(false);
+const activeTab = ref("details");
+const activity = ref<ActivityLog[]>([]);
+
+const modalTabs = computed(() => [
+  { key: "details", label: t("tasks.tabs.details") },
+  { key: "activity", label: t("tasks.tabs.activity") },
+]);
+
+function setActiveTab(key: string) {
+  activeTab.value = key;
+}
 
 const isMobile = ref(false);
 let mobileMq: MediaQueryList | null = null;
@@ -53,6 +65,14 @@ onMounted(() => {
 onUnmounted(() => {
   mobileMq?.removeEventListener("change", updateIsMobile);
   mobileMq = null;
+});
+
+const profileNameById = computed(() => {
+  const map = new Map<string, string>();
+  for (const m of members.value) {
+    map.set(m.user_id, m.profiles?.full_name || m.profiles?.email || m.user_id);
+  }
+  return map;
 });
 
 function memberLabel(userId: string, jobRole: JobRole | null | undefined) {
@@ -77,10 +97,35 @@ function parseEstimate(raw: string): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+function resolveActivityValue(field: string | null, value: string | null) {
+  if (!value) return t("common.none");
+  if (field === "assignee_id" || field === "tester_id") {
+    return profileNameById.value.get(value) ?? value;
+  }
+  if (field === "status") {
+    return t(`status.${value}`);
+  }
+  return value;
+}
+
+function fieldLabel(field: string | null) {
+  if (!field) return "";
+  const key = `tasks.fields.${field}`;
+  const translated = t(key);
+  return translated === key ? field : translated;
+}
+
+function actionLabel(action: string) {
+  if (action === "created") return t("common.created");
+  if (action === "updated") return t("common.updated");
+  return action;
+}
+
 watch(
   () => [props.open, props.subtask] as const,
   async ([open]) => {
     if (!open || !props.subtask) return;
+    activeTab.value = "details";
     await fetchLabels();
     const sub = props.subtask;
     form.title = sub.title;
@@ -94,6 +139,7 @@ watch(
     form.label_ids =
       (sub.subtask_labels?.map((tl) => tl.labels?.id).filter(Boolean) as string[]) ??
       [];
+    activity.value = await fetchSubtaskActivity(sub.id);
   },
 );
 
@@ -178,7 +224,21 @@ function openParent() {
     @update:open="emit('update:open', $event)"
   >
     <template #body>
-      <div class="space-y-4">
+      <div class="mb-4 flex gap-2 overflow-x-auto border-b border-slate-200 pb-2">
+        <UButton
+          v-for="tab in modalTabs"
+          :key="tab.key"
+          :variant="activeTab === tab.key ? 'solid' : 'ghost'"
+          color="neutral"
+          size="xs"
+          class="shrink-0"
+          @click="setActiveTab(tab.key)"
+        >
+          {{ tab.label }}
+        </UButton>
+      </div>
+
+      <div v-if="activeTab === 'details'" class="space-y-4">
         <button
           v-if="parent"
           type="button"
@@ -261,9 +321,32 @@ function openParent() {
           </UFormField>
         </div>
       </div>
+
+      <div v-else-if="activeTab === 'activity'" class="space-y-3">
+        <div
+          v-for="log in activity"
+          :key="log.id"
+          class="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm"
+        >
+          <span class="font-medium">
+            {{ log.profiles?.full_name || log.profiles?.email || t("common.system") }}
+          </span>
+          <span class="text-slate-600">
+            {{ actionLabel(log.action) }}
+            <template v-if="log.field_name">
+              {{ fieldLabel(log.field_name) }}:
+              {{ resolveActivityValue(log.field_name, log.old_value) }}
+              →
+              {{ resolveActivityValue(log.field_name, log.new_value) }}
+            </template>
+          </span>
+          <p class="text-xs text-slate-400">{{ toLocaleString(log.created_at) }}</p>
+        </div>
+        <p v-if="activity.length === 0" class="text-sm text-slate-400">{{ t("tasks.noActivity") }}</p>
+      </div>
     </template>
 
-    <template #footer>
+    <template v-if="activeTab === 'details'" #footer>
       <div class="flex items-center justify-between gap-2">
         <UButton
           v-if="canManageMembers"

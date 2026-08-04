@@ -317,6 +317,11 @@ async function onSubtasksReorder() {
   );
 }
 
+function subtaskTitleById(subtaskId: string | null | undefined) {
+  if (!subtaskId) return null;
+  return props.task?.subtasks?.find((s) => s.id === subtaskId)?.title ?? null;
+}
+
 function resolveActivityValue(field: string | null, value: string | null) {
   if (!value) return t("common.none");
   if (
@@ -668,6 +673,9 @@ const customerItems = computed(() => [
             {{ log.profiles?.full_name || log.profiles?.email || t("common.system") }}
           </span>
           <span class="text-slate-600">
+            <template v-if="log.subtask_id">
+              {{ t("tasks.activitySubtaskPrefix", { title: subtaskTitleById(log.subtask_id) || "…" }) }}
+            </template>
             {{ actionLabel(log.action) }}
             <template v-if="log.field_name">
               {{ fieldLabel(log.field_name) }}:

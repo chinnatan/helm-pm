@@ -273,7 +273,17 @@ export function useTasks(projectId?: Ref<string | undefined>) {
       .eq("task_id", taskId)
       .order("created_at", { ascending: false });
 
-    return (data ?? []) as ActivityLog[];
+    return (data ?? []) as unknown as ActivityLog[];
+  }
+
+  async function fetchSubtaskActivity(subtaskId: string) {
+    const { data } = await supabase
+      .from("activity_log")
+      .select("*, profiles(id, email, full_name)")
+      .eq("subtask_id", subtaskId)
+      .order("created_at", { ascending: false });
+
+    return (data ?? []) as unknown as ActivityLog[];
   }
 
   function subscribeToProject(pid: string, onUpdate: () => void) {
@@ -337,6 +347,7 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     setTaskLabels,
     setSubtaskLabels,
     fetchActivity,
+    fetchSubtaskActivity,
     subscribeToProject,
   };
 }

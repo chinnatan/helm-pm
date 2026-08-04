@@ -389,7 +389,8 @@
       "status": "สถานะ",
       "due_date": "วันครบกำหนด",
       "priority": "ความสำคัญ",
-      "estimate_hours": "ชั่วโมงโดยประมาณ"
+      "estimate_hours": "ชั่วโมงโดยประมาณ",
+      "title": "ชื่อ"
     },
     "tabs": {
       "details": "รายละเอียด",
@@ -397,6 +398,7 @@
       "attachments": "ไฟล์แนบ",
       "activity": "กิจกรรม"
     },
+    "activitySubtaskPrefix": "[งานย่อย: {title}]",
     "noActivity": "ยังไม่มีกิจกรรม",
     "noComments": "ยังไม่มีความคิดเห็น",
     "commentPlaceholder": "เขียนความคิดเห็น... ใช้ {'@'}email เพื่อแท็ก",

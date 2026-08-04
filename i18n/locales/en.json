@@ -389,7 +389,8 @@
       "status": "Status",
       "due_date": "Due date",
       "priority": "Priority",
-      "estimate_hours": "Estimated hours"
+      "estimate_hours": "Estimated hours",
+      "title": "Title"
     },
     "tabs": {
       "details": "Details",
@@ -397,6 +398,7 @@
       "attachments": "Attachments",
       "activity": "Activity"
     },
+    "activitySubtaskPrefix": "[Subtask: {title}]",
     "noActivity": "No activity yet",
     "noComments": "No comments yet",
     "commentPlaceholder": "Write a comment... Use {'@'}email to mention",
