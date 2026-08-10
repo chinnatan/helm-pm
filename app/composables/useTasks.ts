@@ -168,9 +168,29 @@ export function useTasks(projectId?: Ref<string | undefined>) {
   }
 
   async function updateSubtask(subtaskId: string, updates: SubtaskUpdate) {
+    const found = findSubtask(subtaskId);
+    const oldTaskId = found?.task.id;
+    const nextTaskId = updates.task_id;
+    const isReparent =
+      typeof nextTaskId === "string" &&
+      oldTaskId != null &&
+      nextTaskId !== oldTaskId;
+
+    let payload: SubtaskUpdate = { ...updates };
+
+    if (isReparent) {
+      const newParent = tasks.value.find((t) => t.id === nextTaskId);
+      if (!newParent) {
+        return { data: null, error: "Parent task not found in this project" };
+      }
+      const maxSort =
+        newParent.subtasks?.reduce((max, s) => Math.max(max, s.sort_order), -1) ?? -1;
+      payload = { ...payload, sort_order: maxSort + 1 };
+    }
+
     const { data, error } = await supabase
       .from("subtasks")
-      .update(updates)
+      .update(payload)
       .eq("id", subtaskId)
       .select(SUBTASK_SELECT)
       .single();
@@ -181,10 +201,19 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     }
 
     if (data) {
-      const found = findSubtask(subtaskId);
-      if (found) {
+      const sub = data as Subtask;
+      if (isReparent && found) {
+        if (found.task.subtasks) {
+          found.task.subtasks = found.task.subtasks.filter((s) => s.id !== subtaskId);
+        }
+        const newParent = tasks.value.find((t) => t.id === nextTaskId);
+        if (newParent) {
+          if (!newParent.subtasks) newParent.subtasks = [];
+          newParent.subtasks.push(sub);
+        }
+      } else if (found) {
         const idx = found.task.subtasks!.findIndex((s) => s.id === subtaskId);
-        if (idx >= 0) found.task.subtasks![idx] = data as Subtask;
+        if (idx >= 0) found.task.subtasks![idx] = sub;
       }
     }
     return { data: data as Subtask | null, error: undefined };

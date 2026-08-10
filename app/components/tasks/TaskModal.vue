@@ -20,6 +20,7 @@ const { t } = useI18n();
 const { toLocaleString } = useDateLocale();
 const { statuses, priorities } = useTaskLabels();
 const {
+  tasks,
   createTask,
   updateTask,
   deleteTask,
@@ -334,6 +335,9 @@ function resolveActivityValue(field: string | null, value: string | null) {
   }
   if (field === "milestone_id") {
     return milestoneTitleById.value.get(value) ?? value;
+  }
+  if (field === "task_id") {
+    return tasks.value.find((t) => t.id === value)?.title ?? value;
   }
   if (field === "status") {
     return t(`status.${value}`);

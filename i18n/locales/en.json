@@ -379,6 +379,8 @@
     "deleteSubtask": "Delete subtask",
     "deleteSubtaskConfirm": "Remove this subtask?",
     "reorderSubtask": "Reorder subtask",
+    "parentTask": "Parent task",
+    "selectParentTask": "Select parent task",
     "fields": {
       "assignee_id": "Developer",
       "tester_id": "Tester",
@@ -390,7 +392,8 @@
       "due_date": "Due date",
       "priority": "Priority",
       "estimate_hours": "Estimated hours",
-      "title": "Title"
+      "title": "Title",
+      "task_id": "Parent task"
     },
     "tabs": {
       "details": "Details",

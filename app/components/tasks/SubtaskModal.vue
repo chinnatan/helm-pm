@@ -17,7 +17,8 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const { toLocaleString } = useDateLocale();
 const { statuses } = useTaskLabels();
-const { updateSubtask, deleteSubtask, setSubtaskLabels, fetchSubtaskActivity } = useTasks();
+const { tasks, updateSubtask, deleteSubtask, setSubtaskLabels, fetchSubtaskActivity } =
+  useTasks();
 const { members, canManageMembers } = useWorkspace();
 const { confirm } = useConfirmDialog();
 const { labels, fetchLabels } = useLabels();
@@ -28,6 +29,7 @@ const form = reactive({
   title: "",
   description: "",
   status: "todo" as TaskStatus,
+  task_id: "" as string,
   assignee_id: null as string | null,
   tester_id: null as string | null,
   due_date: "",
@@ -75,6 +77,14 @@ const profileNameById = computed(() => {
   return map;
 });
 
+const taskTitleById = computed(() => {
+  const map = new Map<string, string>();
+  for (const task of tasks.value) {
+    map.set(task.id, task.title);
+  }
+  return map;
+});
+
 function memberLabel(userId: string, jobRole: JobRole | null | undefined) {
   const member = members.value.find((m) => m.user_id === userId);
   const name = member?.profiles?.full_name || member?.profiles?.email || userId;
@@ -101,6 +111,9 @@ function resolveActivityValue(field: string | null, value: string | null) {
   if (!value) return t("common.none");
   if (field === "assignee_id" || field === "tester_id") {
     return profileNameById.value.get(value) ?? value;
+  }
+  if (field === "task_id") {
+    return taskTitleById.value.get(value) ?? value;
   }
   if (field === "status") {
     return t(`status.${value}`);
@@ -131,6 +144,7 @@ watch(
     form.title = sub.title;
     form.description = sub.description ?? "";
     form.status = (sub.status ?? (sub.completed ? "done" : "todo")) as TaskStatus;
+    form.task_id = sub.task_id || props.parent?.id || "";
     form.assignee_id = sub.assignee_id;
     form.tester_id = sub.tester_id;
     form.due_date = sub.due_date ?? "";
@@ -172,18 +186,30 @@ const labelOptions = computed(() =>
   labels.value.map((l) => ({ label: l.name, value: l.id })),
 );
 
+const parentTaskItems = computed(() =>
+  tasks.value.map((task) => ({
+    label: task.title,
+    value: task.id,
+  })),
+);
+
 async function save() {
-  if (!props.subtask || !form.title.trim()) return;
+  if (!props.subtask || !form.title.trim() || !form.task_id) return;
   saving.value = true;
-  await updateSubtask(props.subtask.id, {
+  const { error } = await updateSubtask(props.subtask.id, {
     title: form.title.trim(),
     description: form.description || null,
     status: form.status,
+    task_id: form.task_id,
     assignee_id: form.assignee_id || null,
     tester_id: form.tester_id || null,
     due_date: form.due_date || null,
     estimate_hours: parseEstimate(form.estimate_hours),
   });
+  if (error) {
+    saving.value = false;
+    return;
+  }
   await setSubtaskLabels(props.subtask.id, form.label_ids);
   saving.value = false;
   emit("update:open", false);
@@ -251,6 +277,15 @@ function openParent() {
           </span>
           <UIcon name="i-lucide-chevron-right" class="ml-auto size-4 shrink-0 text-slate-400" />
         </button>
+
+        <UFormField :label="t('tasks.parentTask')">
+          <USelect
+            v-model="form.task_id"
+            :items="parentTaskItems"
+            :placeholder="t('tasks.selectParentTask')"
+            class="w-full"
+          />
+        </UFormField>
 
         <UFormField :label="t('tasks.title')" required>
           <UInput
@@ -365,7 +400,7 @@ function openParent() {
           </UButton>
           <UButton
             :loading="saving"
-            :disabled="!form.title.trim() || deleting"
+            :disabled="!form.title.trim() || !form.task_id || deleting"
             @click="save"
           >
             {{ t("common.save") }}

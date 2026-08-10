@@ -379,6 +379,8 @@
     "deleteSubtask": "ลบงานย่อย",
     "deleteSubtaskConfirm": "ลบงานย่อยนี้?",
     "reorderSubtask": "เรียงลำดับงานย่อย",
+    "parentTask": "งานแม่",
+    "selectParentTask": "เลือกงานแม่",
     "fields": {
       "assignee_id": "Developer",
       "tester_id": "Tester",
@@ -390,7 +392,8 @@
       "due_date": "วันครบกำหนด",
       "priority": "ความสำคัญ",
       "estimate_hours": "ชั่วโมงโดยประมาณ",
-      "title": "ชื่อ"
+      "title": "ชื่อ",
+      "task_id": "งานแม่"
     },
     "tabs": {
       "details": "รายละเอียด",
