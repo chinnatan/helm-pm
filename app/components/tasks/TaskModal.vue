@@ -30,6 +30,7 @@ const {
   deleteSubtask,
   reorderSubtasks,
   setTaskLabels,
+  setSubtaskLabels,
   fetchActivity,
 } = useTasks();
 const { members, canManageMembers } = useWorkspace();
@@ -44,6 +45,7 @@ const { scheduleCapacityAlerts } = useCapacityAlerts();
 const form = reactive({
   title: "",
   description: "",
+  parent_task_id: null as string | null,
   assignee_id: null as string | null,
   tester_id: null as string | null,
   milestone_id: null as string | null,
@@ -70,6 +72,9 @@ const saving = ref(false);
 const activeTab = ref("details");
 
 const isEdit = computed(() => !!props.task);
+const isCreateAsSubtask = computed(
+  () => !isEdit.value && !!form.parent_task_id,
+);
 
 function setActiveTab(key: string) {
   activeTab.value = key;
@@ -180,6 +185,7 @@ watch(
     } else {
       form.title = "";
       form.description = "";
+      form.parent_task_id = null;
       form.assignee_id = null;
       form.tester_id = null;
       form.milestone_id = null;
@@ -211,25 +217,48 @@ async function save() {
 
   const estimate_hours = parseEstimate(form.estimate_hours);
 
-  const payload = {
-    title: form.title,
-    description: form.description || undefined,
-    assignee_id: form.assignee_id || null,
-    tester_id: form.tester_id || null,
-    milestone_id: form.milestone_id || null,
-    customer_id: form.customer_id || null,
-    status: form.status,
-    priority: form.priority,
-    due_date: form.due_date || null,
-    start_date: form.start_date || null,
-    estimate_hours,
-  };
-
   if (isEdit.value && props.task) {
-    await updateTask(props.task.id, payload);
+    await updateTask(props.task.id, {
+      title: form.title,
+      description: form.description || undefined,
+      assignee_id: form.assignee_id || null,
+      tester_id: form.tester_id || null,
+      milestone_id: form.milestone_id || null,
+      customer_id: form.customer_id || null,
+      status: form.status,
+      priority: form.priority,
+      due_date: form.due_date || null,
+      start_date: form.start_date || null,
+      estimate_hours,
+    });
     await setTaskLabels(props.task.id, form.label_ids);
+  } else if (form.parent_task_id) {
+    const { data, error } = await addSubtask(form.parent_task_id, form.title, {
+      description: form.description || null,
+      status: form.status,
+      assignee_id: form.assignee_id || null,
+      tester_id: form.tester_id || null,
+      due_date: form.due_date || null,
+      estimate_hours,
+    });
+    if (!error && data && form.label_ids.length) {
+      await setSubtaskLabels(data.id, form.label_ids);
+    }
   } else {
-    const { data } = await createTask({ project_id: props.projectId, ...payload });
+    const { data } = await createTask({
+      project_id: props.projectId,
+      title: form.title,
+      description: form.description || undefined,
+      assignee_id: form.assignee_id || null,
+      tester_id: form.tester_id || null,
+      milestone_id: form.milestone_id || null,
+      customer_id: form.customer_id || null,
+      status: form.status,
+      priority: form.priority,
+      due_date: form.due_date || null,
+      start_date: form.start_date || null,
+      estimate_hours,
+    });
     if (data && form.label_ids.length) {
       await setTaskLabels(data.id, form.label_ids);
     }
@@ -365,6 +394,14 @@ const labelOptions = computed(() =>
   labels.value.map((l) => ({ label: l.name, value: l.id })),
 );
 
+const parentTaskItems = computed(() => [
+  { label: t("tasks.noParentTask"), value: null },
+  ...tasks.value.map((task) => ({
+    label: task.title,
+    value: task.id,
+  })),
+]);
+
 const statusItems = computed(() =>
   statuses.value.map((s) => ({ label: s.label, value: s.value })),
 );
@@ -408,7 +445,7 @@ const customerItems = computed(() => [
 <template>
   <UModal
     :open="open"
-    :title="isEdit ? t('tasks.editTask') : t('tasks.newTask')"
+    :title="isEdit ? t('tasks.editTask') : isCreateAsSubtask ? t('tasks.newSubtask') : t('tasks.newTask')"
     :fullscreen="isMobile"
     @update:open="emit('update:open', $event)"
   >
@@ -431,6 +468,17 @@ const customerItems = computed(() => [
       </div>
 
       <div v-if="activeTab === 'details' || !isEdit" class="space-y-4">
+        <UFormField v-if="!isEdit" :label="t('tasks.parentTask')">
+          <USelectMenu
+            v-model="form.parent_task_id"
+            :items="parentTaskItems"
+            value-key="value"
+            :placeholder="t('tasks.selectParentTask')"
+            :search-input="{ placeholder: t('tasks.searchParentTask'), icon: 'i-lucide-search' }"
+            class="w-full"
+          />
+        </UFormField>
+
         <UFormField :label="t('tasks.title')" required>
           <UInput v-model="form.title" :placeholder="t('tasks.titlePlaceholder')" class="w-full" />
         </UFormField>
@@ -471,7 +519,7 @@ const customerItems = computed(() => [
             />
           </UFormField>
 
-          <UFormField :label="t('tasks.priority')">
+          <UFormField v-if="!isCreateAsSubtask" :label="t('tasks.priority')">
             <USelect
               v-model="form.priority"
               :items="priorityItems"
@@ -479,7 +527,7 @@ const customerItems = computed(() => [
             />
           </UFormField>
 
-          <UFormField :label="t('tasks.startDate')">
+          <UFormField v-if="!isCreateAsSubtask" :label="t('tasks.startDate')">
             <UInput v-model="form.start_date" type="date" class="w-full" />
           </UFormField>
 
@@ -501,7 +549,7 @@ const customerItems = computed(() => [
             />
           </UFormField>
 
-          <UFormField :label="t('projects.milestone')">
+          <UFormField v-if="!isCreateAsSubtask" :label="t('projects.milestone')">
             <USelect
               v-model="form.milestone_id"
               :items="milestoneItems"
@@ -510,7 +558,7 @@ const customerItems = computed(() => [
             />
           </UFormField>
 
-          <UFormField :label="t('projects.customer')">
+          <UFormField v-if="!isCreateAsSubtask" :label="t('projects.customer')">
             <USelect
               v-model="form.customer_id"
               :items="customerItems"

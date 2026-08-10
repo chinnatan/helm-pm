@@ -351,6 +351,7 @@
   "tasks": {
     "editTask": "แก้ไขงาน",
     "newTask": "งานใหม่",
+    "newSubtask": "งานย่อยใหม่",
     "title": "ชื่องาน",
     "titlePlaceholder": "ชื่องาน",
     "description": "คำอธิบาย",
@@ -381,6 +382,8 @@
     "reorderSubtask": "เรียงลำดับงานย่อย",
     "parentTask": "งานแม่",
     "selectParentTask": "เลือกงานแม่",
+    "searchParentTask": "ค้นหางาน...",
+    "noParentTask": "ไม่มี (งานหลัก)",
     "fields": {
       "assignee_id": "Developer",
       "tester_id": "Tester",

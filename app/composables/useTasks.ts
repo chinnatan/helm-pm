@@ -29,6 +29,7 @@ export type AddSubtaskInput = {
   estimate_hours?: number | null;
   due_date?: string | null;
   status?: TaskStatus;
+  description?: string | null;
 };
 
 export function useTasks(projectId?: Ref<string | undefined>) {
@@ -152,6 +153,7 @@ export function useTasks(projectId?: Ref<string | undefined>) {
         title,
         sort_order: maxSort + 1,
         status,
+        description: opts.description ?? null,
         assignee_id: opts.assignee_id ?? null,
         tester_id: opts.tester_id ?? null,
         estimate_hours: opts.estimate_hours ?? null,

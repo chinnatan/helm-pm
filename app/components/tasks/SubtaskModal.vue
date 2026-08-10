@@ -279,10 +279,12 @@ function openParent() {
         </button>
 
         <UFormField :label="t('tasks.parentTask')">
-          <USelect
+          <USelectMenu
             v-model="form.task_id"
             :items="parentTaskItems"
+            value-key="value"
             :placeholder="t('tasks.selectParentTask')"
+            :search-input="{ placeholder: t('tasks.searchParentTask'), icon: 'i-lucide-search' }"
             class="w-full"
           />
         </UFormField>
