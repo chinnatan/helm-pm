@@ -392,6 +392,7 @@
       "milestone_id": "ไมล์สโตน",
       "customer_id": "ลูกค้า",
       "status": "สถานะ",
+      "start_date": "วันเริ่ม",
       "due_date": "วันครบกำหนด",
       "priority": "ความสำคัญ",
       "estimate_hours": "ชั่วโมงโดยประมาณ",

@@ -1,6 +1,9 @@
 import type { Comment, Milestone, MilestoneStatus, TaskDependency, Notification, Attachment } from "~/types";
 
-export function useComments(taskId: Ref<string | undefined>) {
+export function useComments(
+  taskId: Ref<string | undefined>,
+  subtaskId?: Ref<string | undefined | null>,
+) {
   const supabase = useSupabaseClient();
   const user = useSupabaseUser();
   const comments = ref<Comment[]>([]);
@@ -8,25 +11,39 @@ export function useComments(taskId: Ref<string | undefined>) {
   async function fetchComments() {
     if (!taskId.value) return;
 
-    const { data } = await supabase
+    let query = supabase
       .from("comments")
       .select("*, profiles(id, email, full_name, avatar_url)")
       .eq("task_id", taskId.value)
       .order("created_at");
 
-    comments.value = (data ?? []) as Comment[];
+    const sid = subtaskId ? toValue(subtaskId) : null;
+    if (sid) {
+      query = query.eq("subtask_id", sid);
+    } else {
+      query = query.is("subtask_id", null);
+    }
+
+    const { data } = await query;
+    comments.value = (data ?? []) as unknown as Comment[];
   }
 
   async function addComment(content: string) {
     if (!taskId.value || !user.value) return;
 
+    const sid = subtaskId ? toValue(subtaskId) : null;
     const { data, error } = await supabase
       .from("comments")
-      .insert({ task_id: taskId.value, user_id: user.value.id, content })
+      .insert({
+        task_id: taskId.value,
+        subtask_id: sid || null,
+        user_id: user.value.id,
+        content,
+      })
       .select("*, profiles(id, email, full_name, avatar_url)")
       .single();
 
-    if (!error && data) comments.value.push(data as Comment);
+    if (!error && data) comments.value.push(data as unknown as Comment);
 
     // Create notification for assignee mentions
     const mentions = content.match(/@(\S+)/g);
@@ -51,9 +68,10 @@ export function useComments(taskId: Ref<string | undefined>) {
             task_id: taskId.value,
             type: "mention",
             message: `${user.value.email} mentioned you in a comment`,
-            metadata: taskRow?.project_id
-              ? { project_id: taskRow.project_id }
-              : {},
+            metadata: {
+              ...(taskRow?.project_id ? { project_id: taskRow.project_id } : {}),
+              ...(sid ? { subtask_id: sid } : {}),
+            },
           });
         }
       }
@@ -62,7 +80,9 @@ export function useComments(taskId: Ref<string | undefined>) {
     return { error: error?.message };
   }
 
-  watch(taskId, fetchComments, { immediate: true });
+  watch([taskId, () => (subtaskId ? toValue(subtaskId) : null)], fetchComments, {
+    immediate: true,
+  });
 
   return { comments, fetchComments, addComment };
 }
@@ -309,7 +329,10 @@ export function useNotifications() {
   };
 }
 
-export function useAttachments(taskId: Ref<string | undefined>) {
+export function useAttachments(
+  taskId: Ref<string | undefined>,
+  subtaskId?: Ref<string | undefined | null>,
+) {
   const supabase = useSupabaseClient();
   const user = useSupabaseUser();
   const attachments = ref<Attachment[]>([]);
@@ -317,12 +340,20 @@ export function useAttachments(taskId: Ref<string | undefined>) {
   async function fetchAttachments() {
     if (!taskId.value) return;
 
-    const { data } = await supabase
+    let query = supabase
       .from("attachments")
       .select("*")
       .eq("task_id", taskId.value)
       .order("created_at", { ascending: false });
 
+    const sid = subtaskId ? toValue(subtaskId) : null;
+    if (sid) {
+      query = query.eq("subtask_id", sid);
+    } else {
+      query = query.is("subtask_id", null);
+    }
+
+    const { data } = await query;
     attachments.value = (data ?? []) as Attachment[];
   }
 
@@ -331,7 +362,10 @@ export function useAttachments(taskId: Ref<string | undefined>) {
 
     const optimized = await optimizeUploadFile(file);
     const ext = optimized.name.split(".").pop() || "bin";
-    const path = `${taskId.value}/${Date.now()}.${ext}`;
+    const sid = subtaskId ? toValue(subtaskId) : null;
+    const path = sid
+      ? `${taskId.value}/subtasks/${sid}/${Date.now()}.${ext}`
+      : `${taskId.value}/${Date.now()}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from("attachments")
@@ -347,6 +381,7 @@ export function useAttachments(taskId: Ref<string | undefined>) {
       .from("attachments")
       .insert({
         task_id: taskId.value,
+        subtask_id: sid || null,
         uploaded_by: user.value.id,
         file_url: urlData.publicUrl,
         filename: optimized.name,
@@ -365,7 +400,9 @@ export function useAttachments(taskId: Ref<string | undefined>) {
     attachments.value = attachments.value.filter((a) => a.id !== id);
   }
 
-  watch(taskId, fetchAttachments, { immediate: true });
+  watch([taskId, () => (subtaskId ? toValue(subtaskId) : null)], fetchAttachments, {
+    immediate: true,
+  });
 
   return { attachments, fetchAttachments, uploadFile, deleteAttachment };
 }

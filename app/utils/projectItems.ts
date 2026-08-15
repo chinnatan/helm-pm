@@ -56,14 +56,16 @@ export function projectItemTitle(item: ProjectItem): string {
   return item.kind === "task" ? item.task.title : item.subtask.title;
 }
 
-/** Gantt start/end for a subtask: end = due; start = parent.start if valid else due. */
+/** Gantt start/end for a subtask: prefer own start/due; fall back to parent start. */
 export function subtaskGanttRange(
   subtask: Subtask,
   parent: Task,
 ): { start: string; end: string } | null {
   if (!subtask.due_date) return null;
   const end = subtask.due_date;
-  const start =
-    parent.start_date && parent.start_date <= end ? parent.start_date : end;
-  return { start, end };
+  const ownStart = subtask.start_date;
+  if (ownStart && ownStart <= end) return { start: ownStart, end };
+  const parentStart = parent.start_date;
+  if (parentStart && parentStart <= end) return { start: parentStart, end };
+  return { start: end, end };
 }

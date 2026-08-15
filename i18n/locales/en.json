@@ -392,6 +392,7 @@
       "milestone_id": "Milestone",
       "customer_id": "Customer",
       "status": "Status",
+      "start_date": "Start date",
       "due_date": "Due date",
       "priority": "Priority",
       "estimate_hours": "Estimated hours",

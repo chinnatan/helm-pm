@@ -32,6 +32,7 @@ const form = reactive({
   task_id: "" as string,
   assignee_id: null as string | null,
   tester_id: null as string | null,
+  start_date: "",
   due_date: "",
   estimate_hours: "",
   label_ids: [] as string[],
@@ -41,14 +42,20 @@ const saving = ref(false);
 const deleting = ref(false);
 const activeTab = ref("details");
 const activity = ref<ActivityLog[]>([]);
+const loadingActivity = ref(false);
 
 const modalTabs = computed(() => [
   { key: "details", label: t("tasks.tabs.details") },
+  { key: "comments", label: t("tasks.tabs.comments") },
+  { key: "attachments", label: t("tasks.tabs.attachments") },
   { key: "activity", label: t("tasks.tabs.activity") },
 ]);
 
 function setActiveTab(key: string) {
   activeTab.value = key;
+  if (key === "activity" && props.subtask && activity.value.length === 0) {
+    void loadActivity(props.subtask.id);
+  }
 }
 
 const isMobile = ref(false);
@@ -134,26 +141,43 @@ function actionLabel(action: string) {
   return action;
 }
 
+function hydrateFormFromSubtask(sub: Subtask) {
+  form.title = sub.title;
+  form.description = sub.description ?? "";
+  form.status = (sub.status ?? (sub.completed ? "done" : "todo")) as TaskStatus;
+  form.task_id = sub.task_id || props.parent?.id || "";
+  form.assignee_id = sub.assignee_id;
+  form.tester_id = sub.tester_id;
+  form.start_date = sub.start_date ?? "";
+  form.due_date = sub.due_date ?? "";
+  form.estimate_hours =
+    sub.estimate_hours != null ? String(sub.estimate_hours) : "";
+  form.label_ids =
+    (sub.subtask_labels?.map((tl) => tl.labels?.id).filter(Boolean) as string[]) ??
+    [];
+}
+
+async function loadActivity(subtaskId: string) {
+  loadingActivity.value = true;
+  try {
+    activity.value = await fetchSubtaskActivity(subtaskId);
+  } finally {
+    loadingActivity.value = false;
+  }
+}
+
+async function loadSupportingData() {
+  await fetchLabels();
+}
+
 watch(
-  () => [props.open, props.subtask] as const,
-  async ([open]) => {
+  () => [props.open, props.subtask?.id] as const,
+  ([open]) => {
     if (!open || !props.subtask) return;
     activeTab.value = "details";
-    await fetchLabels();
-    const sub = props.subtask;
-    form.title = sub.title;
-    form.description = sub.description ?? "";
-    form.status = (sub.status ?? (sub.completed ? "done" : "todo")) as TaskStatus;
-    form.task_id = sub.task_id || props.parent?.id || "";
-    form.assignee_id = sub.assignee_id;
-    form.tester_id = sub.tester_id;
-    form.due_date = sub.due_date ?? "";
-    form.estimate_hours =
-      sub.estimate_hours != null ? String(sub.estimate_hours) : "";
-    form.label_ids =
-      (sub.subtask_labels?.map((tl) => tl.labels?.id).filter(Boolean) as string[]) ??
-      [];
-    activity.value = await fetchSubtaskActivity(sub.id);
+    hydrateFormFromSubtask(props.subtask);
+    activity.value = [];
+    void loadSupportingData();
   },
 );
 
@@ -203,6 +227,7 @@ async function save() {
     task_id: form.task_id,
     assignee_id: form.assignee_id || null,
     tester_id: form.tester_id || null,
+    start_date: form.start_date || null,
     due_date: form.due_date || null,
     estimate_hours: parseEstimate(form.estimate_hours),
   });
@@ -343,6 +368,10 @@ function openParent() {
             />
           </UFormField>
 
+          <UFormField :label="t('tasks.startDate')">
+            <UInput v-model="form.start_date" type="date" class="w-full" />
+          </UFormField>
+
           <UFormField :label="t('tasks.dueDate')">
             <UInput v-model="form.due_date" type="date" class="w-full" />
           </UFormField>
@@ -359,27 +388,48 @@ function openParent() {
         </div>
       </div>
 
+      <TasksTaskComments
+        v-else-if="activeTab === 'comments' && subtask"
+        :task-id="subtask.task_id || parent?.id || form.task_id"
+        :subtask-id="subtask.id"
+      />
+
+      <TasksTaskAttachments
+        v-else-if="activeTab === 'attachments' && subtask"
+        :task-id="subtask.task_id || parent?.id || form.task_id"
+        :subtask-id="subtask.id"
+      />
+
       <div v-else-if="activeTab === 'activity'" class="space-y-3">
         <div
-          v-for="log in activity"
-          :key="log.id"
-          class="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm"
+          v-if="loadingActivity"
+          class="flex items-center gap-2 py-6 text-sm text-slate-400"
         >
-          <span class="font-medium">
-            {{ log.profiles?.full_name || log.profiles?.email || t("common.system") }}
-          </span>
-          <span class="text-slate-600">
-            {{ actionLabel(log.action) }}
-            <template v-if="log.field_name">
-              {{ fieldLabel(log.field_name) }}:
-              {{ resolveActivityValue(log.field_name, log.old_value) }}
-              →
-              {{ resolveActivityValue(log.field_name, log.new_value) }}
-            </template>
-          </span>
-          <p class="text-xs text-slate-400">{{ toLocaleString(log.created_at) }}</p>
+          <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin" />
+          <span>{{ t("common.loading") }}</span>
         </div>
-        <p v-if="activity.length === 0" class="text-sm text-slate-400">{{ t("tasks.noActivity") }}</p>
+        <template v-else>
+          <div
+            v-for="log in activity"
+            :key="log.id"
+            class="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm"
+          >
+            <span class="font-medium">
+              {{ log.profiles?.full_name || log.profiles?.email || t("common.system") }}
+            </span>
+            <span class="text-slate-600">
+              {{ actionLabel(log.action) }}
+              <template v-if="log.field_name">
+                {{ fieldLabel(log.field_name) }}:
+                {{ resolveActivityValue(log.field_name, log.old_value) }}
+                →
+                {{ resolveActivityValue(log.field_name, log.new_value) }}
+              </template>
+            </span>
+            <p class="text-xs text-slate-400">{{ toLocaleString(log.created_at) }}</p>
+          </div>
+          <p v-if="activity.length === 0" class="text-sm text-slate-400">{{ t("tasks.noActivity") }}</p>
+        </template>
       </div>
     </template>
 

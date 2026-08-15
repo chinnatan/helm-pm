@@ -1,9 +1,14 @@
 <script setup lang="ts">
-const props = defineProps<{ taskId: string }>();
+const props = defineProps<{
+  taskId: string;
+  subtaskId?: string | null;
+}>();
+
 const { t } = useI18n();
 const { toLocaleString } = useDateLocale();
 const taskIdRef = toRef(props, "taskId");
-const { comments, addComment } = useComments(taskIdRef);
+const subtaskIdRef = toRef(props, "subtaskId");
+const { comments, addComment } = useComments(taskIdRef, subtaskIdRef);
 const newComment = ref("");
 const sending = ref(false);
 

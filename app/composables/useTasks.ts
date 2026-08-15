@@ -27,6 +27,7 @@ export type AddSubtaskInput = {
   assignee_id?: string | null;
   tester_id?: string | null;
   estimate_hours?: number | null;
+  start_date?: string | null;
   due_date?: string | null;
   status?: TaskStatus;
   description?: string | null;
@@ -157,6 +158,7 @@ export function useTasks(projectId?: Ref<string | undefined>) {
         assignee_id: opts.assignee_id ?? null,
         tester_id: opts.tester_id ?? null,
         estimate_hours: opts.estimate_hours ?? null,
+        start_date: opts.start_date ?? null,
         due_date: opts.due_date ?? null,
       })
       .select(SUBTASK_SELECT)

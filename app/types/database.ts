@@ -387,6 +387,7 @@ export interface Database {
           assignee_id: string | null;
           tester_id: string | null;
           estimate_hours: number | null;
+          start_date: string | null;
           due_date: string | null;
           created_at: string;
         };
@@ -401,6 +402,7 @@ export interface Database {
           assignee_id?: string | null;
           tester_id?: string | null;
           estimate_hours?: number | null;
+          start_date?: string | null;
           due_date?: string | null;
           created_at?: string;
         };
@@ -415,6 +417,7 @@ export interface Database {
           assignee_id?: string | null;
           tester_id?: string | null;
           estimate_hours?: number | null;
+          start_date?: string | null;
           due_date?: string | null;
           created_at?: string;
         };
@@ -436,6 +439,7 @@ export interface Database {
         Row: {
           id: string;
           task_id: string;
+          subtask_id: string | null;
           user_id: string;
           content: string;
           created_at: string;
@@ -443,6 +447,7 @@ export interface Database {
         Insert: {
           id?: string;
           task_id: string;
+          subtask_id?: string | null;
           user_id: string;
           content: string;
           created_at?: string;
@@ -450,6 +455,7 @@ export interface Database {
         Update: {
           id?: string;
           task_id?: string;
+          subtask_id?: string | null;
           user_id?: string;
           content?: string;
           created_at?: string;
@@ -637,6 +643,7 @@ export interface Database {
         Row: {
           id: string;
           task_id: string;
+          subtask_id: string | null;
           uploaded_by: string;
           file_url: string;
           filename: string;
@@ -645,6 +652,7 @@ export interface Database {
         Insert: {
           id?: string;
           task_id: string;
+          subtask_id?: string | null;
           uploaded_by: string;
           file_url: string;
           filename: string;
@@ -653,6 +661,7 @@ export interface Database {
         Update: {
           id?: string;
           task_id?: string;
+          subtask_id?: string | null;
           uploaded_by?: string;
           file_url?: string;
           filename?: string;

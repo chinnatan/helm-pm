@@ -63,10 +63,10 @@ async function handleDateUpdate(taskId: string, startDate: string, endDate: stri
 
 async function handleSubtaskDateUpdate(
   subtaskId: string,
-  _startDate: string,
+  startDate: string,
   endDate: string,
 ) {
-  await updateSubtask(subtaskId, { due_date: endDate });
+  await updateSubtask(subtaskId, { start_date: startDate, due_date: endDate });
 }
 
 function openTask(task: Task) {
