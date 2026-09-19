@@ -128,6 +128,19 @@ export function isTaskClosed(status: TaskStatus) {
   return TASK_CLOSED_STATUSES.includes(status);
 }
 
+/** Phase auto-suggestion when the user moves status but no phase is set yet */
+export const PHASE_BY_STATUS: Partial<Record<TaskStatus, TaskPhase>> = {
+  in_progress: "development",
+  ready_for_test: "testing",
+  testing: "testing",
+  done: "done",
+  release: "done",
+};
+
+export function suggestPhaseForStatus(status: TaskStatus): TaskPhase | null {
+  return PHASE_BY_STATUS[status] ?? null;
+}
+
 export const REQUIREMENT_STATUS_VALUES: RequirementStatus[] = [
   "open",
   "in_progress",

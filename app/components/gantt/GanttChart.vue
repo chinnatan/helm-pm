@@ -621,11 +621,11 @@ onUnmounted(() => {
             <UIcon v-else name="i-lucide-flag" class="h-3.5 w-3.5 shrink-0 text-ocean-700" />
             <div class="min-w-0">
               <p class="truncate text-sm font-semibold text-slate-900">{{ row.title }}</p>
-              <p v-if="groupBy === 'phase'" class="flex items-center gap-1.5 text-[10px] text-slate-400">
+              <p v-if="row.taskCount" class="flex items-center gap-1.5 text-[10px] text-slate-400">
                 <span class="inline-block h-1 w-16 shrink-0 overflow-hidden rounded-full bg-slate-200 align-middle">
                   <span
                     class="block h-full rounded-full bg-emerald-500"
-                    :style="{ width: row.taskCount ? `${Math.round((row.doneCount / row.taskCount) * 100)}%` : '0%' }"
+                    :style="{ width: `${Math.round((row.doneCount / row.taskCount) * 100)}%` }"
                   />
                 </span>
                 {{ row.doneCount }}/{{ row.taskCount }}

@@ -1,5 +1,5 @@
 import type { TaskPriority, TaskStatus } from "~/types";
-import { TASK_PRIORITY_META, TASK_STATUS_VALUES } from "~/types";
+import { TASK_PHASE_VALUES, TASK_PRIORITY_META, TASK_STATUS_VALUES } from "~/types";
 
 export function useTaskLabels() {
   const { t } = useI18n();
@@ -33,11 +33,21 @@ export function useTaskLabels() {
     );
   }
 
+  const phaseFilterItems = computed(() => [
+    { label: t("dashboard.allPhases"), value: "all" },
+    { label: t("projects.ganttNoPhase"), value: "none" },
+    ...TASK_PHASE_VALUES.map((p) => ({
+      label: t(`tasks.phase.${p.value}`),
+      value: p.value as string,
+    })),
+  ]);
+
   return {
     statuses,
     priorities,
     statusLabel,
     priorityLabel,
     priorityMeta,
+    phaseFilterItems,
   };
 }

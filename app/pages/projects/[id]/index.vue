@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Task } from "~/types";
-import { isTaskClosed, PROJECT_COLORS } from "~/types";
+import { TASK_PHASE_VALUES, isTaskClosed, PROJECT_COLORS } from "~/types";
 import { format, parseISO, isBefore, startOfDay } from "date-fns";
 
 definePageMeta({ middleware: "auth" });
@@ -123,6 +123,21 @@ const overdueTasks = computed(() => {
     .slice(0, 5);
 });
 
+const phaseBreakdown = computed(() =>
+  TASK_PHASE_VALUES.map((p) => {
+    const inPhase = tasks.value.filter((task) => task.phase === p.value);
+    return {
+      phase: p,
+      total: inPhase.length,
+      done: inPhase.filter((task) => isTaskClosed(task.status)).length,
+    };
+  }).filter((row) => row.total > 0),
+);
+
+const noPhaseCount = computed(
+  () => tasks.value.filter((task) => !task.phase).length,
+);
+
 function listLink(status?: string) {
   return {
     path: `/projects/${projectId.value}/list`,
@@ -227,6 +242,52 @@ function formatDue(date: string) {
         <p class="text-sm text-slate-500">{{ t("status.done") }}</p>
         <p class="text-2xl font-bold text-green-600">{{ stats.done }}</p>
       </NuxtLink>
+    </div>
+
+    <div
+      v-if="phaseBreakdown.length || noPhaseCount"
+      class="mb-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-5"
+    >
+      <h2 class="mb-3 text-sm font-semibold text-slate-700">
+        {{ t("projects.phaseProgress") }}
+      </h2>
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div
+          v-for="row in phaseBreakdown"
+          :key="row.phase.value"
+          class="rounded-lg border border-slate-100 p-3"
+        >
+          <div class="mb-1.5 flex items-center justify-between gap-2">
+            <span class="flex min-w-0 items-center gap-1.5 text-sm font-medium text-slate-700">
+              <UIcon
+                :name="row.phase.icon"
+                class="size-3.5 shrink-0"
+                :style="{ color: row.phase.color }"
+              />
+              <span class="truncate">{{ t(`tasks.phase.${row.phase.value}`) }}</span>
+            </span>
+            <span class="shrink-0 text-xs text-slate-500">
+              {{ row.done }}/{{ row.total }}
+            </span>
+          </div>
+          <span class="block h-1 overflow-hidden rounded-full bg-slate-200">
+            <span
+              class="block h-full rounded-full"
+              :style="{
+                width: `${Math.round((row.done / row.total) * 100)}%`,
+                backgroundColor: row.phase.color,
+              }"
+            />
+          </span>
+        </div>
+        <div
+          v-if="noPhaseCount"
+          class="flex items-center justify-between rounded-lg border border-dashed border-slate-200 p-3"
+        >
+          <span class="text-sm text-slate-500">{{ t("projects.ganttNoPhase") }}</span>
+          <span class="text-xs text-slate-500">{{ noPhaseCount }}</span>
+        </div>
+      </div>
     </div>
 
     <div class="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">

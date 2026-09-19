@@ -83,6 +83,37 @@ const selectedRequirement = ref<Requirement | null>(null);
 const selectedProjectId = ref<string | undefined>(undefined);
 const creatingTask = ref(false);
 
+const { createTask } = useTasks();
+const showQuickTask = ref(false);
+const quickTask = reactive({
+  title: "",
+  projectId: undefined as string | undefined,
+  due_date: "",
+});
+const savingQuickTask = ref(false);
+
+function openQuickTask() {
+  quickTask.title = "";
+  quickTask.projectId = projectItems.value[0]?.value;
+  quickTask.due_date = "";
+  showQuickTask.value = true;
+}
+
+async function handleQuickCreateTask() {
+  if (!quickTask.title.trim() || !quickTask.projectId) return;
+  savingQuickTask.value = true;
+  const { error } = await createTask({
+    project_id: quickTask.projectId,
+    title: quickTask.title.trim(),
+    customer_id: customerId.value,
+    due_date: quickTask.due_date || null,
+  });
+  savingQuickTask.value = false;
+  if (error) return;
+  showQuickTask.value = false;
+  openTasks.value = await fetchOpenTasksForCustomer(customerId.value);
+}
+
 const customerProjects = computed(() =>
   projects.value.filter((p) => p.customer_id === customerId.value),
 );
@@ -386,10 +417,15 @@ function formatMeetingDate(iso: string) {
         <div class="space-y-6 lg:col-span-2">
           <!-- Open tasks -->
           <section class="rounded-xl border border-slate-200 bg-white p-4">
-            <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
-              {{ t("customers.openTasks") }}
-              <span class="ml-1 text-ocean-800">({{ openTasks.length }})</span>
-            </h2>
+            <div class="mb-3 flex items-center justify-between gap-2">
+              <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                {{ t("customers.openTasks") }}
+                <span class="ml-1 text-ocean-800">({{ openTasks.length }})</span>
+              </h2>
+              <UButton size="xs" icon="i-lucide-plus" @click="openQuickTask">
+                {{ t("customers.quickCreate") }}
+              </UButton>
+            </div>
             <ul v-if="openTasks.length" class="divide-y divide-slate-100">
               <li
                 v-for="task in openTasks"
@@ -693,6 +729,46 @@ function formatMeetingDate(iso: string) {
             :loading="creatingTask"
             :disabled="!selectedProjectId"
             @click="handleCreateTaskFromRequirement"
+          >
+            {{ t("common.create") }}
+          </UButton>
+        </div>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="showQuickTask" :title="t('customers.quickCreate')">
+      <template #body>
+        <div class="space-y-4">
+          <UFormField :label="t('tasks.title')" required>
+            <UInput
+              v-model="quickTask.title"
+              :placeholder="t('tasks.titlePlaceholder')"
+              class="w-full"
+              @keyup.enter="handleQuickCreateTask"
+            />
+          </UFormField>
+          <UFormField :label="t('customers.selectProject')" required>
+            <USelect
+              v-model="quickTask.projectId"
+              :items="projectItems"
+              :placeholder="t('customers.selectProject')"
+              class="w-full"
+            />
+          </UFormField>
+          <UFormField :label="t('tasks.dueDate')">
+            <UInput v-model="quickTask.due_date" type="date" class="w-full" />
+          </UFormField>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UButton variant="ghost" color="neutral" @click="showQuickTask = false">
+            {{ t("common.cancel") }}
+          </UButton>
+          <UButton
+            :loading="savingQuickTask"
+            :disabled="!quickTask.title.trim() || !quickTask.projectId"
+            @click="handleQuickCreateTask"
           >
             {{ t("common.create") }}
           </UButton>

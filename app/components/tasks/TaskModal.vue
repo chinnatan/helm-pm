@@ -7,7 +7,7 @@ import type {
   TaskPriority,
   TaskPhase,
 } from "~/types";
-import { PRIORITY_DEFAULT_HOURS, isTaskClosed, TASK_PHASE_VALUES } from "~/types";
+import { PRIORITY_DEFAULT_HOURS, isTaskClosed, suggestPhaseForStatus, TASK_PHASE_VALUES } from "~/types";
 import { format, parseISO } from "date-fns";
 import { VueDraggable } from "vue-draggable-plus";
 
@@ -90,6 +90,20 @@ const activeTab = ref("details");
 const loadingActivity = ref(false);
 
 const isEdit = computed(() => !!props.task);
+const phaseTouched = ref(false);
+
+watch(
+  () => form.status,
+  (status) => {
+    if (phaseTouched.value) return;
+    form.phase = suggestPhaseForStatus(status);
+  },
+);
+
+function onPhaseChange(value: TaskPhase | null) {
+  phaseTouched.value = true;
+  form.phase = value;
+}
 const isCreateAsSubtask = computed(
   () => !isEdit.value && !!form.parent_task_id,
 );
@@ -102,6 +116,7 @@ function setActiveTab(key: string) {
 }
 
 function hydrateFormFromTask(task: Task) {
+  phaseTouched.value = !!task.phase;
   form.title = task.title;
   form.description = task.description ?? "";
   form.parent_task_id = null;
@@ -124,6 +139,7 @@ function hydrateFormFromTask(task: Task) {
 }
 
 function hydrateFormForCreate() {
+  phaseTouched.value = false;
   form.title = "";
   form.description = "";
   form.parent_task_id = null;
@@ -709,9 +725,10 @@ watch(
 
           <UFormField v-if="!isCreateAsSubtask" :label="t('tasks.phaseLabel')">
             <USelect
-              v-model="form.phase"
+              :model-value="form.phase"
               :items="phaseItems"
               class="w-full"
+              @update:model-value="(v) => onPhaseChange(v as TaskPhase | null)"
             />
           </UFormField>
 

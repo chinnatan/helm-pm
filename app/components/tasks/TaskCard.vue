@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Task } from "~/types";
+import { taskPhaseMeta } from "~/types";
 import { format, parseISO } from "date-fns";
 
 const props = defineProps<{
@@ -27,6 +28,7 @@ const { priorityMeta } = useTaskLabels();
 const { canManageMembers } = useWorkspace();
 
 const priority = computed(() => priorityMeta(props.task.priority));
+const phaseMeta = computed(() => taskPhaseMeta(props.task.phase));
 
 const blockedTasks = computed(() => blockedBy(props.task.id));
 const isBlocked = computed(() => blockedTasks.value.length > 0);
@@ -124,6 +126,16 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
     <div class="flex flex-wrap items-center gap-1.5">
       <UBadge :color="(priority?.color ?? 'neutral') as 'neutral'" variant="subtle" size="xs">
         {{ priority?.label }}
+      </UBadge>
+
+      <UBadge
+        v-if="display.showPhase && phaseMeta"
+        variant="subtle"
+        size="xs"
+        :style="{ backgroundColor: phaseMeta.color + '20', color: phaseMeta.color }"
+      >
+        <UIcon :name="phaseMeta.icon" class="size-3" />
+        {{ t(`tasks.phase.${phaseMeta.value}`) }}
       </UBadge>
 
       <span v-if="dueDateLabel" class="text-xs text-slate-500">

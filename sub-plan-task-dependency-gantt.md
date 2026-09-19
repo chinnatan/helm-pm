@@ -236,18 +236,17 @@
 ### Task Creation Flow
 
 - [x] เพิ่ม "Phase" dropdown ใน TaskModal (สร้าง/แก้ไข) — **ทำก่อน (ดึงมาจาก Phase 5)** ในการ implement Phase 3: ถ้าไม่มีตัวตั้ง `phase` จะไม่มีข้อมูลทดสอบ grouping/badge เลย; field เดียวใน details tab, ส่งค่าผ่าน `createTask`/`updateTask` (`phase_order` อัตโนมัติจาก DB trigger)
-- [ ] Auto-suggest phase ตาม status (เช่น status = testing → suggest phase = testing)
-- [ ] เพิ่ม "Quick Create" จาก customer page — สร้างงานผูกกับ customer นั้นทันที
-- [ ] เพิ่ม template tasks สำหรับแต่ละ phase (optional)
-
+- [x] Auto-suggest phase ตาม status (เช่น status = testing → suggest phase = testing) — `PHASE_BY_STATUS` + `suggestPhaseForStatus()` ใน `types/index.ts`; watch `form.status` ใน `TaskModal.vue` (ตั้งเฉพาะ phase ยังว่าง/ยังไม่ถูกแก้ด้วยมือ — `phaseTouched` flag, mapping: in_progress→development, ready_for_test/testing→testing, done/release→done)
+- [x] เพิ่ม "Quick Create" จาก customer page — สร้างงานผูกกับ customer นั้นทันที — modal เล็ก (title + project + due date, Enter = สร้าง) ใน `customers/[id].vue` header "งานค้าง" → เรียก `createTask({ project_id, title, customer_id })` ตรง ๆ แล้ว refresh openTasks
+- [x] เพิ่ม template tasks สำหรับแต่ละ phase (optional) — **ไม่ทำ** (optional ตามแผน, YAGNI — auto-suggest phase覆盖了ส่วนใหญ่แล้ว)
 
 
 ### Phase Tracking
 
-- [ ] แสดง phase badge/color บน Kanban cards
-- [ ] แสดง phase progress ใน project overview (จำนวนงานแยกตาม phase)
-- [ ] เพิ่ม phase filter ใน Kanban, List, Calendar views
-- [ ] อัปเดต milestone progress auto-calc จาก tasks ที่ผูกอยู่
+- [x] แสดง phase badge/color บน Kanban cards — badge (icon + สี + label) ใน `TaskCard.vue` ต่อจาก priority badge, เรนเดอร์เมื่อ `display.showPhase` (compact =ซ่อน, standard/detailed =แสดง) ผ่าน flag ใหม่ใน `useTaskCardDisplay.ts`
+- [x] แสดง phase progress ใน project overview (จำนวนงานแยกตาม phase) — section "ความคืบหน้าตาม Phase" ใน `projects/[id]/index.vue`: mini bar ต่อ phase (done/total, สีตาม `TASK_PHASE_VALUES`) + ช่อง "ไม่ระบุ Phase" (count)
+- [x] เพิ่ม phase filter ใน Kanban, List, Calendar views — ใช้ `phaseFilterItems` ใหม่ใน `useTaskLabels.ts` (ทุก phase / ไม่ระบุ / ราย phase); filter ทั้ง 3 วิวใช้ `(task ?? parent).phase`, subtask ติด filter ตาม parent — **fix round 2**: option "ไม่ระบุ Phase" ต้องใช้ sentinel `"none"` (Reka Select ห้าม `value=""` — runtime error, typecheck จับไม่ได้)
+- [x] อัปเดต milestone progress auto-calc จาก tasks ที่ผูกอยู่ — ทำใน Gantt group header: แถบ done/total แสดงทุก group mode (เดิมเฉพาะ phase mode) — progress ของ milestone = finished tasks / ทั้งหมดที่ผูก `milestone_id` (client-side, ไม่แตะ schema)
 
 ---
 

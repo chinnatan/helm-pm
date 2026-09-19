@@ -19,7 +19,7 @@ const props = defineProps<{
   mineOnly?: boolean;
 }>();
 
-const { statuses } = useTaskLabels();
+const { statuses, phaseFilterItems } = useTaskLabels();
 const user = useSupabaseUser();
 const { t } = useI18n();
 const { confirm } = useConfirmDialog();
@@ -46,6 +46,7 @@ const suppressClick = ref(false);
 
 type BlockedFilter = "all" | "hide" | "only";
 const blockedFilter = ref<BlockedFilter>("all");
+const phaseFilter = ref<string>("all");
 const blockedFilterItems = computed(() => [
   { label: t("tasks.blockedFilterAll"), value: "all" },
   { label: t("tasks.blockedFilterHide"), value: "hide" },
@@ -76,6 +77,9 @@ function buildItems(): Record<TaskStatus, KanbanItem[]> {
   const uid = user.value?.id;
 
   for (const task of tasks.value) {
+    if (phaseFilter.value !== "all" && (task.phase ?? "none") !== phaseFilter.value) {
+      continue;
+    }
     const includeTask =
       !props.mineOnly || (uid ? taskInvolvesUser(task, uid) : false);
 
@@ -154,6 +158,10 @@ watch(
 );
 
 watch(blockedFilter, () => {
+  if (!isDragging.value) syncFromServer();
+});
+
+watch(phaseFilter, () => {
   if (!isDragging.value) syncFromServer();
 });
 
@@ -248,7 +256,10 @@ onUnmounted(() => {
 
 <template>
   <div class="space-y-3">
-    <div class="flex items-center justify-end gap-2">
+    <div class="flex flex-wrap items-center justify-end gap-2">
+      <UIcon name="i-lucide-tags" class="size-3.5 text-slate-400" />
+      <span class="text-xs text-slate-500">{{ t("tasks.phaseLabel") }}</span>
+      <USelect v-model="phaseFilter" :items="phaseFilterItems" size="xs" class="w-40" />
       <UIcon name="i-lucide-link-2" class="size-3.5 text-slate-400" />
       <span class="text-xs text-slate-500">{{ t("tasks.dependencies") }}</span>
       <USelect

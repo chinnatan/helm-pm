@@ -42,6 +42,7 @@ export function shouldShowCustomerForDensity(
 export type TaskCardDisplayFlags = {
   showCustomer: boolean;
   showMilestone: boolean;
+  showPhase: boolean;
   showLabels: boolean;
   showSubtaskList: boolean;
   showPeople: boolean;
@@ -59,6 +60,7 @@ export function taskCardDisplayFlags(
       return {
         showCustomer,
         showMilestone: false,
+        showPhase: false,
         showLabels: false,
         showSubtaskList: false,
         showPeople: false,
@@ -67,6 +69,7 @@ export function taskCardDisplayFlags(
       return {
         showCustomer,
         showMilestone: true,
+        showPhase: true,
         showLabels: true,
         showSubtaskList: true,
         showPeople: true,
@@ -76,6 +79,7 @@ export function taskCardDisplayFlags(
       return {
         showCustomer,
         showMilestone: true,
+        showPhase: true,
         showLabels: true,
         showSubtaskList: true,
         showPeople: true,
