@@ -23,3 +23,6 @@ package-lock.json
 # Wrangler
 .wrangler
 .dev.vars
+
+# Test reports
+reports/

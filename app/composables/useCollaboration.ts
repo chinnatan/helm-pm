@@ -1,5 +1,10 @@
 import type { Comment, Milestone, MilestoneStatus, Task, TaskDependency, Notification, Attachment } from "~/types";
 import { isTaskClosed } from "~/types";
+import {
+  graphWouldCreateCycle,
+  graphBlockedBy,
+  graphIsBlocked,
+} from "~/utils/dependencyGraph";
 
 export function useComments(
   taskId: Ref<string | undefined>,
@@ -190,21 +195,8 @@ export function useDependencyGraph() {
 
   // BFS: adding `taskId` depends on `dependsOnTaskId` creates a cycle if
   // `dependsOnTaskId` already (transitively) depends on `taskId`.
-  // ponytail: O(V+E) scan per check, fine for project-sized graphs — revisit if a project hits thousands of deps.
   function wouldCreateCycle(taskId: string, dependsOnTaskId: string) {
-    if (taskId === dependsOnTaskId) return true;
-    const queue = [dependsOnTaskId];
-    const seen = new Set<string>();
-    while (queue.length > 0) {
-      const cur = queue.shift() as string;
-      if (cur === taskId) return true;
-      if (seen.has(cur)) continue;
-      seen.add(cur);
-      for (const d of dependencies.value) {
-        if (d.task_id === cur) queue.push(d.depends_on_task_id);
-      }
-    }
-    return false;
+    return graphWouldCreateCycle(dependencies.value, taskId, dependsOnTaskId);
   }
 
   function isTaskClosedById(taskId: string) {
@@ -214,13 +206,11 @@ export function useDependencyGraph() {
 
   // list of open prerequisite tasks currently blocking `taskId`
   function blockedBy(taskId: string): Task[] {
-    return getDependsOn(taskId)
-      .map((d) => taskById.value.get(d.depends_on_task_id))
-      .filter((t): t is Task => !!t && !isTaskClosed(t.status));
+    return graphBlockedBy(dependencies.value, taskById.value, taskId);
   }
 
   function isBlocked(taskId: string) {
-    return blockedBy(taskId).length > 0;
+    return graphIsBlocked(dependencies.value, taskById.value, taskId);
   }
 
   return {

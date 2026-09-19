@@ -12,16 +12,16 @@
 
 ### Install & configure
 
-- [ ] `bun add -d vitest` — ตัวเดียวพอ (logic ที่จะทดสอบเป็น pure TS ยังไม่ต้องการ happy-dom / @vue/test-utils)
-- [ ] สร้าง `vitest.config.ts` — `environment: "node"`, alias `~` → `./app`, include `tests/**/*.test.ts`
-- [ ] เพิ่ม scripts ใน `package.json`: `"test": "vitest run"`, `"test:watch": "vitest"`
-- [ ] เพิ่ม `tests/` + `vitest.config.ts` ใน `tsconfig` ที่ typecheck มองเห็น (หรือ confirm ว่า `nuxt typecheck` ไม่ error กับไฟล์ test)
+- [x] `bun add -d vitest` — ตัวเดียวพอ (logic ที่จะทดสอบเป็น pure TS ยังไม่ต้องการ happy-dom / @vue/test-utils)
+- [x] สร้าง `vitest.config.ts` — `environment: "node"`, alias `~` → `./app`, include `tests/**/*.test.ts`
+- [x] เพิ่ม scripts ใน `package.json`: `"test": "vitest run"`, `"test:watch": "vitest"`
+- [x] เพิ่ม `tests/` + `vitest.config.ts` ใน `tsconfig` ที่ typecheck มองเห็น — **confirm แล้วไม่ต้องแก้**: `.nuxt/tsconfig.json` include `../**/*` + alias `~` → `app` ครอบคลุม `tests/` อยู่แล้ว, `nuxt typecheck` เขียว
 
 ### Extract pure logic ( precondition ของการทดสอบ )
 
-- [ ] ย้าย BFS cycle detection จาก `useCollaboration.ts:194` → `app/utils/dependencyGraph.ts` เป็น pure function: `wouldCreateCycle(deps: TaskDependency[], taskId, dependsOnTaskId)`
-- [ ] เพิ่ม pure function `blockedBy(deps, taskById, taskId)` / `isBlocked(...)` ในไฟล์เดียวกัน (ย้าย logic จาก `useDependencyGraph()`)
-- [ ] แก้ `useDependencyGraph()` ให้ wrap refs แล้ว call utils — **พฤติกรรมเดิมทุกประการ, UI ไม่แตะ**
+- [x] ย้าย BFS cycle detection จาก `useCollaboration.ts` → `app/utils/dependencyGraph.ts` เป็น pure function `graphWouldCreateCycle(deps, taskId, dependsOnTaskId)` — **เปลี่ยนชื่อจาก `wouldCreateCycle`**: ชื่อนี้ถูก auto-import จาก `app/utils` เป็น global ชนกับ local binding ใน template ของ TaskModal (vue-tsc fail); composable API เดิมคงชื่อ `wouldCreateCycle` ทุกประการ
+- [x] เพิ่ม pure function `graphBlockedBy(deps, taskById, taskId)` / `graphIsBlocked(...)` ในไฟล์เดียวกัน (ย้าย logic จาก `useDependencyGraph()`) — prefix `graph` ด้วยเหตุผล auto-import collision เดียวกัน (`blockedBy`/`isBlocked` ซ้ำกับ local ใน TaskCard/KanbanBoard)
+- [x] แก้ `useDependencyGraph()` ให้ wrap refs แล้ว call utils — **พฤติกรรมเดิมทุกประการ, UI ไม่แตะ**
 
 ---
 
@@ -29,22 +29,22 @@
 
 ### Dependency graph (`tests/unit/dependencyGraph.test.ts`)
 
-- [ ] Self-dependency A→A ต้อง detect cycle — TC-DG-01
-- [ ] Direct cycle A↔B ต้อง detect — TC-DG-02
-- [ ] Transitive cycle A→B→C→A ต้อง detect (เคสนี้คือ pain point เดิมของระบบ) — TC-DG-03, TC-DG-04
-- [ ] DAG ปกติ + diamond (A→B, A→C, B→D, C→D) ต้องไม่ false positive — TC-DG-05, TC-DG-06, TC-DG-07
-- [ ] `blockedBy`: dep ที่ closed (done/released/cancelled) ไม่ block, dep เปิดอยู่ block + คืนถูกงาน — TC-BL-01…08
+- [x] Self-dependency A→A ต้อง detect cycle — TC-DG-01
+- [x] Direct cycle A↔B ต้อง detect — TC-DG-02
+- [x] Transitive cycle A→B→C→A ต้อง detect (เคสนี้คือ pain point เดิมของระบบ) — TC-DG-03, TC-DG-04
+- [x] DAG ปกติ + diamond (A→B, A→C, B→D, C→D) ต้องไม่ false positive — TC-DG-05, TC-DG-06, TC-DG-07
+- [x] `blockedBy`: dep ที่ closed (done/released/cancelled) ไม่ block, dep เปิดอยู่ block + คืนถูกงาน — TC-BL-01…08
 
 ### Phase helpers (`tests/unit/phase.test.ts`)
 
-- [ ] `TASK_PHASE_ORDER` ลำดับตรงกันกับ CHECK constraint ใน migration `029` — TC-PH-01, TC-PH-02
-- [ ] `taskPhaseMeta()` คืน meta ครบทุก `TASK_PHASE_VALUES` และ `undefined` เมื่อ phase = null — TC-PH-03, TC-PH-04
+- [x] `TASK_PHASE_ORDER` ลำดับตรงกันกับ CHECK constraint ใน migration `029` — TC-PH-01, TC-PH-02
+- [x] `taskPhaseMeta()` คืน meta ครบทุก `TASK_PHASE_VALUES` และ `undefined` เมื่อ phase = null — TC-PH-03, TC-PH-04
 
 ### Gate & Report
 
-- [ ] `bun run test` เขียว + `bun run typecheck` เขียว
-- [ ] เพิ่ม script `"test:report": "vitest run --reporter=junit --outputFile=reports/junit.xml"` — รายงานผลกลาง (JUnit XML) เปิดได้ด้วย CI/IDE ทุกตัว โดยไม่ต้องเพิ่ม dependency
-- [ ] เพิ่ม `reports/` ใน `.gitignore`
+- [x] `bun run test` เขียว + `bun run typecheck` เขียว
+- [x] เพิ่ม script `"test:report": "vitest run --reporter=junit --outputFile=reports/junit.xml"` — รายงานผลกลาง (JUnit XML) เปิดได้ด้วย CI/IDE ทุกตัว โดยไม่ต้องเพิ่ม dependency
+- [x] เพิ่ม `reports/` ใน `.gitignore`
 - [ ] (optional — เฉพาะเมื่อต้องส่ง report ให้ non-dev ดู) `bun add -d @vitest/ui` แล้ว `"test:ui": "vitest --ui"` — เลื่อนไว้ก่อน ยังไม่มีผู้รับ report
 - [ ] (optional — เฉพาะเมื่อ coverage มีคนใช้จริง) `@vitest/coverage-v8` + `vitest run --coverage` — ตอนนี้ logic ที่ทดสอบมีแค่ 2 ไฟล์ ยังไม่ต้องวัด %
 
@@ -93,8 +93,8 @@
 
 ## Phase 3: Integrate & Close
 
-- [ ] อัปเดต Phase 6 ของ `sub-plan-task-dependency-gantt.md` ให้แยกข้อ [auto] / [manual] (ทำไปแล้ว ณ ตอนสร้าง plan นี้ — คงสถานะไว้)
-- [ ] ติ๊ก checklist ไฟล์นี้เมื่อแต่ละข้อเสร็จ
+- [x] อัปเดต Phase 6 ของ `sub-plan-task-dependency-gantt.md` ให้แยกข้อ [auto] / [manual] (ทำไปแล้ว ณ ตอนสร้าง plan นี้ — คงสถานะไว้)
+- [x] ติ๊ก checklist ไฟล์นี้เมื่อแต่ละข้อเสร็จ
 
 ---
 
