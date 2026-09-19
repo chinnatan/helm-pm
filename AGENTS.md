@@ -41,7 +41,6 @@
 
 ## Phase N: Review & Quality Assurance
 - [ ] รัน analyzer / ทดสอบตาม scope
-- [ ] รัน `/review-qms` (`qms-flutter-reviewer`) เมื่องานแตะ architecture หรือ conventions
 ```
 
 **กฎการเขียน checklist**
