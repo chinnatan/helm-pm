@@ -55,7 +55,7 @@ const iconWrapClass = computed(() => {
         <UButton variant="ghost" color="neutral" @click="respond(false)">
           {{ cancelLabel }}
         </UButton>
-        <UButton :color="color" @click="respond(true)">
+        <UButton :color="color" data-testid="confirm-ok" @click="respond(true)">
           {{ confirmLabel }}
         </UButton>
       </div>

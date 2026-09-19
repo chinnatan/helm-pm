@@ -37,6 +37,8 @@ export default defineNuxtConfig({
   css: ["~/assets/css/main.css"],
 
   vite: {
+    // e2E dev server (playwright) ชี้ไปที่ cache แยกกัน เพื่อไม่ให้ re-optimize ชนกับ dev server ปกติ
+    cacheDir: process.env.NUXT_VITE_CACHE_DIR || undefined,
     plugins: [tailwindcss()],
     resolve: {
       alias: {
