@@ -8,7 +8,8 @@ type SubtaskUpdate = Database["public"]["Tables"]["subtasks"]["Update"];
 const SUBTASK_SELECT = `
   *,
   profiles:assignee_id(id, email, full_name, avatar_url),
-  tester:tester_id(id, email, full_name, avatar_url)
+  tester:tester_id(id, email, full_name, avatar_url),
+  subtask_labels(label_id, labels(*))
 `;
 
 const TASK_SELECT = `
@@ -26,8 +27,10 @@ export type AddSubtaskInput = {
   assignee_id?: string | null;
   tester_id?: string | null;
   estimate_hours?: number | null;
+  start_date?: string | null;
   due_date?: string | null;
   status?: TaskStatus;
+  description?: string | null;
 };
 
 export function useTasks(projectId?: Ref<string | undefined>) {
@@ -151,9 +154,11 @@ export function useTasks(projectId?: Ref<string | undefined>) {
         title,
         sort_order: maxSort + 1,
         status,
+        description: opts.description ?? null,
         assignee_id: opts.assignee_id ?? null,
         tester_id: opts.tester_id ?? null,
         estimate_hours: opts.estimate_hours ?? null,
+        start_date: opts.start_date ?? null,
         due_date: opts.due_date ?? null,
       })
       .select(SUBTASK_SELECT)
@@ -167,9 +172,29 @@ export function useTasks(projectId?: Ref<string | undefined>) {
   }
 
   async function updateSubtask(subtaskId: string, updates: SubtaskUpdate) {
+    const found = findSubtask(subtaskId);
+    const oldTaskId = found?.task.id;
+    const nextTaskId = updates.task_id;
+    const isReparent =
+      typeof nextTaskId === "string" &&
+      oldTaskId != null &&
+      nextTaskId !== oldTaskId;
+
+    let payload: SubtaskUpdate = { ...updates };
+
+    if (isReparent) {
+      const newParent = tasks.value.find((t) => t.id === nextTaskId);
+      if (!newParent) {
+        return { data: null, error: "Parent task not found in this project" };
+      }
+      const maxSort =
+        newParent.subtasks?.reduce((max, s) => Math.max(max, s.sort_order), -1) ?? -1;
+      payload = { ...payload, sort_order: maxSort + 1 };
+    }
+
     const { data, error } = await supabase
       .from("subtasks")
-      .update(updates)
+      .update(payload)
       .eq("id", subtaskId)
       .select(SUBTASK_SELECT)
       .single();
@@ -180,10 +205,19 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     }
 
     if (data) {
-      const found = findSubtask(subtaskId);
-      if (found) {
+      const sub = data as Subtask;
+      if (isReparent && found) {
+        if (found.task.subtasks) {
+          found.task.subtasks = found.task.subtasks.filter((s) => s.id !== subtaskId);
+        }
+        const newParent = tasks.value.find((t) => t.id === nextTaskId);
+        if (newParent) {
+          if (!newParent.subtasks) newParent.subtasks = [];
+          newParent.subtasks.push(sub);
+        }
+      } else if (found) {
         const idx = found.task.subtasks!.findIndex((s) => s.id === subtaskId);
-        if (idx >= 0) found.task.subtasks![idx] = data as Subtask;
+        if (idx >= 0) found.task.subtasks![idx] = sub;
       }
     }
     return { data: data as Subtask | null, error: undefined };
@@ -253,6 +287,18 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     await fetchTasks();
   }
 
+  async function setSubtaskLabels(subtaskId: string, labelIds: string[]) {
+    await supabase.from("subtask_labels").delete().eq("subtask_id", subtaskId);
+
+    if (labelIds.length > 0) {
+      await supabase
+        .from("subtask_labels")
+        .insert(labelIds.map((label_id) => ({ subtask_id: subtaskId, label_id })));
+    }
+
+    await fetchTasks();
+  }
+
   async function fetchActivity(taskId: string) {
     const { data } = await supabase
       .from("activity_log")
@@ -260,7 +306,17 @@ export function useTasks(projectId?: Ref<string | undefined>) {
       .eq("task_id", taskId)
       .order("created_at", { ascending: false });
 
-    return (data ?? []) as ActivityLog[];
+    return (data ?? []) as unknown as ActivityLog[];
+  }
+
+  async function fetchSubtaskActivity(subtaskId: string) {
+    const { data } = await supabase
+      .from("activity_log")
+      .select("*, profiles(id, email, full_name)")
+      .eq("subtask_id", subtaskId)
+      .order("created_at", { ascending: false });
+
+    return (data ?? []) as unknown as ActivityLog[];
   }
 
   function subscribeToProject(pid: string, onUpdate: () => void) {
@@ -322,7 +378,9 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     deleteSubtask,
     reorderSubtasks,
     setTaskLabels,
+    setSubtaskLabels,
     fetchActivity,
+    fetchSubtaskActivity,
     subscribeToProject,
   };
 }

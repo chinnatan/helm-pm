@@ -26,16 +26,36 @@ const ALLOWED_TAGS = [
   "a",
   "blockquote",
   "hr",
+  "img",
 ];
 
-const ALLOWED_ATTR = ["href", "target", "rel", "class"];
+const ALLOWED_ATTR = ["href", "target", "rel", "class", "src", "alt"];
+
+/** Prefer editor-media; allow other Supabase public storage URLs (local + hosted). */
+function isAllowedImageSrc(src: string): boolean {
+  try {
+    const url = new URL(src);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return false;
+    return url.pathname.includes("/storage/v1/object/public/");
+  } catch {
+    return false;
+  }
+}
 
 function basicSanitize(raw: string): string {
-  return raw
+  let out = raw
     .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
     .replace(/\son\w+\s*=\s*(['"]).*?\1/gi, "")
     .replace(/\son\w+\s*=\s*[^\s>]+/gi, "")
     .replace(/javascript:/gi, "");
+
+  out = out.replace(/<img\b[^>]*>/gi, (tag) => {
+    const srcMatch = tag.match(/\bsrc\s*=\s*(['"])(.*?)\1/i);
+    if (!srcMatch?.[2] || !isAllowedImageSrc(srcMatch[2])) return "";
+    return tag;
+  });
+
+  return out;
 }
 
 export function markdownToUnsafeHtml(md: string | null | undefined): string {
@@ -51,10 +71,12 @@ export async function renderMarkdownToSafeHtml(
   if (import.meta.server) return basicSanitize(raw);
 
   const DOMPurify = (await import("isomorphic-dompurify")).default;
-  return DOMPurify.sanitize(raw, {
+  const cleaned = DOMPurify.sanitize(raw, {
     ALLOWED_TAGS,
     ALLOWED_ATTR,
   });
+  // DOMPurify allows any https src; re-check storage URLs
+  return basicSanitize(cleaned);
 }
 
 /** Plain one-line preview for truncate / line-clamp surfaces. */

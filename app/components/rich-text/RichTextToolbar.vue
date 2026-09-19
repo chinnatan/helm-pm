@@ -4,6 +4,11 @@ import type { Editor } from "@tiptap/vue-3";
 const props = defineProps<{
   editor: Editor;
   variant?: "full" | "minimal";
+  uploadingImage?: boolean;
+}>();
+
+const emit = defineEmits<{
+  "insert-image": [];
 }>();
 
 const variant = computed(() => props.variant ?? "full");
@@ -143,6 +148,17 @@ function isActive(name: string, attrs?: Record<string, unknown>) {
       :variant="isActive('link') ? 'soft' : 'ghost'"
       aria-label="Link"
       @click="setLink"
+    />
+    <UButton
+      v-if="isFull"
+      icon="i-lucide-image"
+      size="xs"
+      color="neutral"
+      :variant="isActive('image') ? 'soft' : 'ghost'"
+      :loading="uploadingImage"
+      :disabled="uploadingImage"
+      aria-label="Image"
+      @click="emit('insert-image')"
     />
   </div>
 </template>

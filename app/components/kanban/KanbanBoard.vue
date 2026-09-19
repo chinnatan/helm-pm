@@ -160,6 +160,7 @@ async function onDragEnd() {
     await fetchTasks(props.projectId);
   } finally {
     isDragging.value = false;
+    syncFromServer();
     window.setTimeout(() => {
       suppressClick.value = false;
     }, 50);

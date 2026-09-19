@@ -14,7 +14,8 @@ import { taskInvolvesUser } from "~/utils/taskPeople";
 const SUBTASK_SELECT = `
   *,
   profiles:assignee_id(id, email, full_name, avatar_url),
-  tester:tester_id(id, email, full_name, avatar_url)
+  tester:tester_id(id, email, full_name, avatar_url),
+  subtask_labels(label_id, labels(*))
 `;
 
 const PLANNER_SELECT = `

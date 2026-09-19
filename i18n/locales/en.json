@@ -351,6 +351,7 @@
   "tasks": {
     "editTask": "Edit Task",
     "newTask": "New Task",
+    "newSubtask": "New Subtask",
     "title": "Title",
     "titlePlaceholder": "Task title",
     "description": "Description",
@@ -379,6 +380,10 @@
     "deleteSubtask": "Delete subtask",
     "deleteSubtaskConfirm": "Remove this subtask?",
     "reorderSubtask": "Reorder subtask",
+    "parentTask": "Parent task",
+    "selectParentTask": "Select parent task",
+    "searchParentTask": "Search tasks...",
+    "noParentTask": "None (main task)",
     "fields": {
       "assignee_id": "Developer",
       "tester_id": "Tester",
@@ -387,9 +392,12 @@
       "milestone_id": "Milestone",
       "customer_id": "Customer",
       "status": "Status",
+      "start_date": "Start date",
       "due_date": "Due date",
       "priority": "Priority",
-      "estimate_hours": "Estimated hours"
+      "estimate_hours": "Estimated hours",
+      "title": "Title",
+      "task_id": "Parent task"
     },
     "tabs": {
       "details": "Details",
@@ -397,6 +405,7 @@
       "attachments": "Attachments",
       "activity": "Activity"
     },
+    "activitySubtaskPrefix": "[Subtask: {title}]",
     "noActivity": "No activity yet",
     "noComments": "No comments yet",
     "commentPlaceholder": "Write a comment... Use {'@'}email to mention",

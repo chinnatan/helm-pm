@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Task } from "~/types";
+import type { Subtask, Task } from "~/types";
 import {
   startOfMonth,
   endOfMonth,
@@ -13,6 +13,12 @@ import {
   addMonths,
   subMonths,
 } from "date-fns";
+import {
+  flattenProjectItems,
+  projectItemDueDate,
+  projectItemTitle,
+  type ProjectItem,
+} from "~/utils/projectItems";
 
 definePageMeta({ middleware: "auth" });
 
@@ -30,6 +36,9 @@ const currentMonth = ref(new Date());
 const showModal = ref(false);
 const selectedTask = ref<Task | null>(null);
 const defaultDueDate = ref<string | undefined>(undefined);
+const showSubtaskModal = ref(false);
+const selectedSubtask = ref<Subtask | null>(null);
+const selectedSubtaskParent = ref<Task | null>(null);
 
 const weekdayKeys = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
@@ -51,22 +60,37 @@ const monthLabel = computed(() =>
   format(currentMonth.value, "MMMM yyyy", { locale: dateFnsLocale.value }),
 );
 
-function tasksForDay(day: Date) {
-  return tasks.value.filter((task) => {
-    if (!task.due_date) return false;
-    return isSameDay(parseISO(task.due_date), day);
+function itemsForDay(day: Date): ProjectItem[] {
+  return flattenProjectItems(tasks.value).filter((item) => {
+    const due = projectItemDueDate(item);
+    if (!due) return false;
+    return isSameDay(parseISO(due), day);
   });
 }
 
 function openTask(task: Task) {
   selectedTask.value = task;
   defaultDueDate.value = undefined;
+  showSubtaskModal.value = false;
   showModal.value = true;
+}
+
+function openSubtask(payload: { subtask: Subtask; parent: Task }) {
+  selectedSubtask.value = payload.subtask;
+  selectedSubtaskParent.value = payload.parent;
+  showModal.value = false;
+  showSubtaskModal.value = true;
+}
+
+function openItem(item: ProjectItem) {
+  if (item.kind === "task") openTask(item.task);
+  else openSubtask({ subtask: item.subtask, parent: item.parent });
 }
 
 function openNewTask(dueDate?: string) {
   selectedTask.value = null;
   defaultDueDate.value = dueDate;
+  showSubtaskModal.value = false;
   showModal.value = true;
 }
 
@@ -74,14 +98,24 @@ function openNewForDay(day: Date) {
   openNewTask(format(day, "yyyy-MM-dd"));
 }
 
+async function onSaved() {
+  await fetchTasks(projectId.value);
+  if (selectedSubtask.value) {
+    const parent = tasks.value.find((t) => t.id === selectedSubtaskParent.value?.id);
+    const fresh = parent?.subtasks?.find((s) => s.id === selectedSubtask.value?.id);
+    selectedSubtask.value = fresh ?? null;
+    selectedSubtaskParent.value = parent ?? null;
+  }
+}
+
 const agendaDays = computed(() => {
   return calendarDays.value
     .filter((day) => isSameMonth(day, currentMonth.value))
     .map((day) => ({
       day,
-      tasks: tasksForDay(day),
+      items: itemsForDay(day),
     }))
-    .filter((entry) => entry.tasks.length > 0);
+    .filter((entry) => entry.items.length > 0);
 });
 </script>
 
@@ -116,14 +150,16 @@ const agendaDays = computed(() => {
           {{ format(entry.day, "EEEE d MMM", { locale: dateFnsLocale }) }}
         </h3>
         <button
-          v-for="task in entry.tasks"
-          :key="task.id"
+          v-for="item in entry.items"
+          :key="item.id"
           type="button"
           class="mb-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-white last:mb-0"
+          :class="item.kind === 'subtask' ? 'border border-white/40 border-dashed' : ''"
           :style="{ backgroundColor: project?.color || '#0B6E7A' }"
-          @click="openTask(task)"
+          @click="openItem(item)"
         >
-          {{ task.title }}
+          <span v-if="item.kind === 'subtask'" class="opacity-80">↳</span>
+          {{ projectItemTitle(item) }}
         </button>
       </div>
     </div>
@@ -147,19 +183,20 @@ const agendaDays = computed(() => {
       >
         <p class="mb-1 text-xs font-medium text-slate-500">{{ format(day, "d") }}</p>
         <div
-          v-for="task in tasksForDay(day).slice(0, 3)"
-          :key="task.id"
+          v-for="item in itemsForDay(day).slice(0, 3)"
+          :key="item.id"
           class="mb-1 cursor-pointer truncate rounded px-1 py-0.5 text-xs text-white"
+          :class="item.kind === 'subtask' ? 'border border-dashed border-white/50' : ''"
           :style="{ backgroundColor: project?.color || '#0B6E7A' }"
-          @click.stop="openTask(task)"
+          @click.stop="openItem(item)"
         >
-          {{ task.title }}
+          <span v-if="item.kind === 'subtask'">↳ </span>{{ projectItemTitle(item) }}
         </div>
         <p
-          v-if="tasksForDay(day).length > 3"
+          v-if="itemsForDay(day).length > 3"
           class="text-[10px] text-slate-400"
         >
-          +{{ tasksForDay(day).length - 3 }}
+          +{{ itemsForDay(day).length - 3 }}
         </p>
       </button>
     </div>
@@ -170,7 +207,16 @@ const agendaDays = computed(() => {
       :open="showModal"
       :default-due-date="defaultDueDate"
       @update:open="showModal = $event"
-      @saved="fetchTasks(projectId)"
+      @saved="onSaved"
+    />
+
+    <TasksSubtaskModal
+      :subtask="selectedSubtask"
+      :parent="selectedSubtaskParent"
+      :open="showSubtaskModal"
+      @update:open="showSubtaskModal = $event"
+      @saved="onSaved"
+      @open-parent="openTask"
     />
   </div>
 </template>

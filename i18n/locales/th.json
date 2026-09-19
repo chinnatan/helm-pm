@@ -351,6 +351,7 @@
   "tasks": {
     "editTask": "แก้ไขงาน",
     "newTask": "งานใหม่",
+    "newSubtask": "งานย่อยใหม่",
     "title": "ชื่องาน",
     "titlePlaceholder": "ชื่องาน",
     "description": "คำอธิบาย",
@@ -379,6 +380,10 @@
     "deleteSubtask": "ลบงานย่อย",
     "deleteSubtaskConfirm": "ลบงานย่อยนี้?",
     "reorderSubtask": "เรียงลำดับงานย่อย",
+    "parentTask": "งานแม่",
+    "selectParentTask": "เลือกงานแม่",
+    "searchParentTask": "ค้นหางาน...",
+    "noParentTask": "ไม่มี (งานหลัก)",
     "fields": {
       "assignee_id": "Developer",
       "tester_id": "Tester",
@@ -387,9 +392,12 @@
       "milestone_id": "ไมล์สโตน",
       "customer_id": "ลูกค้า",
       "status": "สถานะ",
+      "start_date": "วันเริ่ม",
       "due_date": "วันครบกำหนด",
       "priority": "ความสำคัญ",
-      "estimate_hours": "ชั่วโมงโดยประมาณ"
+      "estimate_hours": "ชั่วโมงโดยประมาณ",
+      "title": "ชื่อ",
+      "task_id": "งานแม่"
     },
     "tabs": {
       "details": "รายละเอียด",
@@ -397,6 +405,7 @@
       "attachments": "ไฟล์แนบ",
       "activity": "กิจกรรม"
     },
+    "activitySubtaskPrefix": "[งานย่อย: {title}]",
     "noActivity": "ยังไม่มีกิจกรรม",
     "noComments": "ยังไม่มีความคิดเห็น",
     "commentPlaceholder": "เขียนความคิดเห็น... ใช้ {'@'}email เพื่อแท็ก",

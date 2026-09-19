@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import type { Milestone, Task, TaskStatus } from "~/types";
+import type { Milestone, Subtask, Task, TaskStatus } from "~/types";
 import Gantt from "frappe-gantt";
 import "frappe-gantt/dist/frappe-gantt.css";
 import { format, parseISO, addDays, isSameMonth, isSameYear } from "date-fns";
+import { subtaskGanttRange } from "~/utils/projectItems";
 
 const props = defineProps<{
   tasks: Task[];
@@ -16,7 +17,9 @@ const { statusLabel } = useTaskLabels();
 
 const emit = defineEmits<{
   "update-dates": [taskId: string, startDate: string, endDate: string];
+  "update-subtask-dates": [subtaskId: string, startDate: string, endDate: string];
   "task-click": [task: Task];
+  "subtask-click": [payload: { subtask: Subtask; parent: Task }];
   "milestone-click": [milestone: Milestone];
 }>();
 
@@ -29,6 +32,7 @@ const LOWER_HEADER = 30;
 const HEADER_HEIGHT = UPPER_HEADER + LOWER_HEADER + 10;
 
 const MS_PREFIX = "ms-";
+const SUB_PREFIX = "subtask:";
 const UNGROUPED_ID = "__ungrouped__";
 
 const containerRef = ref<HTMLElement | null>(null);
@@ -57,7 +61,26 @@ type TimelineRow =
       milestoneId: string;
       start: string;
       end: string;
+    }
+  | {
+      kind: "subtask";
+      id: string;
+      subtask: Subtask;
+      parent: Task;
+      milestoneId: string;
+      start: string;
+      end: string;
     };
+
+function datedSubtasksFor(task: Task) {
+  return (task.subtasks ?? [])
+    .map((sub) => {
+      const range = subtaskGanttRange(sub, task);
+      if (!range) return null;
+      return { sub, ...range };
+    })
+    .filter(Boolean) as { sub: Subtask; start: string; end: string }[];
+}
 
 function taskDates(task: Task) {
   const start = task.start_date || task.due_date!;
@@ -167,22 +190,37 @@ const timelineGroups = computed(() => {
       ),
     );
 
-  if (ungrouped.length > 0 || milestones.length === 0) {
+  const parentsWithDatedSubs = props.tasks.filter(
+    (t) =>
+      !assigned.has(t.id) &&
+      !datedTasks.value.some((d) => d.id === t.id) &&
+      datedSubtasksFor(t).length > 0,
+  );
+
+  const ungroupedAll = [...ungrouped, ...parentsWithDatedSubs];
+
+  if (ungroupedAll.length > 0 || milestones.length === 0) {
     let start = "";
     let end = "";
-    for (const t of ungrouped) {
-      const d = taskDates(t);
-      if (!start || d.start < start) start = d.start;
-      if (!end || d.end > end) end = d.end;
+    for (const t of ungroupedAll) {
+      if (t.start_date || t.due_date) {
+        const d = taskDates(t);
+        if (!start || d.start < start) start = d.start;
+        if (!end || d.end > end) end = d.end;
+      }
+      for (const s of datedSubtasksFor(t)) {
+        if (!start || s.start < start) start = s.start;
+        if (!end || s.end > end) end = s.end;
+      }
     }
-    if (ungrouped.length > 0) {
+    if (ungroupedAll.length > 0) {
       groups.push({
         id: UNGROUPED_ID,
         milestone: null,
         title: t("projects.ganttNoMilestone"),
         start,
         end,
-        tasks: ungrouped,
+        tasks: ungroupedAll,
       });
     }
   }
@@ -193,6 +231,11 @@ const timelineGroups = computed(() => {
 const visibleRows = computed<TimelineRow[]>(() => {
   const rows: TimelineRow[] = [];
   for (const group of timelineGroups.value) {
+    let childCount = 0;
+    for (const task of group.tasks) {
+      childCount += task.start_date || task.due_date ? 1 : 0;
+      childCount += datedSubtasksFor(task).length;
+    }
     rows.push({
       kind: "milestone",
       id: group.id,
@@ -200,19 +243,32 @@ const visibleRows = computed<TimelineRow[]>(() => {
       title: group.title,
       start: group.start,
       end: group.end,
-      taskCount: group.tasks.length,
+      taskCount: childCount,
     });
     if (collapsed.value[group.id]) continue;
     for (const task of group.tasks) {
-      const d = taskDates(task);
-      rows.push({
-        kind: "task",
-        id: task.id,
-        task,
-        milestoneId: group.id,
-        start: d.start,
-        end: d.end,
-      });
+      if (task.start_date || task.due_date) {
+        const d = taskDates(task);
+        rows.push({
+          kind: "task",
+          id: task.id,
+          task,
+          milestoneId: group.id,
+          start: d.start,
+          end: d.end,
+        });
+      }
+      for (const { sub, start, end } of datedSubtasksFor(task)) {
+        rows.push({
+          kind: "subtask",
+          id: `${SUB_PREFIX}${sub.id}`,
+          subtask: sub,
+          parent: task,
+          milestoneId: group.id,
+          start,
+          end,
+        });
+      }
     }
   }
   return rows;
@@ -231,6 +287,19 @@ function buildGanttData() {
         progress: 100,
         dependencies: "",
         custom_class: "milestone-bar",
+      };
+    }
+    if (row.kind === "subtask") {
+      const status = (row.subtask.status ??
+        (row.subtask.completed ? "done" : "todo")) as string;
+      return {
+        id: row.id,
+        name: " ",
+        start: row.start,
+        end: row.end,
+        progress: statusToProgress(status),
+        dependencies: "",
+        custom_class: `priority-${row.parent.priority} gantt-subtask`,
       };
     }
     return {
@@ -268,6 +337,15 @@ function renderGantt() {
     popup_on: "hover",
     on_date_change: (task: { id: string; start: string; end: string }) => {
       if (task.id.startsWith(MS_PREFIX)) return;
+      if (task.id.startsWith(SUB_PREFIX)) {
+        emit(
+          "update-subtask-dates",
+          task.id.slice(SUB_PREFIX.length),
+          task.start,
+          task.end,
+        );
+        return;
+      }
       emit("update-dates", task.id, task.start, task.end);
     },
     on_click: (task: { id: string }) => {
@@ -276,6 +354,17 @@ function renderGantt() {
         if (msId === UNGROUPED_ID) return;
         const found = props.milestones?.find((m) => m.id === msId);
         if (found) emit("milestone-click", found);
+        return;
+      }
+      if (task.id.startsWith(SUB_PREFIX)) {
+        const subId = task.id.slice(SUB_PREFIX.length);
+        for (const parent of props.tasks) {
+          const sub = parent.subtasks?.find((s) => s.id === subId);
+          if (sub) {
+            emit("subtask-click", { subtask: sub, parent });
+            return;
+          }
+        }
         return;
       }
       const found = props.tasks.find((t) => t.id === task.id);
@@ -294,6 +383,10 @@ function toggleGroup(groupId: string) {
 function onRowClick(row: TimelineRow) {
   if (row.kind === "milestone") {
     if (row.milestone) emit("milestone-click", row.milestone);
+    return;
+  }
+  if (row.kind === "subtask") {
+    emit("subtask-click", { subtask: row.subtask, parent: row.parent });
     return;
   }
   emit("task-click", row.task);
@@ -401,6 +494,39 @@ onUnmounted(() => {
           </div>
         </template>
 
+        <template v-else-if="row.kind === 'subtask'">
+          <div class="flex min-w-0 items-center gap-1.5 pl-12">
+            <span
+              class="h-2 w-2 shrink-0 rounded-full"
+              :class="
+                statusDotClass(
+                  (row.subtask.status ??
+                    (row.subtask.completed ? 'done' : 'todo')) as TaskStatus,
+                )
+              "
+            />
+            <div class="min-w-0">
+              <p class="truncate text-sm text-slate-600">{{ row.subtask.title }}</p>
+              <p class="truncate text-[10px] text-slate-400">
+                {{ t("tasks.subtaskOf", { title: row.parent.title }) }}
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center justify-center">
+            <span class="truncate text-[10px] text-slate-500">
+              {{
+                statusLabel(
+                  (row.subtask.status ??
+                    (row.subtask.completed ? "done" : "todo")) as TaskStatus,
+                )
+              }}
+            </span>
+          </div>
+          <div class="flex items-center justify-end text-right text-[11px] text-slate-500">
+            {{ formatRange(row.start, row.end) }}
+          </div>
+        </template>
+
         <template v-else>
           <div class="flex min-w-0 items-center gap-1.5 pl-7">
             <span
@@ -478,6 +604,13 @@ onUnmounted(() => {
 }
 .gantt-shell .gantt-container .bar-wrapper.milestone-bar .handle {
   display: none;
+}
+
+.gantt-shell .gantt-container .bar-wrapper.gantt-subtask .bar {
+  opacity: 0.75;
+  stroke: #fff;
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
 }
 
 .gantt-shell .gantt-container .bar-wrapper {

@@ -1,8 +1,13 @@
 <script setup lang="ts">
-const props = defineProps<{ taskId: string }>();
+const props = defineProps<{
+  taskId: string;
+  subtaskId?: string | null;
+}>();
+
 const { t } = useI18n();
 const taskIdRef = toRef(props, "taskId");
-const { attachments, uploadFile, deleteAttachment } = useAttachments(taskIdRef);
+const subtaskIdRef = toRef(props, "subtaskId");
+const { attachments, uploadFile, deleteAttachment } = useAttachments(taskIdRef, subtaskIdRef);
 const uploading = ref(false);
 
 async function onFileSelect(event: Event) {

@@ -20,6 +20,7 @@ const { t } = useI18n();
 const { toLocaleString } = useDateLocale();
 const { statuses, priorities } = useTaskLabels();
 const {
+  tasks,
   createTask,
   updateTask,
   deleteTask,
@@ -29,6 +30,7 @@ const {
   deleteSubtask,
   reorderSubtasks,
   setTaskLabels,
+  setSubtaskLabels,
   fetchActivity,
 } = useTasks();
 const { members, canManageMembers } = useWorkspace();
@@ -43,6 +45,7 @@ const { scheduleCapacityAlerts } = useCapacityAlerts();
 const form = reactive({
   title: "",
   description: "",
+  parent_task_id: null as string | null,
   assignee_id: null as string | null,
   tester_id: null as string | null,
   milestone_id: null as string | null,
@@ -59,6 +62,7 @@ const newSubtask = reactive({
   title: "",
   assignee_id: null as string | null,
   tester_id: null as string | null,
+  start_date: "",
   due_date: "",
   estimate_hours: "",
 });
@@ -67,11 +71,81 @@ const sortedSubtasks = ref<Subtask[]>([]);
 const activity = ref<Awaited<ReturnType<typeof fetchActivity>>>([]);
 const saving = ref(false);
 const activeTab = ref("details");
+const loadingActivity = ref(false);
 
 const isEdit = computed(() => !!props.task);
+const isCreateAsSubtask = computed(
+  () => !isEdit.value && !!form.parent_task_id,
+);
 
 function setActiveTab(key: string) {
   activeTab.value = key;
+  if (key === "activity" && props.task && activity.value.length === 0) {
+    void loadActivity(props.task.id);
+  }
+}
+
+function hydrateFormFromTask(task: Task) {
+  form.title = task.title;
+  form.description = task.description ?? "";
+  form.parent_task_id = null;
+  form.assignee_id = task.assignee_id;
+  form.tester_id = task.tester_id;
+  form.milestone_id = task.milestone_id;
+  form.customer_id =
+    task.customer_id ?? getProject(props.projectId)?.customer_id ?? null;
+  form.status = task.status;
+  form.priority = task.priority;
+  form.due_date = task.due_date ?? "";
+  form.start_date = task.start_date ?? "";
+  form.estimate_hours =
+    task.estimate_hours != null ? String(task.estimate_hours) : "";
+  form.label_ids =
+    (task.task_labels?.map((tl) => tl.labels?.id).filter(Boolean) as string[]) ??
+    [];
+  syncSortedSubtasks();
+}
+
+function hydrateFormForCreate() {
+  form.title = "";
+  form.description = "";
+  form.parent_task_id = null;
+  form.assignee_id = null;
+  form.tester_id = null;
+  form.milestone_id = null;
+  form.customer_id = getProject(props.projectId)?.customer_id ?? null;
+  form.status = props.defaultStatus ?? "todo";
+  form.priority = "medium";
+  form.due_date = props.defaultDueDate ?? "";
+  form.start_date = "";
+  form.estimate_hours = "";
+  form.label_ids = [];
+  activity.value = [];
+  sortedSubtasks.value = [];
+}
+
+async function loadActivity(taskId: string) {
+  loadingActivity.value = true;
+  try {
+    activity.value = await fetchActivity(taskId);
+  } finally {
+    loadingActivity.value = false;
+  }
+}
+
+async function loadSupportingData() {
+  await Promise.all([
+    fetchLabels(),
+    fetchMilestones(),
+    fetchCustomers(),
+    fetchProjects(),
+  ]);
+  // Re-resolve customer default once projects are available
+  if (props.task && !props.task.customer_id && !form.customer_id) {
+    form.customer_id = getProject(props.projectId)?.customer_id ?? null;
+  } else if (!props.task && !form.customer_id) {
+    form.customer_id = getProject(props.projectId)?.customer_id ?? null;
+  }
 }
 
 const modalTabs = computed(() => [
@@ -147,53 +221,38 @@ function resetNewSubtask() {
   newSubtask.title = "";
   newSubtask.assignee_id = null;
   newSubtask.tester_id = null;
+  newSubtask.start_date = "";
   newSubtask.due_date = "";
   newSubtask.estimate_hours = "";
 }
 
 watch(
   () => props.open,
-  async (open) => {
+  (open) => {
     if (!open) return;
 
-    await Promise.all([fetchLabels(), fetchMilestones(), fetchCustomers(), fetchProjects()]);
-
-    if (props.task) {
-      form.title = props.task.title;
-      form.description = props.task.description ?? "";
-      form.assignee_id = props.task.assignee_id;
-      form.tester_id = props.task.tester_id;
-      form.milestone_id = props.task.milestone_id;
-      form.customer_id =
-        props.task.customer_id ?? getProject(props.projectId)?.customer_id ?? null;
-      form.status = props.task.status;
-      form.priority = props.task.priority;
-      form.due_date = props.task.due_date ?? "";
-      form.start_date = props.task.start_date ?? "";
-      form.estimate_hours =
-        props.task.estimate_hours != null ? String(props.task.estimate_hours) : "";
-      form.label_ids =
-        props.task.task_labels?.map((tl) => tl.labels?.id).filter(Boolean) as string[] ?? [];
-      activity.value = await fetchActivity(props.task.id);
-      syncSortedSubtasks();
-    } else {
-      form.title = "";
-      form.description = "";
-      form.assignee_id = null;
-      form.tester_id = null;
-      form.milestone_id = null;
-      form.customer_id = getProject(props.projectId)?.customer_id ?? null;
-      form.status = props.defaultStatus ?? "todo";
-      form.priority = "medium";
-      form.due_date = props.defaultDueDate ?? "";
-      form.start_date = "";
-      form.estimate_hours = "";
-      form.label_ids = [];
-      activity.value = [];
-      sortedSubtasks.value = [];
-    }
-    resetNewSubtask();
     activeTab.value = "details";
+    resetNewSubtask();
+
+    // Hydrate immediately so edit doesn't flash as "new task"
+    if (props.task) {
+      hydrateFormFromTask(props.task);
+      activity.value = [];
+    } else {
+      hydrateFormForCreate();
+    }
+
+    void loadSupportingData();
+  },
+);
+
+watch(
+  () => props.task?.id,
+  (id) => {
+    if (!props.open || !id || !props.task) return;
+    hydrateFormFromTask(props.task);
+    activity.value = [];
+    if (activeTab.value === "activity") void loadActivity(id);
   },
 );
 
@@ -210,25 +269,49 @@ async function save() {
 
   const estimate_hours = parseEstimate(form.estimate_hours);
 
-  const payload = {
-    title: form.title,
-    description: form.description || undefined,
-    assignee_id: form.assignee_id || null,
-    tester_id: form.tester_id || null,
-    milestone_id: form.milestone_id || null,
-    customer_id: form.customer_id || null,
-    status: form.status,
-    priority: form.priority,
-    due_date: form.due_date || null,
-    start_date: form.start_date || null,
-    estimate_hours,
-  };
-
   if (isEdit.value && props.task) {
-    await updateTask(props.task.id, payload);
+    await updateTask(props.task.id, {
+      title: form.title,
+      description: form.description || undefined,
+      assignee_id: form.assignee_id || null,
+      tester_id: form.tester_id || null,
+      milestone_id: form.milestone_id || null,
+      customer_id: form.customer_id || null,
+      status: form.status,
+      priority: form.priority,
+      due_date: form.due_date || null,
+      start_date: form.start_date || null,
+      estimate_hours,
+    });
     await setTaskLabels(props.task.id, form.label_ids);
+  } else if (form.parent_task_id) {
+    const { data, error } = await addSubtask(form.parent_task_id, form.title, {
+      description: form.description || null,
+      status: form.status,
+      assignee_id: form.assignee_id || null,
+      tester_id: form.tester_id || null,
+      start_date: form.start_date || null,
+      due_date: form.due_date || null,
+      estimate_hours,
+    });
+    if (!error && data && form.label_ids.length) {
+      await setSubtaskLabels(data.id, form.label_ids);
+    }
   } else {
-    const { data } = await createTask({ project_id: props.projectId, ...payload });
+    const { data } = await createTask({
+      project_id: props.projectId,
+      title: form.title,
+      description: form.description || undefined,
+      assignee_id: form.assignee_id || null,
+      tester_id: form.tester_id || null,
+      milestone_id: form.milestone_id || null,
+      customer_id: form.customer_id || null,
+      status: form.status,
+      priority: form.priority,
+      due_date: form.due_date || null,
+      start_date: form.start_date || null,
+      estimate_hours,
+    });
     if (data && form.label_ids.length) {
       await setTaskLabels(data.id, form.label_ids);
     }
@@ -269,6 +352,7 @@ async function handleAddSubtask() {
   await addSubtask(props.task.id, newSubtask.title.trim(), {
     assignee_id: newSubtask.assignee_id,
     tester_id: newSubtask.tester_id,
+    start_date: newSubtask.start_date || null,
     due_date: newSubtask.due_date || null,
     estimate_hours: parseEstimate(newSubtask.estimate_hours),
   });
@@ -284,6 +368,10 @@ async function onSubtaskAssignee(sub: Subtask, value: string | null) {
 
 async function onSubtaskTester(sub: Subtask, value: string | null) {
   await updateSubtask(sub.id, { tester_id: value });
+}
+
+async function onSubtaskStartDate(sub: Subtask, value: string) {
+  await updateSubtask(sub.id, { start_date: value || null });
 }
 
 async function onSubtaskDueDate(sub: Subtask, value: string) {
@@ -317,6 +405,11 @@ async function onSubtasksReorder() {
   );
 }
 
+function subtaskTitleById(subtaskId: string | null | undefined) {
+  if (!subtaskId) return null;
+  return props.task?.subtasks?.find((s) => s.id === subtaskId)?.title ?? null;
+}
+
 function resolveActivityValue(field: string | null, value: string | null) {
   if (!value) return t("common.none");
   if (
@@ -329,6 +422,9 @@ function resolveActivityValue(field: string | null, value: string | null) {
   }
   if (field === "milestone_id") {
     return milestoneTitleById.value.get(value) ?? value;
+  }
+  if (field === "task_id") {
+    return tasks.value.find((t) => t.id === value)?.title ?? value;
   }
   if (field === "status") {
     return t(`status.${value}`);
@@ -355,6 +451,14 @@ function actionLabel(action: string) {
 const labelOptions = computed(() =>
   labels.value.map((l) => ({ label: l.name, value: l.id })),
 );
+
+const parentTaskItems = computed(() => [
+  { label: t("tasks.noParentTask"), value: null },
+  ...tasks.value.map((task) => ({
+    label: task.title,
+    value: task.id,
+  })),
+]);
 
 const statusItems = computed(() =>
   statuses.value.map((s) => ({ label: s.label, value: s.value })),
@@ -399,7 +503,7 @@ const customerItems = computed(() => [
 <template>
   <UModal
     :open="open"
-    :title="isEdit ? t('tasks.editTask') : t('tasks.newTask')"
+    :title="isEdit ? t('tasks.editTask') : isCreateAsSubtask ? t('tasks.newSubtask') : t('tasks.newTask')"
     :fullscreen="isMobile"
     @update:open="emit('update:open', $event)"
   >
@@ -422,6 +526,17 @@ const customerItems = computed(() => [
       </div>
 
       <div v-if="activeTab === 'details' || !isEdit" class="space-y-4">
+        <UFormField v-if="!isEdit" :label="t('tasks.parentTask')">
+          <USelectMenu
+            v-model="form.parent_task_id"
+            :items="parentTaskItems"
+            value-key="value"
+            :placeholder="t('tasks.selectParentTask')"
+            :search-input="{ placeholder: t('tasks.searchParentTask'), icon: 'i-lucide-search' }"
+            class="w-full"
+          />
+        </UFormField>
+
         <UFormField :label="t('tasks.title')" required>
           <UInput v-model="form.title" :placeholder="t('tasks.titlePlaceholder')" class="w-full" />
         </UFormField>
@@ -462,7 +577,7 @@ const customerItems = computed(() => [
             />
           </UFormField>
 
-          <UFormField :label="t('tasks.priority')">
+          <UFormField v-if="!isCreateAsSubtask" :label="t('tasks.priority')">
             <USelect
               v-model="form.priority"
               :items="priorityItems"
@@ -492,7 +607,7 @@ const customerItems = computed(() => [
             />
           </UFormField>
 
-          <UFormField :label="t('projects.milestone')">
+          <UFormField v-if="!isCreateAsSubtask" :label="t('projects.milestone')">
             <USelect
               v-model="form.milestone_id"
               :items="milestoneItems"
@@ -501,7 +616,7 @@ const customerItems = computed(() => [
             />
           </UFormField>
 
-          <UFormField :label="t('projects.customer')">
+          <UFormField v-if="!isCreateAsSubtask" :label="t('projects.customer')">
             <USelect
               v-model="form.customer_id"
               :items="customerItems"
@@ -573,6 +688,13 @@ const customerItems = computed(() => [
                         @update:model-value="(v) => onSubtaskTester(sub, v as string | null)"
                       />
                       <UInput
+                        :model-value="sub.start_date ?? ''"
+                        type="date"
+                        size="sm"
+                        class="w-full"
+                        @update:model-value="(v) => onSubtaskStartDate(sub, String(v ?? ''))"
+                      />
+                      <UInput
                         :model-value="sub.due_date ?? ''"
                         type="date"
                         size="sm"
@@ -629,6 +751,7 @@ const customerItems = computed(() => [
                   size="sm"
                   class="w-full"
                 />
+                <UInput v-model="newSubtask.start_date" type="date" size="sm" class="w-full" />
                 <UInput v-model="newSubtask.due_date" type="date" size="sm" class="w-full" />
                 <UInput
                   v-model="newSubtask.estimate_hours"
@@ -660,25 +783,37 @@ const customerItems = computed(() => [
 
       <div v-else-if="activeTab === 'activity'" class="space-y-3">
         <div
-          v-for="log in activity"
-          :key="log.id"
-          class="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm"
+          v-if="loadingActivity"
+          class="flex items-center gap-2 py-6 text-sm text-slate-400"
         >
-          <span class="font-medium">
-            {{ log.profiles?.full_name || log.profiles?.email || t("common.system") }}
-          </span>
-          <span class="text-slate-600">
-            {{ actionLabel(log.action) }}
-            <template v-if="log.field_name">
-              {{ fieldLabel(log.field_name) }}:
-              {{ resolveActivityValue(log.field_name, log.old_value) }}
-              →
-              {{ resolveActivityValue(log.field_name, log.new_value) }}
-            </template>
-          </span>
-          <p class="text-xs text-slate-400">{{ toLocaleString(log.created_at) }}</p>
+          <UIcon name="i-lucide-loader-circle" class="size-4 animate-spin" />
+          <span>{{ t("common.loading") }}</span>
         </div>
-        <p v-if="activity.length === 0" class="text-sm text-slate-400">{{ t("tasks.noActivity") }}</p>
+        <template v-else>
+          <div
+            v-for="log in activity"
+            :key="log.id"
+            class="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm"
+          >
+            <span class="font-medium">
+              {{ log.profiles?.full_name || log.profiles?.email || t("common.system") }}
+            </span>
+            <span class="text-slate-600">
+              <template v-if="log.subtask_id">
+                {{ t("tasks.activitySubtaskPrefix", { title: subtaskTitleById(log.subtask_id) || "…" }) }}
+              </template>
+              {{ actionLabel(log.action) }}
+              <template v-if="log.field_name">
+                {{ fieldLabel(log.field_name) }}:
+                {{ resolveActivityValue(log.field_name, log.old_value) }}
+                →
+                {{ resolveActivityValue(log.field_name, log.new_value) }}
+              </template>
+            </span>
+            <p class="text-xs text-slate-400">{{ toLocaleString(log.created_at) }}</p>
+          </div>
+          <p v-if="activity.length === 0" class="text-sm text-slate-400">{{ t("tasks.noActivity") }}</p>
+        </template>
       </div>
     </template>
 

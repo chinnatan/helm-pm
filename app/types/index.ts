@@ -298,14 +298,17 @@ export interface Subtask {
   assignee_id: string | null;
   tester_id: string | null;
   estimate_hours: number | null;
+  start_date: string | null;
   due_date: string | null;
   profiles?: Profile;
   tester?: Profile;
+  subtask_labels?: { labels: Label }[];
 }
 
 export interface Comment {
   id: string;
   task_id: string;
+  subtask_id: string | null;
   user_id: string;
   content: string;
   created_at: string;
@@ -315,6 +318,7 @@ export interface Comment {
 export interface ActivityLog {
   id: string;
   task_id: string;
+  subtask_id: string | null;
   user_id: string | null;
   action: string;
   field_name: string | null;
@@ -375,6 +379,7 @@ export interface Notification {
 export interface Attachment {
   id: string;
   task_id: string;
+  subtask_id: string | null;
   uploaded_by: string;
   file_url: string;
   filename: string;
