@@ -1,6 +1,13 @@
 <script setup lang="ts">
-import type { JobRole, Subtask, Task, TaskStatus, TaskPriority } from "~/types";
-import { PRIORITY_DEFAULT_HOURS, isTaskClosed } from "~/types";
+import type {
+  JobRole,
+  Subtask,
+  Task,
+  TaskStatus,
+  TaskPriority,
+  TaskPhase,
+} from "~/types";
+import { PRIORITY_DEFAULT_HOURS, isTaskClosed, TASK_PHASE_VALUES } from "~/types";
 import { format, parseISO } from "date-fns";
 import { VueDraggable } from "vue-draggable-plus";
 
@@ -60,6 +67,7 @@ const form = reactive({
   customer_id: null as string | null,
   status: "todo" as TaskStatus,
   priority: "medium" as TaskPriority,
+  phase: null as TaskPhase | null,
   due_date: "",
   start_date: "",
   estimate_hours: "" as string,
@@ -104,6 +112,7 @@ function hydrateFormFromTask(task: Task) {
     task.customer_id ?? getProject(props.projectId)?.customer_id ?? null;
   form.status = task.status;
   form.priority = task.priority;
+  form.phase = task.phase ?? null;
   form.due_date = task.due_date ?? "";
   form.start_date = task.start_date ?? "";
   form.estimate_hours =
@@ -124,6 +133,7 @@ function hydrateFormForCreate() {
   form.customer_id = getProject(props.projectId)?.customer_id ?? null;
   form.status = props.defaultStatus ?? "todo";
   form.priority = "medium";
+  form.phase = null;
   form.due_date = props.defaultDueDate ?? "";
   form.start_date = "";
   form.estimate_hours = "";
@@ -309,6 +319,7 @@ async function save() {
       customer_id: form.customer_id || null,
       status: form.status,
       priority: form.priority,
+      phase: form.phase,
       due_date: form.due_date || null,
       start_date: form.start_date || null,
       estimate_hours,
@@ -338,6 +349,7 @@ async function save() {
       customer_id: form.customer_id || null,
       status: form.status,
       priority: form.priority,
+      phase: form.phase,
       due_date: form.due_date || null,
       start_date: form.start_date || null,
       estimate_hours,
@@ -517,6 +529,14 @@ const priorityItems = computed(() =>
   priorities.value.map((p) => ({ label: p.label, value: p.value })),
 );
 
+const phaseItems = computed(() => [
+  { label: t("tasks.phaseNone"), value: null },
+  ...TASK_PHASE_VALUES.map((p) => ({
+    label: t(`tasks.phase.${p.value}`),
+    value: p.value,
+  })),
+]);
+
 const developerItems = computed(() => [
   { label: t("tasks.unassigned"), value: null },
   ...sortedMembers("developer").map((m) => ({
@@ -683,6 +703,14 @@ watch(
             <USelect
               v-model="form.priority"
               :items="priorityItems"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField v-if="!isCreateAsSubtask" :label="t('tasks.phaseLabel')">
+            <USelect
+              v-model="form.phase"
+              :items="phaseItems"
               class="w-full"
             />
           </UFormField>

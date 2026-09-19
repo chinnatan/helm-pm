@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import type { Milestone, Subtask, Task, TaskStatus } from "~/types";
+import type {
+  Milestone,
+  Subtask,
+  Task,
+  TaskPhase,
+  TaskStatus,
+} from "~/types";
+import { isTaskClosed, TASK_PHASE_VALUES, taskPhaseMeta } from "~/types";
 import Gantt from "frappe-gantt";
 import "frappe-gantt/dist/frappe-gantt.css";
 import { format, parseISO, addDays, isSameMonth, isSameYear } from "date-fns";
@@ -31,8 +38,8 @@ const UPPER_HEADER = 45;
 const LOWER_HEADER = 30;
 const HEADER_HEIGHT = UPPER_HEADER + LOWER_HEADER + 10;
 
-const MS_PREFIX = "ms-";
-const SUB_PREFIX = "subtask:";
+const GROUP_PREFIX = "grp-";
+const SUB_PREFIX = "sub-";
 const UNGROUPED_ID = "__ungrouped__";
 
 const containerRef = ref<HTMLElement | null>(null);
@@ -44,21 +51,31 @@ let syncingScroll = false;
 
 const collapsed = ref<Record<string, boolean>>({});
 
+type GroupBy = "milestone" | "phase" | "none";
+const groupBy = ref<GroupBy>("milestone");
+
+const groupByItems = computed(() => [
+  { label: t("projects.ganttGroupMilestone"), value: "milestone" as GroupBy },
+  { label: t("projects.ganttGroupPhase"), value: "phase" as GroupBy },
+  { label: t("projects.ganttGroupNone"), value: "none" as GroupBy },
+]);
+
 type TimelineRow =
   | {
-      kind: "milestone";
+      kind: "group";
       id: string;
       milestone: Milestone | null;
+      phase: TaskPhase | null;
       title: string;
       start: string;
       end: string;
       taskCount: number;
+      doneCount: number;
     }
   | {
       kind: "task";
       id: string;
       task: Task;
-      milestoneId: string;
       start: string;
       end: string;
     }
@@ -67,10 +84,19 @@ type TimelineRow =
       id: string;
       subtask: Subtask;
       parent: Task;
-      milestoneId: string;
       start: string;
       end: string;
     };
+
+interface GanttGroup {
+  id: string;
+  milestone: Milestone | null;
+  phase: TaskPhase | null;
+  title: string;
+  start: string;
+  end: string;
+  tasks: Task[];
+}
 
 function datedSubtasksFor(task: Task) {
   return (task.subtasks ?? [])
@@ -147,34 +173,91 @@ const datedTasks = computed(() =>
   props.tasks.filter((t) => t.start_date || t.due_date),
 );
 
-const timelineGroups = computed(() => {
+const parentsWithDatedSubs = computed(() =>
+  props.tasks.filter(
+    (t) =>
+      !datedTasks.value.some((d) => d.id === t.id) &&
+      datedSubtasksFor(t).length > 0,
+  ),
+);
+
+function byStartDate(a: Task, b: Task) {
+  return (a.start_date || a.due_date || "").localeCompare(
+    b.start_date || b.due_date || "",
+  );
+}
+
+function groupRangeOf(tasksIn: Task[]) {
+  let start = "";
+  let end = "";
+  for (const t of tasksIn) {
+    if (t.start_date || t.due_date) {
+      const d = taskDates(t);
+      if (!start || d.start < start) start = d.start;
+      if (!end || d.end > end) end = d.end;
+    }
+    for (const s of datedSubtasksFor(t)) {
+      if (!start || s.start < start) start = s.start;
+      if (!end || s.end > end) end = s.end;
+    }
+  }
+  return { start, end };
+}
+
+const groups = computed<GanttGroup[]>(() => {
+  if (groupBy.value === "phase") {
+    const all = [...datedTasks.value, ...parentsWithDatedSubs.value];
+    const out: GanttGroup[] = [];
+    for (const pv of TASK_PHASE_VALUES) {
+      const children = all
+        .filter((t) => (t.phase ?? null) === pv.value)
+        .sort(byStartDate);
+      if (children.length === 0) continue;
+      const { start, end } = groupRangeOf(children);
+      out.push({
+        id: `phase-${pv.value}`,
+        milestone: null,
+        phase: pv.value,
+        title: t(`tasks.phase.${pv.value}`),
+        start,
+        end,
+        tasks: children,
+      });
+    }
+    const noPhase = all.filter((t) => !t.phase).sort(byStartDate);
+    if (noPhase.length > 0) {
+      const { start, end } = groupRangeOf(noPhase);
+      out.push({
+        id: UNGROUPED_ID,
+        milestone: null,
+        phase: null,
+        title: t("projects.ganttNoPhase"),
+        start,
+        end,
+        tasks: noPhase,
+      });
+    }
+    return out;
+  }
+
+  if (groupBy.value === "none") return [];
+
   const milestones = [...(props.milestones ?? [])].sort((a, b) =>
     (a.start_date || a.date).localeCompare(b.start_date || b.date),
   );
   const assigned = new Set<string>();
-
-  const groups: {
-    id: string;
-    milestone: Milestone | null;
-    title: string;
-    start: string;
-    end: string;
-    tasks: Task[];
-  }[] = [];
+  const out: GanttGroup[] = [];
 
   for (const ms of milestones) {
     const children = datedTasks.value
       .filter((t) => t.milestone_id === ms.id)
-      .sort((a, b) =>
-        (a.start_date || a.due_date || "").localeCompare(
-          b.start_date || b.due_date || "",
-        ),
-      );
+      .sort(byStartDate);
     for (const t of children) assigned.add(t.id);
     const dates = milestoneDates(ms);
-    groups.push({
+    out.push({
       id: ms.id,
       milestone: ms,
+      phase: null,
       title: ms.title,
       start: dates.start,
       end: dates.end,
@@ -182,41 +265,18 @@ const timelineGroups = computed(() => {
     });
   }
 
-  const ungrouped = datedTasks.value
-    .filter((t) => !assigned.has(t.id))
-    .sort((a, b) =>
-      (a.start_date || a.due_date || "").localeCompare(
-        b.start_date || b.due_date || "",
-      ),
-    );
-
-  const parentsWithDatedSubs = props.tasks.filter(
-    (t) =>
-      !assigned.has(t.id) &&
-      !datedTasks.value.some((d) => d.id === t.id) &&
-      datedSubtasksFor(t).length > 0,
-  );
-
-  const ungroupedAll = [...ungrouped, ...parentsWithDatedSubs];
+  const ungroupedAll = [
+    ...datedTasks.value.filter((t) => !assigned.has(t.id)).sort(byStartDate),
+    ...parentsWithDatedSubs.value.filter((t) => !assigned.has(t.id)),
+  ];
 
   if (ungroupedAll.length > 0 || milestones.length === 0) {
-    let start = "";
-    let end = "";
-    for (const t of ungroupedAll) {
-      if (t.start_date || t.due_date) {
-        const d = taskDates(t);
-        if (!start || d.start < start) start = d.start;
-        if (!end || d.end > end) end = d.end;
-      }
-      for (const s of datedSubtasksFor(t)) {
-        if (!start || s.start < start) start = s.start;
-        if (!end || s.end > end) end = s.end;
-      }
-    }
+    const { start, end } = groupRangeOf(ungroupedAll);
     if (ungroupedAll.length > 0) {
-      groups.push({
+      out.push({
         id: UNGROUPED_ID,
         milestone: null,
+        phase: null,
         title: t("projects.ganttNoMilestone"),
         start,
         end,
@@ -225,38 +285,17 @@ const timelineGroups = computed(() => {
     }
   }
 
-  return groups;
+  return out;
 });
 
 const visibleRows = computed<TimelineRow[]>(() => {
   const rows: TimelineRow[] = [];
-  for (const group of timelineGroups.value) {
-    let childCount = 0;
-    for (const task of group.tasks) {
-      childCount += task.start_date || task.due_date ? 1 : 0;
-      childCount += datedSubtasksFor(task).length;
-    }
-    rows.push({
-      kind: "milestone",
-      id: group.id,
-      milestone: group.milestone,
-      title: group.title,
-      start: group.start,
-      end: group.end,
-      taskCount: childCount,
-    });
-    if (collapsed.value[group.id]) continue;
-    for (const task of group.tasks) {
+
+  function pushTaskRows(tasksIn: Task[]) {
+    for (const task of tasksIn) {
       if (task.start_date || task.due_date) {
         const d = taskDates(task);
-        rows.push({
-          kind: "task",
-          id: task.id,
-          task,
-          milestoneId: group.id,
-          start: d.start,
-          end: d.end,
-        });
+        rows.push({ kind: "task", id: task.id, task, start: d.start, end: d.end });
       }
       for (const { sub, start, end } of datedSubtasksFor(task)) {
         rows.push({
@@ -264,29 +303,74 @@ const visibleRows = computed<TimelineRow[]>(() => {
           id: `${SUB_PREFIX}${sub.id}`,
           subtask: sub,
           parent: task,
-          milestoneId: group.id,
           start,
           end,
         });
       }
     }
   }
+
+  if (groupBy.value === "none") {
+    pushTaskRows(
+      [...datedTasks.value, ...parentsWithDatedSubs.value].sort(byStartDate),
+    );
+    return rows;
+  }
+
+  for (const group of groups.value) {
+    rows.push({
+      kind: "group",
+      id: group.id,
+      milestone: group.milestone,
+      phase: group.phase,
+      title: group.title,
+      start: group.start,
+      end: group.end,
+      taskCount: group.tasks.length,
+      doneCount: group.tasks.filter(
+        (t) => t.status === "done" || t.status === "release",
+      ).length,
+    });
+    if (collapsed.value[group.id]) continue;
+    pushTaskRows(group.tasks);
+  }
   return rows;
 });
 
 const hasTimelineItems = computed(() => visibleRows.value.length > 0);
 
+const PRIORITY_BAR_COLOR: Record<string, string> = {
+  urgent: "#ef4444",
+  high: "#f59e0b",
+  medium: "#3b82f6",
+  low: "#94a3b8",
+};
+
 function buildGanttData() {
   return visibleRows.value.map((row) => {
-    if (row.kind === "milestone") {
+    if (row.kind === "group") {
+      // frappe 1.0.3 does classList.add(custom_class) — multi-token strings throw
+      const band =
+        row.phase || groupBy.value === "phase"
+          ? {
+              custom_class: "phase-bar",
+              color: taskPhaseMeta(row.phase)?.color ?? "#94a3b8",
+            }
+          : { custom_class: "milestone-bar", color: "#0b6e7a" };
+      // a same-day group would render a 0-width (invisible) band — guarantee ≥ 1 column
+      const start = row.start || format(new Date(), "yyyy-MM-dd");
+      let end = row.end;
+      if (!end || end <= start) {
+        end = format(addDays(parseISO(start), 1), "yyyy-MM-dd");
+      }
       return {
-        id: `${MS_PREFIX}${row.id}`,
+        id: `${GROUP_PREFIX}${row.id}`,
         name: " ",
-        start: row.start,
-        end: row.end,
+        start,
+        end,
         progress: 100,
         dependencies: "",
-        custom_class: "milestone-bar",
+        ...band,
       };
     }
     if (row.kind === "subtask") {
@@ -299,7 +383,8 @@ function buildGanttData() {
         end: row.end,
         progress: statusToProgress(status),
         dependencies: "",
-        custom_class: `priority-${row.parent.priority} gantt-subtask`,
+        custom_class: "gantt-subtask",
+        color: PRIORITY_BAR_COLOR[row.parent.priority],
       };
     }
     return {
@@ -315,6 +400,52 @@ function buildGanttData() {
       custom_class: `priority-${row.task.priority}`,
     };
   });
+}
+
+function esc(s: string) {
+  return s.replace(/[&<>"]/g, (c) =>
+    c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : "&quot;",
+  );
+}
+
+function depChipLine(taskId: string) {
+  const dep = props.tasks.find((t) => t.id === taskId);
+  if (!dep) return "";
+  return `<div>${isTaskClosed(dep.status) ? "✅" : "⏳"} ${esc(dep.title)}</div>`;
+}
+
+function popupHtml(id: string): string | false {
+  if (id.startsWith(GROUP_PREFIX)) {
+    const group = groups.value.find((g) => g.id === id.slice(GROUP_PREFIX.length));
+    if (!group) return false;
+    const done = group.tasks.filter(
+      (t) => t.status === "done" || t.status === "release",
+    ).length;
+    return `<div class="title">${esc(group.title)}</div><div class="details">${done}/${group.tasks.length} ${esc(t("projects.ganttTasksCount"))}<br>${esc(formatRange(group.start, group.end))}</div>`;
+  }
+  if (id.startsWith(SUB_PREFIX)) {
+    const subId = id.slice(SUB_PREFIX.length);
+    for (const parent of props.tasks) {
+      const sub = parent.subtasks?.find((s) => s.id === subId);
+      if (!sub) continue;
+      const range = subtaskGanttRange(sub, parent);
+      const status = (sub.status ?? (sub.completed ? "done" : "todo")) as TaskStatus;
+      return `<div class="title">${esc(sub.title)}</div><div class="subtitle">${esc(t("tasks.subtaskOf", { title: parent.title }))}</div><div class="details">${esc(statusLabel(status))}${range ? ` · ${esc(formatRange(range.start, range.end))}` : ""}</div>`;
+    }
+    return false;
+  }
+  const task = props.tasks.find((t) => t.id === id);
+  if (!task) return false;
+  const depends = (props.dependencies ?? [])
+    .filter((d) => d.task_id === task.id)
+    .map((d) => depChipLine(d.depends_on_task_id))
+    .join("");
+  const blocks = (props.dependencies ?? [])
+    .filter((d) => d.depends_on_task_id === task.id)
+    .map((d) => depChipLine(d.task_id))
+    .join("");
+  const range = taskDates(task);
+  return `<div class="title">${esc(task.title)}</div><div class="subtitle">${esc(statusLabel(task.status))} · ${esc(formatRange(range.start, range.end))}</div><div class="details">${depends ? `<b>${esc(t("tasks.dependsOn"))}</b>${depends}` : ""}${blocks ? `<br><b>${esc(t("tasks.blocks"))}</b>${blocks}` : ""}${!depends && !blocks ? esc(t("tasks.noDependencies")) : ""}</div>`;
 }
 
 function renderGantt() {
@@ -335,8 +466,9 @@ function renderGantt() {
     today_button: true,
     view_mode_select: true,
     popup_on: "hover",
+    popup: ({ task }: { task: { id: string } }) => popupHtml(task.id),
     on_date_change: (task: { id: string; start: string; end: string }) => {
-      if (task.id.startsWith(MS_PREFIX)) return;
+      if (task.id.startsWith(GROUP_PREFIX)) return;
       if (task.id.startsWith(SUB_PREFIX)) {
         emit(
           "update-subtask-dates",
@@ -349,10 +481,15 @@ function renderGantt() {
       emit("update-dates", task.id, task.start, task.end);
     },
     on_click: (task: { id: string }) => {
-      if (task.id.startsWith(MS_PREFIX)) {
-        const msId = task.id.slice(MS_PREFIX.length);
-        if (msId === UNGROUPED_ID) return;
-        const found = props.milestones?.find((m) => m.id === msId);
+      if (task.id.startsWith(GROUP_PREFIX)) {
+        const groupId = task.id.slice(GROUP_PREFIX.length);
+        if (groupId === UNGROUPED_ID) return;
+        const group = groups.value.find((g) => g.id === groupId);
+        if (group?.phase) {
+          toggleGroup(groupId);
+          return;
+        }
+        const found = group?.milestone ?? props.milestones?.find((m) => m.id === groupId);
         if (found) emit("milestone-click", found);
         return;
       }
@@ -381,7 +518,7 @@ function toggleGroup(groupId: string) {
 }
 
 function onRowClick(row: TimelineRow) {
-  if (row.kind === "milestone") {
+  if (row.kind === "group") {
     if (row.milestone) emit("milestone-click", row.milestone);
     return;
   }
@@ -406,7 +543,7 @@ function syncScroll(source: "left" | "right") {
 }
 
 watch(
-  () => [props.tasks, props.dependencies, props.milestones, collapsed.value],
+  () => [props.tasks, props.dependencies, props.milestones, collapsed.value, groupBy.value],
   () => nextTick(renderGantt),
   { deep: true },
 );
@@ -433,10 +570,13 @@ onUnmounted(() => {
     <p>{{ t("projects.ganttEmpty") }}</p>
   </div>
 
-  <div
-    v-else
-    class="gantt-shell flex overflow-hidden rounded-xl border border-slate-200 bg-white"
-  >
+  <div v-else class="flex min-h-0 flex-1 flex-col">
+    <div class="mb-3 flex shrink-0 items-center justify-end gap-2">
+      <span class="text-xs font-medium text-slate-500">{{ t("projects.ganttGroupBy") }}</span>
+      <USelect v-model="groupBy" :items="groupByItems" size="sm" class="w-48" />
+    </div>
+
+    <div class="gantt-shell flex min-h-0 flex-1 overflow-hidden rounded-xl border border-slate-200 bg-white">
     <!-- Left: hierarchical milestone / task list -->
     <aside
       ref="leftScrollRef"
@@ -459,7 +599,7 @@ onUnmounted(() => {
         :style="{ height: `${ROW_HEIGHT}px` }"
         @click="onRowClick(row)"
       >
-        <template v-if="row.kind === 'milestone'">
+        <template v-if="row.kind === 'group'">
           <div class="flex min-w-0 items-center gap-1.5">
             <button
               type="button"
@@ -472,25 +612,45 @@ onUnmounted(() => {
                 class="h-3.5 w-3.5"
               />
             </button>
-            <UIcon name="i-lucide-flag" class="h-3.5 w-3.5 shrink-0 text-ocean-700" />
+            <UIcon
+              v-if="row.phase && taskPhaseMeta(row.phase)"
+              :name="taskPhaseMeta(row.phase)!.icon"
+              class="h-4 w-4 shrink-0"
+              :style="{ color: taskPhaseMeta(row.phase)!.color }"
+            />
+            <UIcon v-else name="i-lucide-flag" class="h-3.5 w-3.5 shrink-0 text-ocean-700" />
             <div class="min-w-0">
               <p class="truncate text-sm font-semibold text-slate-900">{{ row.title }}</p>
-              <p class="truncate text-[10px] text-slate-400">
+              <p v-if="groupBy === 'phase'" class="flex items-center gap-1.5 text-[10px] text-slate-400">
+                <span class="inline-block h-1 w-16 shrink-0 overflow-hidden rounded-full bg-slate-200 align-middle">
+                  <span
+                    class="block h-full rounded-full bg-emerald-500"
+                    :style="{ width: row.taskCount ? `${Math.round((row.doneCount / row.taskCount) * 100)}%` : '0%' }"
+                  />
+                </span>
+                {{ row.doneCount }}/{{ row.taskCount }}
+              </p>
+              <p v-else class="truncate text-[10px] text-slate-400">
                 {{ row.taskCount }} {{ t("projects.ganttTasksCount") }}
               </p>
             </div>
           </div>
           <div class="flex items-center justify-center">
-            <span class="text-[10px] font-medium uppercase tracking-wide text-ocean-800">
-              {{
-                row.milestone?.status
-                  ? t(`projects.milestoneStatus.${row.milestone.status}`)
-                  : t("projects.milestone")
-              }}
+            <span
+              v-if="row.milestone?.status"
+              class="text-[10px] font-medium uppercase tracking-wide text-ocean-800"
+            >
+              {{ t(`projects.milestoneStatus.${row.milestone.status}`) }}
+            </span>
+            <span
+              v-else-if="!row.phase && groupBy === 'milestone'"
+              class="text-[10px] font-medium uppercase tracking-wide text-ocean-800"
+            >
+              {{ t("projects.milestone") }}
             </span>
           </div>
           <div class="flex items-center justify-end text-right text-[11px] text-slate-500">
-            {{ formatRange(row.start, row.end) }}
+            {{ row.start ? formatRange(row.start, row.end) : "" }}
           </div>
         </template>
 
@@ -548,12 +708,13 @@ onUnmounted(() => {
     </aside>
 
     <!-- Right: frappe timeline -->
-    <div
-      ref="rightScrollRef"
-      class="gantt-timeline min-w-0 flex-1 overflow-auto"
-      @scroll="syncScroll('right')"
-    >
-      <div ref="containerRef" />
+      <div
+        ref="rightScrollRef"
+        class="gantt-timeline min-w-0 flex-1 overflow-auto"
+        @scroll="syncScroll('right')"
+      >
+        <div ref="containerRef" />
+      </div>
     </div>
   </div>
 </template>
@@ -561,11 +722,6 @@ onUnmounted(() => {
 <style>
 .gantt-side {
   width: min(340px, 42vw);
-  max-height: min(70vh, 720px);
-}
-
-.gantt-timeline {
-  max-height: min(70vh, 720px);
 }
 
 .gantt-shell .gantt-container {
@@ -592,12 +748,10 @@ onUnmounted(() => {
   fill: #94a3b8;
 }
 
-/* Milestone = thin summary / bracket-style bar */
+/* Milestone = thin summary bar (height comes from custom_bar_height) */
 .gantt-shell .gantt-container .bar-wrapper.milestone-bar .bar {
   fill: #0b6e7a;
   opacity: 0.85;
-  height: 10px !important;
-  transform: translateY(9px);
 }
 .gantt-shell .gantt-container .bar-wrapper.milestone-bar .bar-progress {
   display: none;
@@ -611,6 +765,17 @@ onUnmounted(() => {
   stroke: #fff;
   stroke-width: 1;
   stroke-dasharray: 3 2;
+}
+
+/* Phase swim-lane bands (color set inline via task.color — custom_class must stay single-token) */
+.gantt-shell .gantt-container .bar-wrapper.phase-bar .bar {
+  opacity: 0.6;
+}
+.gantt-shell .gantt-container .bar-wrapper.phase-bar .bar-progress {
+  display: none;
+}
+.gantt-shell .gantt-container .bar-wrapper.phase-bar .handle {
+  display: none;
 }
 
 .gantt-shell .gantt-container .bar-wrapper {

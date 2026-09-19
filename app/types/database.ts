@@ -328,6 +328,8 @@ export interface Database {
           description: string | null;
           status: string;
           priority: string;
+          phase: string | null;
+          phase_order: number;
           due_date: string | null;
           start_date: string | null;
           estimate_hours: number | null;
@@ -347,6 +349,8 @@ export interface Database {
           description?: string | null;
           status?: string;
           priority?: string;
+          phase?: string | null;
+          phase_order?: number;
           due_date?: string | null;
           start_date?: string | null;
           estimate_hours?: number | null;
@@ -366,6 +370,8 @@ export interface Database {
           description?: string | null;
           status?: string;
           priority?: string;
+          phase?: string | null;
+          phase_order?: number;
           due_date?: string | null;
           start_date?: string | null;
           estimate_hours?: number | null;
@@ -552,6 +558,7 @@ export interface Database {
           start_date: string;
           due_date: string;
           status: string;
+          phase: string | null;
           created_at: string;
         };
         Insert: {
@@ -562,6 +569,7 @@ export interface Database {
           start_date: string;
           due_date: string;
           status?: string;
+          phase?: string | null;
           created_at?: string;
         };
         Update: {
@@ -572,6 +580,7 @@ export interface Database {
           start_date?: string;
           due_date?: string;
           status?: string;
+          phase?: string | null;
           created_at?: string;
         };
         Relationships: [];

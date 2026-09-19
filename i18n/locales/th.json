@@ -29,7 +29,8 @@
     "allProjects": "โปรเจกต์ทั้งหมด",
     "switchWorkspace": "Workspace",
     "selectWorkspace": "เลือก workspace",
-    "audit": "Audit"
+    "audit": "Audit",
+    "dashboard": "แดชบอร์ด"
   },
   "workspace": {
     "empty": "ยังไม่มี workspace",
@@ -169,7 +170,12 @@
     "ganttColDates": "วันที่",
     "ganttTasksCount": "งาน",
     "ganttToggleGroup": "ขยายหรือย่อกลุ่ม",
-    "capacitySection": "ความจุ"
+    "capacitySection": "ความจุ",
+    "ganttGroupBy": "จัดกลุ่ม",
+    "ganttGroupMilestone": "ตาม Milestone",
+    "ganttGroupPhase": "ตาม Phase",
+    "ganttGroupNone": "ไม่จัดกลุ่ม",
+    "ganttNoPhase": "ไม่ระบุ Phase"
   },
   "team": {
     "title": "ทีม",
@@ -435,7 +441,18 @@
     "blockedFilterAll": "งานทั้งหมด",
     "blockedFilterHide": "ซ่อนงานที่ถูกบล็อก",
     "blockedFilterOnly": "แสดงเฉพาะงานที่ถูกบล็อก",
-    "blocked": "ถูกบล็อก"
+    "blocked": "ถูกบล็อก",
+    "phaseLabel": "Phase",
+    "phaseNone": "ไม่ระบุ",
+    "phase": {
+      "requirements": "เก็บความต้องการ",
+      "analysis": "วิเคราะห์",
+      "design": "ออกแบบ",
+      "development": "พัฒนา",
+      "testing": "ทดสอบ",
+      "deployment": "Deploy",
+      "done": "เสร็จสิ้น"
+    }
   },
   "customers": {
     "title": "ลูกค้า",
@@ -525,5 +542,33 @@
   "language": {
     "th": "ไทย",
     "en": "EN"
+  },
+  "dashboard": {
+    "title": "ภาพรวมทุกลูกค้า",
+    "subtitle": "สถานะงาน ความเสี่ยง และโหลดทีมทั่วทั้งเวิร์กสเปซ",
+    "customerProgress": "ความคืบหน้ารายลูกค้า",
+    "progress": "เสร็จสิ้น",
+    "noCustomers": "ยังไม่มีลูกค้า",
+    "openShort": "งานเปิด",
+    "overdueShort": "เกินกำหนด",
+    "overdueAtRisk": "เกินกำหนด & เสี่ยง",
+    "noRisks": "ไม่มีงานเกินกำหนดหรือเสี่ยง",
+    "overdueTag": "เกินกำหนด",
+    "atRiskTag": "เสี่ยง",
+    "upcomingMilestones": "Milestones ที่จะถึง (30 วัน)",
+    "noMilestones": "ไม่มี milestones ใน 30 วันนี้",
+    "teamWorkload": "โหลดทีมสัปดาห์นี้",
+    "noWorkload": "ยังไม่มีข้อมูลโหลดทีม",
+    "allTasks": "งานทั้งหมดทุกโปรเจกต์",
+    "allCustomers": "ทุกลูกค้า",
+    "allProjects": "ทุกโปรเจกต์",
+    "allPhases": "ทุก phase",
+    "groupBy": "จัดกลุ่ม",
+    "groupNone": "ไม่จัดกลุ่ม",
+    "groupCustomer": "ลูกค้า",
+    "groupProject": "โปรเจกต์",
+    "groupPhase": "Phase",
+    "groupStatus": "สถานะ",
+    "unassignedCustomer": "ไม่ระบุลูกค้า"
   }
 }

@@ -161,8 +161,8 @@ async function handleDeleteMilestone() {
 </script>
 
 <template>
-  <div class="p-4 md:p-6">
-    <LayoutProjectHeader v-if="project" :project="project">
+  <div class="flex h-full flex-col p-4 md:p-6">
+    <LayoutProjectHeader v-if="project" :project="project" class="shrink-0">
       <template #actions>
         <UButton
           icon="i-lucide-flag"
@@ -180,7 +180,7 @@ async function handleDeleteMilestone() {
       </template>
     </LayoutProjectHeader>
 
-    <LayoutProjectNav class="mb-6" />
+    <LayoutProjectNav class="mb-6 shrink-0" />
 
     <GanttChart
       :tasks="tasks"

@@ -29,7 +29,8 @@
     "allProjects": "All projects",
     "switchWorkspace": "Workspace",
     "selectWorkspace": "Select workspace",
-    "audit": "Audit"
+    "audit": "Audit",
+    "dashboard": "Dashboard"
   },
   "workspace": {
     "empty": "No workspaces yet",
@@ -169,7 +170,12 @@
     "ganttColDates": "Dates",
     "ganttTasksCount": "tasks",
     "ganttToggleGroup": "Expand or collapse group",
-    "capacitySection": "Capacity"
+    "capacitySection": "Capacity",
+    "ganttGroupBy": "Group",
+    "ganttGroupMilestone": "by Milestone",
+    "ganttGroupPhase": "by Phase",
+    "ganttGroupNone": "No Grouping",
+    "ganttNoPhase": "No Phase"
   },
   "team": {
     "title": "Team",
@@ -435,7 +441,18 @@
     "blockedFilterAll": "All tasks",
     "blockedFilterHide": "Hide blocked",
     "blockedFilterOnly": "Only blocked",
-    "blocked": "blocked"
+    "blocked": "blocked",
+    "phaseLabel": "Phase",
+    "phaseNone": "Not set",
+    "phase": {
+      "requirements": "Requirements",
+      "analysis": "Analysis",
+      "design": "Design",
+      "development": "Development",
+      "testing": "Testing",
+      "deployment": "Deployment",
+      "done": "Done"
+    }
   },
   "customers": {
     "title": "Customers",
@@ -525,5 +542,33 @@
   "language": {
     "th": "ไทย",
     "en": "EN"
+  },
+  "dashboard": {
+    "title": "Cross-client Overview",
+    "subtitle": "Task status, risks and team load across the workspace",
+    "customerProgress": "Customer progress",
+    "progress": "Done",
+    "noCustomers": "No customers yet",
+    "openShort": "open",
+    "overdueShort": "overdue",
+    "overdueAtRisk": "Overdue & At Risk",
+    "noRisks": "Nothing overdue or at risk",
+    "overdueTag": "Overdue",
+    "atRiskTag": "At risk",
+    "upcomingMilestones": "Upcoming milestones (30 days)",
+    "noMilestones": "No milestones in the next 30 days",
+    "teamWorkload": "Team workload this week",
+    "noWorkload": "No workload data",
+    "allTasks": "All tasks",
+    "allCustomers": "All customers",
+    "allProjects": "All projects",
+    "allPhases": "All phases",
+    "groupBy": "Group",
+    "groupNone": "No grouping",
+    "groupCustomer": "Customer",
+    "groupProject": "Project",
+    "groupPhase": "Phase",
+    "groupStatus": "Status",
+    "unassignedCustomer": "No customer"
   }
 }

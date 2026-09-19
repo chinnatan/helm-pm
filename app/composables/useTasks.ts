@@ -1,4 +1,12 @@
-import type { Task, TaskStatus, TaskPriority, Subtask, Label, ActivityLog } from "~/types";
+import type {
+  Task,
+  TaskPhase,
+  TaskStatus,
+  TaskPriority,
+  Subtask,
+  Label,
+  ActivityLog,
+} from "~/types";
 import type { Database } from "~/types/database";
 import { isTaskClosed } from "~/types";
 
@@ -78,6 +86,7 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     customer_id?: string | null;
     status?: TaskStatus;
     priority?: TaskPriority;
+    phase?: TaskPhase | null;
     due_date?: string | null;
     start_date?: string | null;
     estimate_hours?: number | null;

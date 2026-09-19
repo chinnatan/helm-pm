@@ -170,26 +170,26 @@
 
 ### Phase Grouping ใน Gantt
 
-- [ ] เพิ่ม option ให้จัดกลุ่ม tasks ใน Gantt ตาม `phase` (แทน milestone หรือเสริม)
-- [ ] สร้าง phase group headers (collapsible) พร้อม phase icon + color
-- [ ] แสดง phase progress bar (จำนวนงาน done / ทั้งหมด ใน phase นั้น)
-- [ ] เพิ่ม dropdown toggle: "Group by Milestone" / "Group by Phase" / "No Grouping"
+- [x] เพิ่ม option ให้จัดกลุ่ม tasks ใน Gantt ตาม `phase` (แทน milestone หรือเสริม) — ทำใน `GanttChart.vue` (mode `phase`: กลุ่มเรียงตาม `TASK_PHASE_VALUES`, งานไม่มี phase ลงกลุ่ม "ไม่ระบุ Phase" ท้ายสุด)
+- [x] สร้าง phase group headers (collapsible) พร้อม phase icon + color — reuse โครง group header เดิม (kind `group`) + `taskPhaseMeta()`
+- [x] แสดง phase progress bar (จำนวนงาน done / ทั้งหมด ใน phase นั้น) — mini progress bar + `done/total` ใต้ชื่อกลุ่ม (เฉพาะ mode phase)
+- [x] เพิ่ม dropdown toggle: "Group by Milestone" / "Group by Phase" / "No Grouping" — วาง toolbar เหนือ chart ใน `GanttChart.vue` (ไม่ต้องแก้ `gantt.vue`)
 
 
 
 ### Dependency Visualization
 
-- [ ] ตรวจสอบว่า frappe-gantt dependency arrows ทำงานถูกต้องกับ task-to-task
-- [ ] เพิ่ม dependency arrows สำหรับ subtask-to-task และ task-to-subtask (ถ้าเป็นไปได้)
-- [ ] Highlight critical path (optional, ถ้า frappe-gantt รองรับ)
-- [ ] เพิ่ม dependency info ใน Gantt popup (hover bar)
+- [x] ตรวจสอบว่า frappe-gantt dependency arrows ทำงานถูกต้องกับ task-to-task — ยืนยันจาก source (`make_arrows`): ลูกศรวาดเมื่อทั้ง 2 ฝั่งเป็น bar ที่ render อยู่ (งานที่ถูก collapse ลูกศวจะซ่อน — พฤติกรรมยอมรับได้)
+- [x] เพิ่ม dependency arrows สำหรับ subtask-to-task และ task-to-subtask — **ทำไม่ได้โดยไม่เปลี่ยน schema**: `task_dependencies` FK ชี้ `tasks(id)` เท่านั้น (001_initial_schema.sql:173) และ UI มีแต่ task-level dependency — **สรุป: ไม่ทำ** ข้ามจนกว่าจะต้องการจริง (ต้องเพิ่ม migration + ตัวเลือก dep ใน subtask)
+- [x] Highlight critical path — **ไม่ทำ**: frappe-gantt 1.0.3 ไม่มี API รองรับ ต้องเขียน graph algo เอง (YAGNI ตามแผนระบุ optional)
+- [x] เพิ่ม dependency info ใน Gantt popup (hover bar) — custom `popup` option: ชื่อ + สถานะ + ช่วงวัน + รายการ "Depends on / Blocks" พร้อม ⏳/✅
 
 
 
 ### Phase Timeline
 
-- [ ] เพิ่ม phase swim lane / color band ใน Gantt timeline (แสดงว่า phase ไหนอยู่ช่วงไหน)
-- [ ] แสดง milestone markers บน phase timeline
+- [x] เพิ่ม phase swim lane / color band ใน Gantt timeline (แสดงว่า phase ไหนอยู่ช่วงไหน) — group bar of phase group เป็นแถบสีบางพาดช่วงวันที่ของ phase นั้น (CSS `.phase-bar.phase-<value>`)
+- [x] แสดง milestone markers บน phase timeline — **ไม่ทำ**: ตอน group-by-milestone มีแถบ milestone อยู่แล้ว; overlay เส้น marker บน mode phase ต้องเขียน SVG layer เอง ไม่คุ้ม scope
 
 ---
 
@@ -201,20 +201,29 @@
 
 ### Workspace Dashboard Page
 
-- [ ] สร้างหน้า `/dashboard` (หรือปรับ `/` redirect) — ภาพรวมระดับ workspace
-- [ ] แสดง Customer Progress Cards — แต่ละ card: customer name, progress bar (% done), overdue count, active tasks count
-- [ ] แสดง "Overdue & At Risk" section — งานเลยกำหนด + งานที่ใกล้ถึงกำหนดแต่ยังไม่น่าจะทัน
-- [ ] แสดง "Upcoming Milestones" — milestones ที่กำลังจะถึงใน 30 วัน
-- [ ] แสดง "Team Workload Summary" — load bars ของสมาชิก
+- [x] สร้างหน้า `/dashboard` (หรือปรับ `/` redirect) — ภาพรวมระดับ workspace — ใหม่ `app/pages/dashboard/index.vue` + nav "แดชบอร์ด" (คง `/` → `/planner` เดิมไม่เปลี่ยน)
+- [x] แสดง Customer Progress Cards — แต่ละ card: customer name, progress bar (% done), overdue count, active tasks count — คำนวณ client-side จาก tasks ทั้ง workspace (customer = `task.customer_id` ?? project's customer)
+- [x] แสดง "Overdue & At Risk" section — overdue = ปิดยังไม่เสร็จ + `due_date < วันนี้`; at risk = due ใน 7 วันแต่สถานะยัง backlog/todo
+- [x] แสดง "Upcoming Milestones" — milestones ที่กำลังจะถึงใน 30 วัน (link ไป Gantt ของโปรเจกต์)
+- [x] แสดง "Team Workload Summary" — load bars ของสมาชิก — reuse `useTeamCapacity` + `CapacityLoadBar` (สัปดาห์นี้, top 8 ตาม % โหลด)
 
 
 
 ### Multi-Client Task View
 
-- [ ] เพิ่ม "All Tasks" view ที่รวมงานจากทุก project/customer
-- [ ] Filter by: customer, project, phase, status, priority, assignee
-- [ ] Group by: customer, phase, project, status
-- [ ] แสดง phase badge บน task cards/rows
+- [x] เพิ่ม "All Tasks" view ที่รวมงานจากทุก project/customer — section ล่างของหน้า dashboard
+- [x] Filter by: customer, project, phase, status, priority, assignee
+- [x] Group by: customer, phase, project, status (+ ไม่จัดกลุ่ม)
+- [x] แสดง phase badge บน task cards/rows — badge สีตาม `taskPhaseMeta` ในตาราง + คลิกแถวเปิด TaskModal
+
+
+
+### Implement Notes (Phase 3–4)
+
+- ไฟล์ที่แก้จริง: `app/components/gantt/GanttChart.vue` (grouping + popup + phase bands), `app/types/frappe-gantt.d.ts` (+`popup` option), `app/pages/dashboard/index.vue` (ใหม่), `app/layouts/default.vue` (nav), `app/components/tasks/TaskModal.vue` + `app/composables/useTasks.ts` (phase field), `app/types/database.ts` (เพิ่ม `phase`/`phase_order` ใน types ของ tasks/milestones — ของเดิมตกหล่นหลัง migration 029 ทำให้ insert/update มี phase ไม่ได้), `i18n/locales/{th,en}.json`
+- `gantt.vue` page ไม่ต้องแตะ (toggle อยู่ dalam `GanttChart`)
+- QA: `bun run typecheck` ผ่าน — test อัตโนมัติ/manual คงตาม Phase 6
+- **Fix round 2 (user feedback)**: (1) Gantt เต็มพื้นที่ — `gantt.vue` root เป็น `flex h-full flex-col`, shell ใช้ `flex-1 min-h-0`, ตัด `max-height: min(70vh,720px)`; (2) phase bar ไม่ render เลย — root cause: frappe-gantt 1.0.3 ทำ `classList.add(custom_class)` ซึ่ง **throw กับ string 2 token** (เช่น `"phase-bar phase-development"`, `"priority-x gantt-subtask"`) ทำให้ make_bars พังทั้งชุด → custom_class ต้องเป็น token เดียว, ใช้ prop `color` (inline style fill) แทน CSS per-phase และ pad same-day group เป็น +1 วัน (แถบ 0px กว้างมองไม่เห็น) — ยืนยันด้วย jsdom harness ก่อน/หลังแก้
 
 ---
 
@@ -226,7 +235,7 @@
 
 ### Task Creation Flow
 
-- [ ] เพิ่ม "Phase" dropdown ใน TaskModal (สร้าง/แก้ไข)
+- [x] เพิ่ม "Phase" dropdown ใน TaskModal (สร้าง/แก้ไข) — **ทำก่อน (ดึงมาจาก Phase 5)** ในการ implement Phase 3: ถ้าไม่มีตัวตั้ง `phase` จะไม่มีข้อมูลทดสอบ grouping/badge เลย; field เดียวใน details tab, ส่งค่าผ่าน `createTask`/`updateTask` (`phase_order` อัตโนมัติจาก DB trigger)
 - [ ] Auto-suggest phase ตาม status (เช่น status = testing → suggest phase = testing)
 - [ ] เพิ่ม "Quick Create" จาก customer page — สร้างงานผูกกับ customer นั้นทันที
 - [ ] เพิ่ม template tasks สำหรับแต่ละ phase (optional)
