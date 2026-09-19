@@ -246,12 +246,17 @@
 
 ## Phase 6: Review & Quality Assurance
 
-- [ ] รัน `bun run lint` (หรือ analyzer ที่มี) เพื่อตรวจสอบ code quality
-- [ ] ทดสอบการสร้าง/แก้ไข/ลบ task พร้อม dependency
-- [ ] ทดสอบ circular dependency detection
-- [ ] ทดสอบ phase grouping ใน Gantt
-- [ ] ทดสอบ cross-client dashboard กับข้อมูลหลายลูกค้า
-- [ ] ทดสอบ responsive (mobile/desktop)
+> **Automated testing**: setup ตาม `sub-plan-automated-testing.md` (vitest + unit tests ของ dependency graph / phase helpers) — ข้อที่ติด [auto] รันด้วย `bun run test`, ข้อ [manual] คงทดสอบด้วยมือ
+
+- [ ] รัน `bun run typecheck` + `bun run test` (vitest) เพื่อตรวจสอบ code quality — ไม่มี script `lint` ใน repo จึงใช้ typecheck แทน
+- [ ] ออก test report ด้วย `bun run test:report` → `reports/junit.xml` (JUnit XML — เปิดใน CI/IDE, ดูวิธีใน `sub-plan-automated-testing.md`)
+- [ ] [auto] ทดสอบ circular dependency detection (self / direct A↔B / transitive A→B→C→A / DAG ไม่ false positive) — vitest unit test
+- [ ] [auto] ทดสอบ blocked status (`blockedBy`/`isBlocked` กับ dep ที่ closed vs เปิดอยู่) และ phase helpers (`TASK_PHASE_ORDER`, `taskPhaseMeta`) — vitest unit test
+- [ ] [manual] ทดสอบการสร้าง/แก้ไข/ลบ task พร้อม dependency (UI + Gantt arrows) — e2e ยังไม่ตั้ง, ทดสอบมือจนกว่า Phase 3–5 จบ
+- [ ] [manual] ทดสอบ phase grouping ใน Gantt
+- [ ] [manual] ทดสอบ cross-client dashboard กับข้อมูลหลายลูกค้า
+- [ ] [manual] ทดสอบ responsive (mobile/desktop)
+- [ ] [manual] ทดสอบ DB trigger `check_circular_dependency()` ผ่าน `supabase db reset` local
 - [ ] รัน `/review-qms` เมื่องานแตะ architecture หรือ conventions
 
 ---
