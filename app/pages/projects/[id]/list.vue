@@ -15,7 +15,7 @@ definePageMeta({ middleware: "auth" });
 
 const { t } = useI18n();
 const { dateFnsLocale } = useDateLocale();
-const { statuses, priorities, statusLabel, priorityLabel } = useTaskLabels();
+const { statuses, priorities, statusLabel, priorityLabel, phaseFilterItems } = useTaskLabels();
 const route = useRoute();
 const projectId = computed(() => route.params.id as string);
 
@@ -27,6 +27,7 @@ const project = computed(() => getProject(projectId.value));
 const statusFilter = ref<TaskStatus | "all">("all");
 const priorityFilter = ref<TaskPriority | "all">("all");
 const assigneeFilter = ref<string | "all">("all");
+const phaseFilter = ref<string>("all");
 
 const showModal = ref(false);
 const selectedTask = ref<Task | null>(null);
@@ -58,6 +59,13 @@ const filteredItems = computed(() => {
     }
     if (assigneeFilter.value !== "all") {
       if (!projectItemMatchesPerson(item, assigneeFilter.value)) return false;
+    }
+    if (
+      phaseFilter.value !== "all" &&
+      ((item.kind === "task" ? item.task.phase : item.parent.phase) ?? "none") !==
+        phaseFilter.value
+    ) {
+      return false;
     }
     return true;
   });
@@ -179,6 +187,13 @@ function itemMilestone(item: ProjectItem) {
         <USelect
           v-model="assigneeFilter"
           :items="assigneeFilterItems"
+          class="w-full"
+        />
+      </UFormField>
+      <UFormField :label="t('tasks.phaseLabel')" class="w-full sm:w-40">
+        <USelect
+          v-model="phaseFilter"
+          :items="phaseFilterItems"
           class="w-full"
         />
       </UFormField>

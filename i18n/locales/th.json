@@ -29,7 +29,8 @@
     "allProjects": "โปรเจกต์ทั้งหมด",
     "switchWorkspace": "Workspace",
     "selectWorkspace": "เลือก workspace",
-    "audit": "Audit"
+    "audit": "Audit",
+    "dashboard": "แดชบอร์ด"
   },
   "workspace": {
     "empty": "ยังไม่มี workspace",
@@ -145,6 +146,7 @@
     "color": "สี",
     "overdueTasks": "เกินกำหนด",
     "recentTasks": "งานล่าสุด",
+    "phaseProgress": "ความคืบหน้าตาม Phase",
     "noOverdue": "ไม่มีงานเกินกำหนด",
     "statsTotal": "ทั้งหมด",
     "searchPlaceholder": "ค้นหางาน...",
@@ -169,7 +171,12 @@
     "ganttColDates": "วันที่",
     "ganttTasksCount": "งาน",
     "ganttToggleGroup": "ขยายหรือย่อกลุ่ม",
-    "capacitySection": "ความจุ"
+    "capacitySection": "ความจุ",
+    "ganttGroupBy": "จัดกลุ่ม",
+    "ganttGroupMilestone": "ตาม Milestone",
+    "ganttGroupPhase": "ตาม Phase",
+    "ganttGroupNone": "ไม่จัดกลุ่ม",
+    "ganttNoPhase": "ไม่ระบุ Phase"
   },
   "team": {
     "title": "ทีม",
@@ -380,6 +387,11 @@
     "deleteSubtask": "ลบงานย่อย",
     "deleteSubtaskConfirm": "ลบงานย่อยนี้?",
     "reorderSubtask": "เรียงลำดับงานย่อย",
+    "renameSubtask": "แก้ชื่องานย่อย",
+    "subtaskMoreOptions": "ตัวเลือกเพิ่มเติมของงานย่อย",
+    "showDetails": "เพิ่มรายละเอียด…",
+    "hideDetails": "ซ่อนรายละเอียด",
+    "subtaskBulkHint": "Enter เพื่อเพิ่ม · วางหลายบรรทัดเพื่อสร้างหลายงานย่อยพร้อมกัน",
     "parentTask": "งานแม่",
     "selectParentTask": "เลือกงานแม่",
     "searchParentTask": "ค้นหางาน...",
@@ -413,7 +425,35 @@
     "uploadFile": "อัปโหลดไฟล์",
     "uploading": "กำลังอัปโหลด...",
     "delete": "ลบงาน",
-    "deleteConfirm": "ลบงานนี้อย่างถาวร? ความคิดเห็น ไฟล์แนบ และกิจกรรมจะถูกลบด้วย"
+    "deleteConfirm": "ลบงานนี้อย่างถาวร? ความคิดเห็น ไฟล์แนบ และกิจกรรมจะถูกลบด้วย",
+    "dependencies": "การพึ่งพา",
+    "dependsOn": "งานที่ต้องทำก่อน (Depends on)",
+    "blocks": "งานที่รองานนี้ (Blocks)",
+    "addDependency": "เลือกงานที่ต้องทำก่อน...",
+    "noDependencies": "ไม่มีการพึ่งพากัน",
+    "dependenciesHint": "งานนี้ไม่ได้รอการทำงานอื่น",
+    "dependencyStatusDone": "เสร็จแล้ว",
+    "dependencyStatusOpen": "ยังไม่เสร็จ",
+    "depErrSelf": "งานไม่สามารถพึ่งพาตัวมันเองได้",
+    "depErrClosed": "ไม่สามารถพึ่งพางานที่ปิดไปแล้วได้",
+    "depErrCircular": "การเชื่อมต่อนี้จะทำให้เกิด dependency วนซ้ำ",
+    "blockedBadge": "ถูกบล็อก",
+    "blockedTooltip": "รอ: {titles}",
+    "blockedFilterAll": "งานทั้งหมด",
+    "blockedFilterHide": "ซ่อนงานที่ถูกบล็อก",
+    "blockedFilterOnly": "แสดงเฉพาะงานที่ถูกบล็อก",
+    "blocked": "ถูกบล็อก",
+    "phaseLabel": "Phase",
+    "phaseNone": "ไม่ระบุ",
+    "phase": {
+      "requirements": "เก็บความต้องการ",
+      "analysis": "วิเคราะห์",
+      "design": "ออกแบบ",
+      "development": "พัฒนา",
+      "testing": "ทดสอบ",
+      "deployment": "Deploy",
+      "done": "เสร็จสิ้น"
+    }
   },
   "customers": {
     "title": "ลูกค้า",
@@ -430,6 +470,7 @@
     "openTasksShort": "งานค้าง",
     "openTasks": "งานค้าง",
     "noOpenTasks": "ไม่มีงานค้าง",
+    "quickCreate": "เพิ่มงานด่วน",
     "viewProject": "ดูโปรเจกต์",
     "details": "รายละเอียด",
     "back": "กลับไปรายการลูกค้า",
@@ -503,5 +544,33 @@
   "language": {
     "th": "ไทย",
     "en": "EN"
+  },
+  "dashboard": {
+    "title": "ภาพรวมทุกลูกค้า",
+    "subtitle": "สถานะงาน ความเสี่ยง และโหลดทีมทั่วทั้งเวิร์กสเปซ",
+    "customerProgress": "ความคืบหน้ารายลูกค้า",
+    "progress": "เสร็จสิ้น",
+    "noCustomers": "ยังไม่มีลูกค้า",
+    "openShort": "งานเปิด",
+    "overdueShort": "เกินกำหนด",
+    "overdueAtRisk": "เกินกำหนด & เสี่ยง",
+    "noRisks": "ไม่มีงานเกินกำหนดหรือเสี่ยง",
+    "overdueTag": "เกินกำหนด",
+    "atRiskTag": "เสี่ยง",
+    "upcomingMilestones": "Milestones ที่จะถึง (30 วัน)",
+    "noMilestones": "ไม่มี milestones ใน 30 วันนี้",
+    "teamWorkload": "โหลดทีมสัปดาห์นี้",
+    "noWorkload": "ยังไม่มีข้อมูลโหลดทีม",
+    "allTasks": "งานทั้งหมดทุกโปรเจกต์",
+    "allCustomers": "ทุกลูกค้า",
+    "allProjects": "ทุกโปรเจกต์",
+    "allPhases": "ทุก phase",
+    "groupBy": "จัดกลุ่ม",
+    "groupNone": "ไม่จัดกลุ่ม",
+    "groupCustomer": "ลูกค้า",
+    "groupProject": "โปรเจกต์",
+    "groupPhase": "Phase",
+    "groupStatus": "สถานะ",
+    "unassignedCustomer": "ไม่ระบุลูกค้า"
   }
 }

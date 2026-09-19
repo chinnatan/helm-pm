@@ -21,6 +21,86 @@ export const TASK_CARD_DENSITY_VALUES: TaskCardDensity[] = [
 ];
 export type RequirementStatus = "open" | "in_progress" | "done" | "cancelled";
 export type MilestoneStatus = "planned" | "in_progress" | "done" | "cancelled";
+export type TaskPhase =
+  | "requirements"
+  | "analysis"
+  | "design"
+  | "development"
+  | "testing"
+  | "deployment"
+  | "done";
+
+export interface TaskPhaseMeta {
+  value: TaskPhase;
+  label: string;
+  icon: string;
+  color: string;
+  order: number;
+}
+
+export const TASK_PHASE_VALUES: TaskPhaseMeta[] = [
+  {
+    value: "requirements",
+    label: "เก็บความต้องการ",
+    icon: "i-lucide-clipboard-list",
+    color: "#8b5cf6",
+    order: 1,
+  },
+  {
+    value: "analysis",
+    label: "วิเคราะห์",
+    icon: "i-lucide-search",
+    color: "#6366f1",
+    order: 2,
+  },
+  {
+    value: "design",
+    label: "ออกแบบ",
+    icon: "i-lucide-palette",
+    color: "#3b82f6",
+    order: 3,
+  },
+  {
+    value: "development",
+    label: "พัฒนา",
+    icon: "i-lucide-code",
+    color: "#10b981",
+    order: 4,
+  },
+  {
+    value: "testing",
+    label: "ทดสอบ",
+    icon: "i-lucide-bug",
+    color: "#f59e0b",
+    order: 5,
+  },
+  {
+    value: "deployment",
+    label: "Deploy",
+    icon: "i-lucide-rocket",
+    color: "#ef4444",
+    order: 6,
+  },
+  {
+    value: "done",
+    label: "เสร็จสิ้น",
+    icon: "i-lucide-check-circle",
+    color: "#6b7280",
+    order: 7,
+  },
+];
+
+export const TASK_PHASE_ORDER: Record<TaskPhase, number> = TASK_PHASE_VALUES.reduce(
+  (acc, p) => {
+    acc[p.value] = p.order;
+    return acc;
+  },
+  {} as Record<TaskPhase, number>,
+);
+
+export function taskPhaseMeta(phase: TaskPhase | null | undefined): TaskPhaseMeta | undefined {
+  return TASK_PHASE_VALUES.find((p) => p.value === phase);
+}
 
 export const JOB_ROLE_VALUES: JobRole[] = [
   "developer",
@@ -46,6 +126,19 @@ export const TASK_CLOSED_STATUSES: TaskStatus[] = ["done", "release", "cancelled
 
 export function isTaskClosed(status: TaskStatus) {
   return TASK_CLOSED_STATUSES.includes(status);
+}
+
+/** Phase auto-suggestion when the user moves status but no phase is set yet */
+export const PHASE_BY_STATUS: Partial<Record<TaskStatus, TaskPhase>> = {
+  in_progress: "development",
+  ready_for_test: "testing",
+  testing: "testing",
+  done: "done",
+  release: "done",
+};
+
+export function suggestPhaseForStatus(status: TaskStatus): TaskPhase | null {
+  return PHASE_BY_STATUS[status] ?? null;
 }
 
 export const REQUIREMENT_STATUS_VALUES: RequirementStatus[] = [
@@ -256,6 +349,7 @@ export interface Milestone {
   start_date: string;
   due_date: string;
   status: MilestoneStatus;
+  phase?: TaskPhase | null;
   created_at: string;
 }
 
@@ -271,6 +365,8 @@ export interface Task {
   description: string | null;
   status: TaskStatus;
   priority: TaskPriority;
+  phase?: TaskPhase | null;
+  phase_order?: number;
   due_date: string | null;
   start_date: string | null;
   estimate_hours: number | null;

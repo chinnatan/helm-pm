@@ -19,6 +19,7 @@ declare module "frappe-gantt" {
     today_button?: boolean;
     view_mode_select?: boolean;
     popup_on?: "click" | "hover";
+    popup?: (opts: { task: GanttTask }) => string | false | void;
     on_date_change?: (task: GanttTask) => void;
     on_click?: (task: GanttTask) => void;
   }

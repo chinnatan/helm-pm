@@ -35,6 +35,7 @@ onMounted(() => {
 
 const navItems = computed(() => {
   const items = [
+    { label: t("nav.dashboard"), to: "/dashboard", match: "/dashboard", icon: "i-lucide-layout-dashboard" },
     { label: t("nav.planner"), to: "/planner", match: "/planner", icon: "i-lucide-calendar-days" },
     {
       label: t("nav.projects"),

@@ -1,6 +1,14 @@
 <script setup lang="ts">
-import type { JobRole, Subtask, Task, TaskStatus, TaskPriority } from "~/types";
-import { PRIORITY_DEFAULT_HOURS } from "~/types";
+import type {
+  JobRole,
+  Subtask,
+  Task,
+  TaskStatus,
+  TaskPriority,
+  TaskPhase,
+} from "~/types";
+import { PRIORITY_DEFAULT_HOURS, isTaskClosed, suggestPhaseForStatus, TASK_PHASE_VALUES } from "~/types";
+import { format, parseISO } from "date-fns";
 import { VueDraggable } from "vue-draggable-plus";
 
 const props = defineProps<{
@@ -17,7 +25,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const { toLocaleString } = useDateLocale();
+const { toLocaleString, dateFnsLocale } = useDateLocale();
 const { statuses, priorities } = useTaskLabels();
 const {
   tasks,
@@ -41,6 +49,13 @@ const { milestones, fetchMilestones } = useMilestones(projectIdRef);
 const { customers, fetchCustomers } = useCustomers();
 const { getProject, fetchProjects, projects } = useProjects();
 const { scheduleCapacityAlerts } = useCapacityAlerts();
+const {
+  addDependency,
+  removeDependency,
+  getDependsOn,
+  getBlocks,
+  wouldCreateCycle,
+} = useDependencies(projectIdRef);
 
 const form = reactive({
   title: "",
@@ -52,6 +67,7 @@ const form = reactive({
   customer_id: null as string | null,
   status: "todo" as TaskStatus,
   priority: "medium" as TaskPriority,
+  phase: null as TaskPhase | null,
   due_date: "",
   start_date: "",
   estimate_hours: "" as string,
@@ -74,6 +90,20 @@ const activeTab = ref("details");
 const loadingActivity = ref(false);
 
 const isEdit = computed(() => !!props.task);
+const phaseTouched = ref(false);
+
+watch(
+  () => form.status,
+  (status) => {
+    if (phaseTouched.value) return;
+    form.phase = suggestPhaseForStatus(status);
+  },
+);
+
+function onPhaseChange(value: TaskPhase | null) {
+  phaseTouched.value = true;
+  form.phase = value;
+}
 const isCreateAsSubtask = computed(
   () => !isEdit.value && !!form.parent_task_id,
 );
@@ -86,6 +116,7 @@ function setActiveTab(key: string) {
 }
 
 function hydrateFormFromTask(task: Task) {
+  phaseTouched.value = !!task.phase;
   form.title = task.title;
   form.description = task.description ?? "";
   form.parent_task_id = null;
@@ -96,6 +127,7 @@ function hydrateFormFromTask(task: Task) {
     task.customer_id ?? getProject(props.projectId)?.customer_id ?? null;
   form.status = task.status;
   form.priority = task.priority;
+  form.phase = task.phase ?? null;
   form.due_date = task.due_date ?? "";
   form.start_date = task.start_date ?? "";
   form.estimate_hours =
@@ -107,6 +139,7 @@ function hydrateFormFromTask(task: Task) {
 }
 
 function hydrateFormForCreate() {
+  phaseTouched.value = false;
   form.title = "";
   form.description = "";
   form.parent_task_id = null;
@@ -116,6 +149,7 @@ function hydrateFormForCreate() {
   form.customer_id = getProject(props.projectId)?.customer_id ?? null;
   form.status = props.defaultStatus ?? "todo";
   form.priority = "medium";
+  form.phase = null;
   form.due_date = props.defaultDueDate ?? "";
   form.start_date = "";
   form.estimate_hours = "";
@@ -226,6 +260,27 @@ function resetNewSubtask() {
   newSubtask.estimate_hours = "";
 }
 
+const newSubtaskMore = ref(false);
+const showSubtaskDetail = ref(false);
+const detailSubtask = ref<Subtask | null>(null);
+
+function subtaskDateShort(iso: string | null | undefined) {
+  if (!iso) return null;
+  return format(parseISO(iso), "d MMM", { locale: dateFnsLocale.value });
+}
+
+function openSubtaskDetail(sub: Subtask) {
+  detailSubtask.value = sub;
+  showSubtaskDetail.value = true;
+}
+
+async function renameSubtask(sub: Subtask, raw: string) {
+  const title = raw.trim();
+  if (!title || title === sub.title) return;
+  await updateSubtask(sub.id, { title });
+  syncSortedSubtasks();
+}
+
 watch(
   () => props.open,
   (open) => {
@@ -233,6 +288,7 @@ watch(
 
     activeTab.value = "details";
     resetNewSubtask();
+    newSubtaskMore.value = false;
 
     // Hydrate immediately so edit doesn't flash as "new task"
     if (props.task) {
@@ -279,6 +335,7 @@ async function save() {
       customer_id: form.customer_id || null,
       status: form.status,
       priority: form.priority,
+      phase: form.phase,
       due_date: form.due_date || null,
       start_date: form.start_date || null,
       estimate_hours,
@@ -308,6 +365,7 @@ async function save() {
       customer_id: form.customer_id || null,
       status: form.status,
       priority: form.priority,
+      phase: form.phase,
       due_date: form.due_date || null,
       start_date: form.start_date || null,
       estimate_hours,
@@ -348,17 +406,36 @@ const defaultEstimateHours = computed(
 );
 
 async function handleAddSubtask() {
-  if (!props.task || !newSubtask.title.trim()) return;
-  await addSubtask(props.task.id, newSubtask.title.trim(), {
+  if (!props.task) return;
+  const titles = newSubtask.title
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (!titles.length) return;
+
+  const opts = {
     assignee_id: newSubtask.assignee_id,
     tester_id: newSubtask.tester_id,
     start_date: newSubtask.start_date || null,
     due_date: newSubtask.due_date || null,
     estimate_hours: parseEstimate(newSubtask.estimate_hours),
-  });
-  resetNewSubtask();
+  };
+  for (const title of titles) {
+    await addSubtask(props.task.id, title, opts);
+  }
+
+  // คง field อื่นไว้เพื่อกรอกต่อเนื่อง ล้างเฉพาะ title
+  newSubtask.title = "";
   syncSortedSubtasks();
   scheduleCapacityAlerts({ projects: projects.value });
+}
+
+function onNewSubtaskPaste(event: ClipboardEvent) {
+  const text = event.clipboardData?.getData("text/plain") ?? "";
+  if (!text.includes("\n")) return;
+  event.preventDefault();
+  newSubtask.title = text;
+  void handleAddSubtask();
 }
 
 async function onSubtaskAssignee(sub: Subtask, value: string | null) {
@@ -468,6 +545,14 @@ const priorityItems = computed(() =>
   priorities.value.map((p) => ({ label: p.label, value: p.value })),
 );
 
+const phaseItems = computed(() => [
+  { label: t("tasks.phaseNone"), value: null },
+  ...TASK_PHASE_VALUES.map((p) => ({
+    label: t(`tasks.phase.${p.value}`),
+    value: p.value,
+  })),
+]);
+
 const developerItems = computed(() => [
   { label: t("tasks.unassigned"), value: null },
   ...sortedMembers("developer").map((m) => ({
@@ -498,6 +583,59 @@ const customerItems = computed(() => [
     .filter((c) => c.status === "active")
     .map((c) => ({ label: formatCustomerLabel(c), value: c.id })),
 ]);
+
+const newDependency = ref<string | undefined>(undefined);
+const depError = ref<string | null>(null);
+
+const dependsOnList = computed(() => {
+  const id = props.task?.id;
+  if (!id) return [];
+  return getDependsOn(id)
+    .map((d) => ({ depId: d.id, task: tasks.value.find((t) => t.id === d.depends_on_task_id) }))
+    .filter((x): x is { depId: string; task: Task } => !!x.task);
+});
+
+const blocksList = computed(() => {
+  const id = props.task?.id;
+  if (!id) return [];
+  return getBlocks(id)
+    .map((d) => tasks.value.find((t) => t.id === d.task_id))
+    .filter((t): t is Task => !!t);
+});
+
+const dependencyOptions = computed(() => {
+  const id = props.task?.id;
+  const selected = new Set(dependsOnList.value.map((d) => d.task.id));
+  return tasks.value
+    .filter((t) => t.id !== id && !selected.has(t.id) && !isTaskClosed(t.status))
+    .map((t) => ({ label: t.title, value: t.id }));
+});
+
+async function handleAddDependency(value?: string | null) {
+  if (!props.task || !value) return;
+  depError.value = null;
+  if (wouldCreateCycle(props.task.id, value)) {
+    depError.value = t("tasks.depErrCircular");
+    newDependency.value = undefined;
+    return;
+  }
+  const { error } = await addDependency(props.task.id, value);
+  if (error) depError.value = error;
+  newDependency.value = undefined;
+}
+
+async function handleRemoveDependency(depId: string) {
+  depError.value = null;
+  await removeDependency(depId);
+}
+
+watch(
+  () => props.task?.id,
+  () => {
+    newDependency.value = undefined;
+    depError.value = null;
+  },
+);
 </script>
 
 <template>
@@ -585,6 +723,15 @@ const customerItems = computed(() => [
             />
           </UFormField>
 
+          <UFormField v-if="!isCreateAsSubtask" :label="t('tasks.phaseLabel')">
+            <USelect
+              :model-value="form.phase"
+              :items="phaseItems"
+              class="w-full"
+              @update:model-value="(v) => onPhaseChange(v as TaskPhase | null)"
+            />
+          </UFormField>
+
           <UFormField :label="t('tasks.startDate')">
             <UInput v-model="form.start_date" type="date" class="w-full" />
           </UFormField>
@@ -637,40 +784,69 @@ const customerItems = computed(() => [
         </div>
 
         <UFormField v-if="isEdit && task" :label="t('tasks.subtasks')">
-          <div class="space-y-3">
+          <div class="space-y-1.5">
             <VueDraggable
               v-model="sortedSubtasks"
               handle=".subtask-drag-handle"
               :animation="150"
-              class="space-y-3"
+              class="space-y-1.5"
               @end="onSubtasksReorder"
             >
               <div
                 v-for="sub in sortedSubtasks"
                 :key="sub.id"
-                class="rounded-lg border border-slate-200 bg-slate-50/80 p-2.5"
+                class="flex items-start gap-1.5 rounded-lg border border-slate-200 bg-white px-2 py-1.5 hover:border-slate-300"
               >
-                <div class="flex items-start gap-2">
-                  <button
-                    type="button"
-                    class="subtask-drag-handle mt-1.5 shrink-0 cursor-grab text-slate-400 hover:text-slate-600 active:cursor-grabbing"
-                    :aria-label="t('tasks.reorderSubtask')"
-                  >
-                    <UIcon name="i-lucide-grip-vertical" class="size-4" />
-                  </button>
-                  <UCheckbox
-                    class="mt-1.5"
-                    :model-value="sub.completed"
-                    @update:model-value="(v) => toggleSubtask(sub.id, !!v)"
+                <button
+                  type="button"
+                  class="subtask-drag-handle mt-1 shrink-0 cursor-grab text-slate-300 hover:text-slate-600 active:cursor-grabbing"
+                  :aria-label="t('tasks.reorderSubtask')"
+                >
+                  <UIcon name="i-lucide-grip-vertical" class="size-4" />
+                </button>
+                <UCheckbox
+                  class="mt-1"
+                  :model-value="sub.completed"
+                  @update:model-value="(v) => toggleSubtask(sub.id, !!v)"
+                />
+                <div class="min-w-0 flex-1">
+                  <input
+                    :value="sub.title"
+                    type="text"
+                    class="w-full truncate rounded bg-transparent text-sm outline-none hover:bg-slate-50 focus:bg-slate-50 focus:ring-1 focus:ring-slate-200"
+                    :class="sub.completed ? 'text-slate-400 line-through' : 'text-slate-700'"
+                    :aria-label="t('tasks.renameSubtask')"
+                    @change="
+                      (e: Event) => renameSubtask(sub, (e.target as HTMLInputElement).value)
+                    "
+                    @keyup.enter="(e: KeyboardEvent) => (e.target as HTMLInputElement).blur()"
                   />
-                  <div class="min-w-0 flex-1 space-y-2">
-                    <span
-                      class="block text-sm"
-                      :class="sub.completed ? 'line-through text-slate-400' : 'text-slate-700'"
-                    >
-                      {{ sub.title }}
+                  <div
+                    v-if="sub.profiles || sub.due_date || sub.estimate_hours != null"
+                    class="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] text-slate-400"
+                  >
+                    <span v-if="sub.profiles" class="flex items-center gap-1">
+                      <UIcon name="i-lucide-user" class="size-3" />
+                      {{ sub.profiles.full_name || sub.profiles.email }}
                     </span>
-                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <span v-if="sub.due_date" class="flex items-center gap-1">
+                      <UIcon name="i-lucide-calendar" class="size-3" />
+                      {{ subtaskDateShort(sub.due_date) }}
+                    </span>
+                    <span v-if="sub.estimate_hours != null">{{ sub.estimate_hours }}h</span>
+                  </div>
+                </div>
+                <UPopover>
+                  <UButton
+                    icon="i-lucide-sliders-horizontal"
+                    variant="ghost"
+                    color="neutral"
+                    size="xs"
+                    class="mt-0.5 shrink-0"
+                    :aria-label="t('tasks.subtaskMoreOptions')"
+                  />
+                  <template #content>
+                    <div class="w-64 space-y-2 p-3">
                       <USelect
                         :model-value="sub.assignee_id"
                         :items="developerItems"
@@ -715,28 +891,38 @@ const customerItems = computed(() => [
                         "
                       />
                     </div>
-                  </div>
-                  <UButton
-                    icon="i-lucide-trash-2"
-                    variant="ghost"
-                    color="error"
-                    size="xs"
-                    class="mt-1 shrink-0"
-                    :aria-label="t('tasks.deleteSubtask')"
-                    @click="handleDeleteSubtask(sub)"
-                  />
-                </div>
+                  </template>
+                </UPopover>
+                <UButton
+                  icon="i-lucide-maximize-2"
+                  variant="ghost"
+                  color="neutral"
+                  size="xs"
+                  class="mt-0.5 shrink-0"
+                  :aria-label="t('tasks.editSubtask')"
+                  @click="openSubtaskDetail(sub)"
+                />
+                <UButton
+                  icon="i-lucide-trash-2"
+                  variant="ghost"
+                  color="error"
+                  size="xs"
+                  class="mt-0.5 shrink-0"
+                  :aria-label="t('tasks.deleteSubtask')"
+                  @click="handleDeleteSubtask(sub)"
+                />
               </div>
             </VueDraggable>
 
-            <div class="space-y-2 rounded-lg border border-dashed border-slate-300 p-2.5">
+            <div class="space-y-2 rounded-lg border border-dashed border-slate-300 p-2">
               <UInput
                 v-model="newSubtask.title"
                 :placeholder="t('tasks.addSubtask')"
                 class="w-full"
                 @keyup.enter="handleAddSubtask"
+                @paste="onNewSubtaskPaste"
               />
-              <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div v-if="newSubtaskMore" class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <USelect
                   v-model="newSubtask.assignee_id"
                   :items="developerItems"
@@ -763,9 +949,103 @@ const customerItems = computed(() => [
                   :placeholder="t('tasks.estimateHoursPlaceholder')"
                 />
               </div>
-              <UButton size="sm" :disabled="!newSubtask.title.trim()" @click="handleAddSubtask">
-                {{ t("common.add") }}
-              </UButton>
+              <div class="flex items-center gap-2">
+                <UButton
+                  size="sm"
+                  icon="i-lucide-plus"
+                  :disabled="!newSubtask.title.trim()"
+                  @click="handleAddSubtask"
+                >
+                  {{ t("common.add") }}
+                </UButton>
+                <UButton
+                  size="xs"
+                  variant="link"
+                  color="neutral"
+                  :label="newSubtaskMore ? t('tasks.hideDetails') : t('tasks.showDetails')"
+                  @click="newSubtaskMore = !newSubtaskMore"
+                />
+              </div>
+              <p class="text-[11px] text-slate-400">{{ t("tasks.subtaskBulkHint") }}</p>
+            </div>
+          </div>
+        </UFormField>
+
+        <UFormField v-if="isEdit && task" :label="t('tasks.dependencies')">
+          <div class="space-y-3">
+            <div>
+              <p class="mb-1.5 text-xs font-medium text-slate-500">
+                {{ t("tasks.dependsOn") }}
+              </p>
+              <div v-if="dependsOnList.length" class="flex flex-col gap-1.5">
+                <div
+                  v-for="d in dependsOnList"
+                  :key="d.depId"
+                  class="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5"
+                >
+                  <div class="flex min-w-0 items-center gap-2">
+                    <UIcon
+                      :name="
+                        isTaskClosed(d.task.status)
+                          ? 'i-lucide-circle-check'
+                          : 'i-lucide-clock'
+                      "
+                      class="size-4 shrink-0"
+                      :class="isTaskClosed(d.task.status) ? 'text-green-500' : 'text-amber-500'"
+                    />
+                    <span class="truncate text-sm text-slate-700">{{ d.task.title }}</span>
+                    <span class="shrink-0 text-[11px] text-slate-400">
+                      {{
+                        isTaskClosed(d.task.status)
+                          ? t("tasks.dependencyStatusDone")
+                          : t("tasks.dependencyStatusOpen")
+                      }}
+                    </span>
+                  </div>
+                  <UButton
+                    icon="i-lucide-x"
+                    variant="ghost"
+                    color="neutral"
+                    size="xs"
+                    :aria-label="t('common.delete')"
+                    @click="handleRemoveDependency(d.depId)"
+                  />
+                </div>
+              </div>
+              <p v-else class="text-xs text-slate-400">{{ t("tasks.dependenciesHint") }}</p>
+
+              <USelectMenu
+                v-model="newDependency"
+                :items="dependencyOptions"
+                value-key="value"
+                :placeholder="t('tasks.addDependency')"
+                :search-input="{
+                  placeholder: t('tasks.addDependency'),
+                  icon: 'i-lucide-search',
+                }"
+                class="mt-2 w-full"
+                @update:model-value="handleAddDependency"
+              />
+              <p v-if="depError" class="mt-1 text-xs text-red-500">{{ depError }}</p>
+            </div>
+
+            <div>
+              <p class="mb-1.5 text-xs font-medium text-slate-500">{{ t("tasks.blocks") }}</p>
+              <div v-if="blocksList.length" class="flex flex-col gap-1.5">
+                <div
+                  v-for="b in blocksList"
+                  :key="b.id"
+                  class="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 py-1.5"
+                >
+                  <UIcon
+                    :name="isTaskClosed(b.status) ? 'i-lucide-circle-check' : 'i-lucide-clock'"
+                    class="size-4 shrink-0"
+                    :class="isTaskClosed(b.status) ? 'text-green-500' : 'text-amber-500'"
+                  />
+                  <span class="truncate text-sm text-slate-700">{{ b.title }}</span>
+                </div>
+              </div>
+              <p v-else class="text-xs text-slate-400">{{ t("tasks.noDependencies") }}</p>
             </div>
           </div>
         </UFormField>
@@ -841,4 +1121,12 @@ const customerItems = computed(() => [
       </div>
     </template>
   </UModal>
+
+  <TasksSubtaskModal
+    :subtask="detailSubtask"
+    :parent="task ?? null"
+    :open="showSubtaskDetail"
+    @update:open="showSubtaskDetail = $event"
+    @saved="syncSortedSubtasks"
+  />
 </template>

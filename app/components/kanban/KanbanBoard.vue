@@ -19,7 +19,7 @@ const props = defineProps<{
   mineOnly?: boolean;
 }>();
 
-const { statuses } = useTaskLabels();
+const { statuses, phaseFilterItems } = useTaskLabels();
 const user = useSupabaseUser();
 const { t } = useI18n();
 const { confirm } = useConfirmDialog();
@@ -32,6 +32,7 @@ const {
   subscribeToProject,
   fetchTasks,
 } = useTasks(toRef(props, "projectId"));
+const { isBlocked } = useDependencies(toRef(props, "projectId"));
 
 const emit = defineEmits<{
   "task-click": [task: Task];
@@ -42,6 +43,19 @@ const emit = defineEmits<{
 const columns = statuses;
 const isDragging = ref(false);
 const suppressClick = ref(false);
+
+type BlockedFilter = "all" | "hide" | "only";
+const blockedFilter = ref<BlockedFilter>("all");
+const phaseFilter = ref<string>("all");
+const blockedFilterItems = computed(() => [
+  { label: t("tasks.blockedFilterAll"), value: "all" },
+  { label: t("tasks.blockedFilterHide"), value: "hide" },
+  { label: t("tasks.blockedFilterOnly"), value: "only" },
+]);
+
+function itemBlocked(item: KanbanItem) {
+  return item.kind === "task" && isBlocked(item.task.id);
+}
 
 function emptyColumns(): Record<TaskStatus, KanbanItem[]> {
   return {
@@ -63,6 +77,9 @@ function buildItems(): Record<TaskStatus, KanbanItem[]> {
   const uid = user.value?.id;
 
   for (const task of tasks.value) {
+    if (phaseFilter.value !== "all" && (task.phase ?? "none") !== phaseFilter.value) {
+      continue;
+    }
     const includeTask =
       !props.mineOnly || (uid ? taskInvolvesUser(task, uid) : false);
 
@@ -98,7 +115,18 @@ function buildItems(): Record<TaskStatus, KanbanItem[]> {
   }
 
   for (const status of TASK_STATUS_VALUES) {
-    cols[status]?.sort((a, b) => a.sort_order - b.sort_order || a.id.localeCompare(b.id));
+    let items = cols[status] ?? [];
+    if (blockedFilter.value === "hide") {
+      items = items.filter((i) => !itemBlocked(i));
+    } else if (blockedFilter.value === "only") {
+      items = items.filter((i) => i.kind === "task" && isBlocked(i.task.id));
+    }
+    // blocked tasks sink to the bottom of each column
+    cols[status] = items.sort((a, b) => {
+      const ab = itemBlocked(a) ? 1 : 0;
+      const bb = itemBlocked(b) ? 1 : 0;
+      return ab - bb || a.sort_order - b.sort_order || a.id.localeCompare(b.id);
+    });
   }
 
   return cols;
@@ -128,6 +156,18 @@ watch(
     if (!isDragging.value) syncFromServer();
   },
 );
+
+watch(blockedFilter, () => {
+  if (!isDragging.value) syncFromServer();
+});
+
+watch(phaseFilter, () => {
+  if (!isDragging.value) syncFromServer();
+});
+
+function blockedCountIn(status: TaskStatus) {
+  return (localColumns.value[status] ?? []).filter(itemBlocked).length;
+}
 
 function onDragStart() {
   isDragging.value = true;
@@ -215,7 +255,22 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4">
+  <div class="space-y-3">
+    <div class="flex flex-wrap items-center justify-end gap-2">
+      <UIcon name="i-lucide-tags" class="size-3.5 text-slate-400" />
+      <span class="text-xs text-slate-500">{{ t("tasks.phaseLabel") }}</span>
+      <USelect v-model="phaseFilter" :items="phaseFilterItems" size="xs" class="w-40" />
+      <UIcon name="i-lucide-link-2" class="size-3.5 text-slate-400" />
+      <span class="text-xs text-slate-500">{{ t("tasks.dependencies") }}</span>
+      <USelect
+        v-model="blockedFilter"
+        :items="blockedFilterItems"
+        size="xs"
+        class="w-48"
+      />
+    </div>
+
+    <div class="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4">
     <div
       v-for="col in columns"
       :key="`${projectId}-${col.value}`"
@@ -226,6 +281,16 @@ onUnmounted(() => {
         <div class="flex items-center gap-1">
           <UBadge color="primary" variant="subtle" size="xs">
             {{ localColumns[col.value]?.length ?? 0 }}
+          </UBadge>
+          <UBadge
+            v-if="blockedCountIn(col.value)"
+            color="warning"
+            variant="subtle"
+            size="xs"
+            :title="t('tasks.blocked')"
+          >
+            <UIcon name="i-lucide-hourglass" class="size-3" />
+            {{ blockedCountIn(col.value) }}
           </UBadge>
           <UButton
             icon="i-lucide-plus"
@@ -273,8 +338,9 @@ onUnmounted(() => {
             @delete="handleDeleteSubtask(item.subtask)"
           />
         </div>
-      </VueDraggable>
-    </div>
+       </VueDraggable>
+     </div>
+   </div>
   </div>
 </template>
 

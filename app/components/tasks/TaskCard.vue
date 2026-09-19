@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Task } from "~/types";
+import { taskPhaseMeta } from "~/types";
 import { format, parseISO } from "date-fns";
 
 const props = defineProps<{
@@ -13,6 +14,7 @@ const cardContext = computed(() => ({
 }));
 
 const { display } = useTaskCardDisplay(() => props.task, cardContext);
+const { blockedBy } = useDependencyGraph();
 
 const emit = defineEmits<{
   click: [task: Task];
@@ -26,6 +28,13 @@ const { priorityMeta } = useTaskLabels();
 const { canManageMembers } = useWorkspace();
 
 const priority = computed(() => priorityMeta(props.task.priority));
+const phaseMeta = computed(() => taskPhaseMeta(props.task.phase));
+
+const blockedTasks = computed(() => blockedBy(props.task.id));
+const isBlocked = computed(() => blockedTasks.value.length > 0);
+const blockedTooltip = computed(() =>
+  t("tasks.blockedTooltip", { titles: blockedTasks.value.map((b) => b.title).join(", ") }),
+);
 
 const isPinned = computed(
   () => props.task.user_task_preferences?.some((p) => p.is_pinned) ?? false,
@@ -62,11 +71,21 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
 
 <template>
   <div
-    class="cursor-pointer rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md"
+    class="cursor-pointer rounded-lg border bg-white p-3 shadow-sm transition-shadow hover:shadow-md"
+    :class="isBlocked ? 'task-card--blocked' : 'border-slate-200'"
     @click="emit('click', task)"
   >
     <div class="mb-2 flex items-start justify-between gap-2">
-      <h4 class="text-sm font-medium text-slate-800 leading-snug">{{ task.title }}</h4>
+      <div class="flex min-w-0 items-start gap-1.5">
+        <UIcon
+          v-if="isBlocked"
+          name="i-lucide-hourglass"
+          class="mt-0.5 size-4 shrink-0 text-amber-500"
+          :title="blockedTooltip"
+          :aria-label="t('tasks.blockedBadge')"
+        />
+        <h4 class="text-sm font-medium text-slate-800 leading-snug">{{ task.title }}</h4>
+      </div>
       <div class="flex shrink-0 items-center gap-0.5">
         <UButton
           v-if="canManageMembers"
@@ -107,6 +126,16 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
     <div class="flex flex-wrap items-center gap-1.5">
       <UBadge :color="(priority?.color ?? 'neutral') as 'neutral'" variant="subtle" size="xs">
         {{ priority?.label }}
+      </UBadge>
+
+      <UBadge
+        v-if="display.showPhase && phaseMeta"
+        variant="subtle"
+        size="xs"
+        :style="{ backgroundColor: phaseMeta.color + '20', color: phaseMeta.color }"
+      >
+        <UIcon :name="phaseMeta.icon" class="size-3" />
+        {{ t(`tasks.phase.${phaseMeta.value}`) }}
       </UBadge>
 
       <span v-if="dueDateLabel" class="text-xs text-slate-500">
@@ -202,5 +231,19 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
         </span>
       </div>
     </div>
+
+    <div
+      v-if="isBlocked"
+      class="mt-2 flex items-center gap-1.5 border-t border-amber-200 pt-2 text-xs text-amber-600"
+    >
+      <UIcon name="i-lucide-hourglass" class="size-3.5 shrink-0" />
+      <span class="min-w-0 flex-1 truncate">{{ blockedTooltip }}</span>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.task-card--blocked {
+  border-color: #f59e0b;
+}
+</style>

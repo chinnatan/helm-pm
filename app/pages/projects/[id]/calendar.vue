@@ -32,6 +32,8 @@ const { tasks, fetchTasks } = useTasks(projectId);
 const { fetchWorkspace } = useWorkspace();
 
 const project = computed(() => getProject(projectId.value));
+const phaseFilter = ref<string>("all");
+const { phaseFilterItems } = useTaskLabels();
 const currentMonth = ref(new Date());
 const showModal = ref(false);
 const selectedTask = ref<Task | null>(null);
@@ -62,6 +64,13 @@ const monthLabel = computed(() =>
 
 function itemsForDay(day: Date): ProjectItem[] {
   return flattenProjectItems(tasks.value).filter((item) => {
+    if (
+      phaseFilter.value !== "all" &&
+      ((item.kind === "task" ? item.task.phase : item.parent.phase) ?? "none") !==
+        phaseFilter.value
+    ) {
+      return false;
+    }
     const due = projectItemDueDate(item);
     if (!due) return false;
     return isSameDay(parseISO(due), day);
@@ -135,6 +144,13 @@ const agendaDays = computed(() => {
       <UButton icon="i-lucide-chevron-left" variant="ghost" color="neutral" @click="currentMonth = subMonths(currentMonth, 1)" />
       <h2 class="text-base font-semibold sm:text-lg">{{ monthLabel }}</h2>
       <UButton icon="i-lucide-chevron-right" variant="ghost" color="neutral" @click="currentMonth = addMonths(currentMonth, 1)" />
+      <USelect
+        v-model="phaseFilter"
+        :items="phaseFilterItems"
+        size="sm"
+        class="ml-auto w-40"
+        :aria-label="t('tasks.phaseLabel')"
+      />
     </div>
 
     <div class="space-y-4 md:hidden">
