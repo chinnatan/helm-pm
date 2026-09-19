@@ -11,20 +11,20 @@
 ## Phase 1: Data Layer — Schema & Types
 
 ### Database Migration (029)
-- [ ] เพิ่ม `phase` column (TEXT, nullable) ใน `tasks` — ค่า: `requirements`, `analysis`, `design`, `development`, `testing`, `deployment`, `done`
-- [ ] เพิ่ม `phase` column (TEXT, nullable) ใน `milestones` — ค่าเดียวกัน
-- [ ] เพิ่ม `phase_order` column (INTEGER) ใน `tasks` — สำหรับจัดลำดับ phase ใน Kanban/Gantt
-- [ ] สร้าง function `check_circular_dependency()` ใน PostgreSQL — ป้องกัน circular dependency ระดับ DB (transitive)
-- [ ] เพิ่ม trigger `tasks_set_phase_order` — auto-set `phase_order` ตาม `phase` value
-- [ ] อัปเดต RLS policies สำหรับ columns ใหม่
+- [x] เพิ่ม `phase` column (TEXT, nullable) ใน `tasks` — ค่า: `requirements`, `analysis`, `design`, `development`, `testing`, `deployment`, `done`
+- [x] เพิ่ม `phase` column (TEXT, nullable) ใน `milestones` — ค่าเดียวกัน
+- [x] เพิ่ม `phase_order` column (INTEGER) ใน `tasks` — สำหรับจัดลำดับ phase ใน Kanban/Gantt
+- [x] สร้าง function `check_circular_dependency()` ใน PostgreSQL — ป้องกัน circular dependency ระดับ DB (transitive) + trigger `task_dependencies_check_circular`
+- [x] เพิ่ม trigger `tasks_set_phase_order` — auto-set `phase_order` ตาม `phase` value (function `set_task_phase_order()`)
+- [x] อัปเดต RLS policies สำหรับ columns ใหม่ — ไม่ต้องแก้ policies (เป็น row-based ไม่อ้างอิง column ครอบคลุม column ใหม่อัตโนมัติ — บันทึกไว้ท้าย migration 029)
 - [ ] **หมายเหตุ**: ใช้ `task_dependencies` table ที่มีอยู่แล้ว (task_id, depends_on_task_id) — ไม่ต้องเพิ่ม column ใหม่
 
 ### TypeScript Types & Constants
-- [ ] เพิ่ม `TaskPhase` type ใน `types/index.ts`
-- [ ] เพิ่ม `TASK_PHASE_VALUES` array พร้อม label + icon + color สำหรับแต่ละ phase
-- [ ] เพิ่ม `phase` field ใน `Task` interface
-- [ ] เพิ่ม `phase` field ใน `Milestone` interface
-- [ ] เพิ่ม `phase_order` field ใน `Task` interface
+- [x] เพิ่ม `TaskPhase` type ใน `types/index.ts`
+- [x] เพิ่ม `TASK_PHASE_VALUES` array พร้อม label + icon + color สำหรับแต่ละ phase (+ `TASK_PHASE_ORDER` map, `taskPhaseMeta()` helper)
+- [x] เพิ่ม `phase` field ใน `Task` interface
+- [x] เพิ่ม `phase` field ใน `Milestone` interface
+- [x] เพิ่ม `phase_order` field ใน `Task` interface
 - [ ] **หมายเหตุ**: `TaskDependency` interface มีอยู่แล้ว — ไม่ต้องแก้
 
 ---
