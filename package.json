@@ -10,6 +10,10 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:report": "vitest run --reporter=junit --outputFile=reports/junit.xml",
+    "test:e2e": "playwright test",
     "deploy": "nuxt build && wrangler pages deploy dist",
     "notifications:dev": "cd workers/notifications && bun run dev",
     "notifications:deploy": "cd workers/notifications && bun run deploy"
@@ -36,12 +40,14 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.1.8",
     "@types/dompurify": "^3.2.0",
     "@types/marked": "^6.0.0",
     "@types/node": "^22.15.21",
     "tailwindcss": "^4.1.8",
     "typescript": "^5.8.3",
+    "vitest": "^5.0.1",
     "vue-tsc": "^2.2.10",
     "wrangler": "^4.115.0"
   }

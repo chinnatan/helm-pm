@@ -73,6 +73,7 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
   <div
     class="cursor-pointer rounded-lg border bg-white p-3 shadow-sm transition-shadow hover:shadow-md"
     :class="isBlocked ? 'task-card--blocked' : 'border-slate-200'"
+    data-testid="task-card"
     @click="emit('click', task)"
   >
     <div class="mb-2 flex items-start justify-between gap-2">
@@ -84,7 +85,7 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
           :title="blockedTooltip"
           :aria-label="t('tasks.blockedBadge')"
         />
-        <h4 class="text-sm font-medium text-slate-800 leading-snug">{{ task.title }}</h4>
+        <h4 class="text-sm font-medium text-slate-800 leading-snug" data-testid="task-card-title">{{ task.title }}</h4>
       </div>
       <div class="flex shrink-0 items-center gap-0.5">
         <UButton
@@ -235,6 +236,7 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
     <div
       v-if="isBlocked"
       class="mt-2 flex items-center gap-1.5 border-t border-amber-200 pt-2 text-xs text-amber-600"
+      data-testid="blocked-badge"
     >
       <UIcon name="i-lucide-hourglass" class="size-3.5 shrink-0" />
       <span class="min-w-0 flex-1 truncate">{{ blockedTooltip }}</span>

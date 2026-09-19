@@ -676,7 +676,7 @@ watch(
         </UFormField>
 
         <UFormField :label="t('tasks.title')" required>
-          <UInput v-model="form.title" :placeholder="t('tasks.titlePlaceholder')" class="w-full" />
+          <UInput v-model="form.title" :placeholder="t('tasks.titlePlaceholder')" class="w-full" data-testid="task-title" />
         </UFormField>
 
         <UFormField :label="t('tasks.description')">
@@ -1024,9 +1024,10 @@ watch(
                   icon: 'i-lucide-search',
                 }"
                 class="mt-2 w-full"
+                data-testid="dep-select"
                 @update:model-value="handleAddDependency"
               />
-              <p v-if="depError" class="mt-1 text-xs text-red-500">{{ depError }}</p>
+              <p v-if="depError" class="mt-1 text-xs text-red-500" data-testid="dep-error">{{ depError }}</p>
             </div>
 
             <div>
@@ -1105,6 +1106,7 @@ watch(
           color="error"
           :loading="deleting"
           :disabled="saving"
+          data-testid="task-delete"
           @click="handleDelete"
         >
           {{ t("tasks.delete") }}
@@ -1114,7 +1116,7 @@ watch(
           <UButton variant="ghost" color="neutral" @click="emit('update:open', false)">
             {{ t("common.cancel") }}
           </UButton>
-          <UButton :loading="saving" :disabled="!form.title || deleting" @click="save">
+          <UButton :loading="saving" :disabled="!form.title || deleting" data-testid="task-save" @click="save">
             {{ isEdit ? t("common.save") : t("common.create") }}
           </UButton>
         </div>

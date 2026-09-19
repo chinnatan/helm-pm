@@ -95,7 +95,7 @@ async function onSaved() {
   <div class="p-4 md:p-6">
     <LayoutProjectHeader v-if="project" :project="project">
       <template #actions>
-        <UButton icon="i-lucide-plus" size="sm" class="shrink-0" @click="openNewTask()">
+        <UButton icon="i-lucide-plus" size="sm" class="shrink-0" data-testid="add-task" @click="openNewTask()">
           {{ t("projects.addTask") }}
         </UButton>
       </template>

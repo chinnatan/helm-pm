@@ -23,3 +23,11 @@ package-lock.json
 # Wrangler
 .wrangler
 .dev.vars
+
+# Test reports
+reports/
+
+# Playwright E2E
+test-results/
+playwright-report/
+tests/e2e/.auth/

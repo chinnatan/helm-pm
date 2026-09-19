@@ -254,13 +254,14 @@
 
 ## Phase 6: Review & Quality Assurance
 
-> **Automated testing**: setup ตาม `sub-plan-automated-testing.md` (vitest + unit tests ของ dependency graph / phase helpers) — ข้อที่ติด [auto] รันด้วย `bun run test`, ข้อ [manual] คงทดสอบด้วยมือ
+> **Automated testing**: unit = `sub-plan-automated-testing.md` (`bun run test`), e2e = `sub-plan-e2e-testing.md` (`bun run test:e2e`) — ข้อ [auto] รันอัตโนมัติ, ข้อ [manual] คงทดสอบด้วยมือ
 
-- [ ] รัน `bun run typecheck` + `bun run test` (vitest) เพื่อตรวจสอบ code quality — ไม่มี script `lint` ใน repo จึงใช้ typecheck แทน
-- [ ] ออก test report ด้วย `bun run test:report` → `reports/junit.xml` (JUnit XML — เปิดใน CI/IDE, ดูวิธีใน `sub-plan-automated-testing.md`)
-- [ ] [auto] ทดสอบ circular dependency detection (self / direct A↔B / transitive A→B→C→A / DAG ไม่ false positive) — vitest unit test
-- [ ] [auto] ทดสอบ blocked status (`blockedBy`/`isBlocked` กับ dep ที่ closed vs เปิดอยู่) และ phase helpers (`TASK_PHASE_ORDER`, `taskPhaseMeta`) — vitest unit test
-- [ ] [manual] ทดสอบการสร้าง/แก้ไข/ลบ task พร้อม dependency (UI + Gantt arrows) — e2e ยังไม่ตั้ง, ทดสอบมือจนกว่า Phase 3–5 จบ
+- [x] รัน `bun run typecheck` + `bun run test` (vitest) เพื่อตรวจสอบ code quality — ไม่มี script `lint` ใน repo จึงใช้ typecheck แทน (typecheck เขียว, unit 20/20, e2e 8/8 ณ ปิดงาน automated testing)
+- [x] ออก test report ด้วย `bun run test:report` → `reports/junit.xml` (JUnit XML — เปิดใน CI/IDE, ดูวิธีใน `sub-plan-automated-testing.md`)
+- [x] [auto] ทดสอบ circular dependency detection (self / direct A↔B / transitive A→B→C→A / DAG ไม่ false positive) — vitest unit test + e2e cycle guard ผ่าน UI
+- [x] [auto] ทดสอบ blocked status (`blockedBy`/`isBlocked` กับ dep ที่ closed vs เปิดอยู่) และ phase helpers (`TASK_PHASE_ORDER`, `taskPhaseMeta`) — vitest unit test
+- [x] [auto] สร้าง/แก้ไข/ลบ task + เพิ่ม dependency + blocked badge + cycle error ผ่าน UI — Playwright e2e (`bun run test:e2e`)
+- [ ] [manual] ตรวจ Gantt arrows แบบ visual — e2e ยังไม่ assert ตำแหน่งลูกศร (deferred ใน `sub-plan-e2e-testing.md`)
 - [ ] [manual] ทดสอบ phase grouping ใน Gantt
 - [ ] [manual] ทดสอบ cross-client dashboard กับข้อมูลหลายลูกค้า
 - [ ] [manual] ทดสอบ responsive (mobile/desktop)
