@@ -257,7 +257,6 @@
 - [ ] [manual] ทดสอบ cross-client dashboard กับข้อมูลหลายลูกค้า
 - [ ] [manual] ทดสอบ responsive (mobile/desktop)
 - [ ] [manual] ทดสอบ DB trigger `check_circular_dependency()` ผ่าน `supabase db reset` local
-- [ ] รัน `/review-qms` เมื่องานแตะ architecture หรือ conventions
 
 ---
 
