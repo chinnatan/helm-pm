@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { JobRole, Subtask, Task, TaskStatus, TaskPriority } from "~/types";
 import { PRIORITY_DEFAULT_HOURS, isTaskClosed } from "~/types";
+import { format, parseISO } from "date-fns";
 import { VueDraggable } from "vue-draggable-plus";
 
 const props = defineProps<{
@@ -17,7 +18,7 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
-const { toLocaleString } = useDateLocale();
+const { toLocaleString, dateFnsLocale } = useDateLocale();
 const { statuses, priorities } = useTaskLabels();
 const {
   tasks,
@@ -233,6 +234,27 @@ function resetNewSubtask() {
   newSubtask.estimate_hours = "";
 }
 
+const newSubtaskMore = ref(false);
+const showSubtaskDetail = ref(false);
+const detailSubtask = ref<Subtask | null>(null);
+
+function subtaskDateShort(iso: string | null | undefined) {
+  if (!iso) return null;
+  return format(parseISO(iso), "d MMM", { locale: dateFnsLocale.value });
+}
+
+function openSubtaskDetail(sub: Subtask) {
+  detailSubtask.value = sub;
+  showSubtaskDetail.value = true;
+}
+
+async function renameSubtask(sub: Subtask, raw: string) {
+  const title = raw.trim();
+  if (!title || title === sub.title) return;
+  await updateSubtask(sub.id, { title });
+  syncSortedSubtasks();
+}
+
 watch(
   () => props.open,
   (open) => {
@@ -240,6 +262,7 @@ watch(
 
     activeTab.value = "details";
     resetNewSubtask();
+    newSubtaskMore.value = false;
 
     // Hydrate immediately so edit doesn't flash as "new task"
     if (props.task) {
@@ -355,17 +378,36 @@ const defaultEstimateHours = computed(
 );
 
 async function handleAddSubtask() {
-  if (!props.task || !newSubtask.title.trim()) return;
-  await addSubtask(props.task.id, newSubtask.title.trim(), {
+  if (!props.task) return;
+  const titles = newSubtask.title
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (!titles.length) return;
+
+  const opts = {
     assignee_id: newSubtask.assignee_id,
     tester_id: newSubtask.tester_id,
     start_date: newSubtask.start_date || null,
     due_date: newSubtask.due_date || null,
     estimate_hours: parseEstimate(newSubtask.estimate_hours),
-  });
-  resetNewSubtask();
+  };
+  for (const title of titles) {
+    await addSubtask(props.task.id, title, opts);
+  }
+
+  // คง field อื่นไว้เพื่อกรอกต่อเนื่อง ล้างเฉพาะ title
+  newSubtask.title = "";
   syncSortedSubtasks();
   scheduleCapacityAlerts({ projects: projects.value });
+}
+
+function onNewSubtaskPaste(event: ClipboardEvent) {
+  const text = event.clipboardData?.getData("text/plain") ?? "";
+  if (!text.includes("\n")) return;
+  event.preventDefault();
+  newSubtask.title = text;
+  void handleAddSubtask();
 }
 
 async function onSubtaskAssignee(sub: Subtask, value: string | null) {
@@ -697,40 +739,69 @@ watch(
         </div>
 
         <UFormField v-if="isEdit && task" :label="t('tasks.subtasks')">
-          <div class="space-y-3">
+          <div class="space-y-1.5">
             <VueDraggable
               v-model="sortedSubtasks"
               handle=".subtask-drag-handle"
               :animation="150"
-              class="space-y-3"
+              class="space-y-1.5"
               @end="onSubtasksReorder"
             >
               <div
                 v-for="sub in sortedSubtasks"
                 :key="sub.id"
-                class="rounded-lg border border-slate-200 bg-slate-50/80 p-2.5"
+                class="flex items-start gap-1.5 rounded-lg border border-slate-200 bg-white px-2 py-1.5 hover:border-slate-300"
               >
-                <div class="flex items-start gap-2">
-                  <button
-                    type="button"
-                    class="subtask-drag-handle mt-1.5 shrink-0 cursor-grab text-slate-400 hover:text-slate-600 active:cursor-grabbing"
-                    :aria-label="t('tasks.reorderSubtask')"
-                  >
-                    <UIcon name="i-lucide-grip-vertical" class="size-4" />
-                  </button>
-                  <UCheckbox
-                    class="mt-1.5"
-                    :model-value="sub.completed"
-                    @update:model-value="(v) => toggleSubtask(sub.id, !!v)"
+                <button
+                  type="button"
+                  class="subtask-drag-handle mt-1 shrink-0 cursor-grab text-slate-300 hover:text-slate-600 active:cursor-grabbing"
+                  :aria-label="t('tasks.reorderSubtask')"
+                >
+                  <UIcon name="i-lucide-grip-vertical" class="size-4" />
+                </button>
+                <UCheckbox
+                  class="mt-1"
+                  :model-value="sub.completed"
+                  @update:model-value="(v) => toggleSubtask(sub.id, !!v)"
+                />
+                <div class="min-w-0 flex-1">
+                  <input
+                    :value="sub.title"
+                    type="text"
+                    class="w-full truncate rounded bg-transparent text-sm outline-none hover:bg-slate-50 focus:bg-slate-50 focus:ring-1 focus:ring-slate-200"
+                    :class="sub.completed ? 'text-slate-400 line-through' : 'text-slate-700'"
+                    :aria-label="t('tasks.renameSubtask')"
+                    @change="
+                      (e: Event) => renameSubtask(sub, (e.target as HTMLInputElement).value)
+                    "
+                    @keyup.enter="(e: KeyboardEvent) => (e.target as HTMLInputElement).blur()"
                   />
-                  <div class="min-w-0 flex-1 space-y-2">
-                    <span
-                      class="block text-sm"
-                      :class="sub.completed ? 'line-through text-slate-400' : 'text-slate-700'"
-                    >
-                      {{ sub.title }}
+                  <div
+                    v-if="sub.profiles || sub.due_date || sub.estimate_hours != null"
+                    class="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] text-slate-400"
+                  >
+                    <span v-if="sub.profiles" class="flex items-center gap-1">
+                      <UIcon name="i-lucide-user" class="size-3" />
+                      {{ sub.profiles.full_name || sub.profiles.email }}
                     </span>
-                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <span v-if="sub.due_date" class="flex items-center gap-1">
+                      <UIcon name="i-lucide-calendar" class="size-3" />
+                      {{ subtaskDateShort(sub.due_date) }}
+                    </span>
+                    <span v-if="sub.estimate_hours != null">{{ sub.estimate_hours }}h</span>
+                  </div>
+                </div>
+                <UPopover>
+                  <UButton
+                    icon="i-lucide-sliders-horizontal"
+                    variant="ghost"
+                    color="neutral"
+                    size="xs"
+                    class="mt-0.5 shrink-0"
+                    :aria-label="t('tasks.subtaskMoreOptions')"
+                  />
+                  <template #content>
+                    <div class="w-64 space-y-2 p-3">
                       <USelect
                         :model-value="sub.assignee_id"
                         :items="developerItems"
@@ -775,28 +846,38 @@ watch(
                         "
                       />
                     </div>
-                  </div>
-                  <UButton
-                    icon="i-lucide-trash-2"
-                    variant="ghost"
-                    color="error"
-                    size="xs"
-                    class="mt-1 shrink-0"
-                    :aria-label="t('tasks.deleteSubtask')"
-                    @click="handleDeleteSubtask(sub)"
-                  />
-                </div>
+                  </template>
+                </UPopover>
+                <UButton
+                  icon="i-lucide-maximize-2"
+                  variant="ghost"
+                  color="neutral"
+                  size="xs"
+                  class="mt-0.5 shrink-0"
+                  :aria-label="t('tasks.editSubtask')"
+                  @click="openSubtaskDetail(sub)"
+                />
+                <UButton
+                  icon="i-lucide-trash-2"
+                  variant="ghost"
+                  color="error"
+                  size="xs"
+                  class="mt-0.5 shrink-0"
+                  :aria-label="t('tasks.deleteSubtask')"
+                  @click="handleDeleteSubtask(sub)"
+                />
               </div>
             </VueDraggable>
 
-            <div class="space-y-2 rounded-lg border border-dashed border-slate-300 p-2.5">
+            <div class="space-y-2 rounded-lg border border-dashed border-slate-300 p-2">
               <UInput
                 v-model="newSubtask.title"
                 :placeholder="t('tasks.addSubtask')"
                 class="w-full"
                 @keyup.enter="handleAddSubtask"
+                @paste="onNewSubtaskPaste"
               />
-              <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div v-if="newSubtaskMore" class="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <USelect
                   v-model="newSubtask.assignee_id"
                   :items="developerItems"
@@ -823,9 +904,24 @@ watch(
                   :placeholder="t('tasks.estimateHoursPlaceholder')"
                 />
               </div>
-              <UButton size="sm" :disabled="!newSubtask.title.trim()" @click="handleAddSubtask">
-                {{ t("common.add") }}
-              </UButton>
+              <div class="flex items-center gap-2">
+                <UButton
+                  size="sm"
+                  icon="i-lucide-plus"
+                  :disabled="!newSubtask.title.trim()"
+                  @click="handleAddSubtask"
+                >
+                  {{ t("common.add") }}
+                </UButton>
+                <UButton
+                  size="xs"
+                  variant="link"
+                  color="neutral"
+                  :label="newSubtaskMore ? t('tasks.hideDetails') : t('tasks.showDetails')"
+                  @click="newSubtaskMore = !newSubtaskMore"
+                />
+              </div>
+              <p class="text-[11px] text-slate-400">{{ t("tasks.subtaskBulkHint") }}</p>
             </div>
           </div>
         </UFormField>
@@ -980,4 +1076,12 @@ watch(
       </div>
     </template>
   </UModal>
+
+  <TasksSubtaskModal
+    :subtask="detailSubtask"
+    :parent="task ?? null"
+    :open="showSubtaskDetail"
+    @update:open="showSubtaskDetail = $event"
+    @saved="syncSortedSubtasks"
+  />
 </template>
