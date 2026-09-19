@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { JobRole, Subtask, Task, TaskStatus, TaskPriority } from "~/types";
-import { PRIORITY_DEFAULT_HOURS } from "~/types";
+import { PRIORITY_DEFAULT_HOURS, isTaskClosed } from "~/types";
 import { VueDraggable } from "vue-draggable-plus";
 
 const props = defineProps<{
@@ -41,6 +41,13 @@ const { milestones, fetchMilestones } = useMilestones(projectIdRef);
 const { customers, fetchCustomers } = useCustomers();
 const { getProject, fetchProjects, projects } = useProjects();
 const { scheduleCapacityAlerts } = useCapacityAlerts();
+const {
+  addDependency,
+  removeDependency,
+  getDependsOn,
+  getBlocks,
+  wouldCreateCycle,
+} = useDependencies(projectIdRef);
 
 const form = reactive({
   title: "",
@@ -498,6 +505,59 @@ const customerItems = computed(() => [
     .filter((c) => c.status === "active")
     .map((c) => ({ label: formatCustomerLabel(c), value: c.id })),
 ]);
+
+const newDependency = ref<string | undefined>(undefined);
+const depError = ref<string | null>(null);
+
+const dependsOnList = computed(() => {
+  const id = props.task?.id;
+  if (!id) return [];
+  return getDependsOn(id)
+    .map((d) => ({ depId: d.id, task: tasks.value.find((t) => t.id === d.depends_on_task_id) }))
+    .filter((x): x is { depId: string; task: Task } => !!x.task);
+});
+
+const blocksList = computed(() => {
+  const id = props.task?.id;
+  if (!id) return [];
+  return getBlocks(id)
+    .map((d) => tasks.value.find((t) => t.id === d.task_id))
+    .filter((t): t is Task => !!t);
+});
+
+const dependencyOptions = computed(() => {
+  const id = props.task?.id;
+  const selected = new Set(dependsOnList.value.map((d) => d.task.id));
+  return tasks.value
+    .filter((t) => t.id !== id && !selected.has(t.id) && !isTaskClosed(t.status))
+    .map((t) => ({ label: t.title, value: t.id }));
+});
+
+async function handleAddDependency(value?: string | null) {
+  if (!props.task || !value) return;
+  depError.value = null;
+  if (wouldCreateCycle(props.task.id, value)) {
+    depError.value = t("tasks.depErrCircular");
+    newDependency.value = undefined;
+    return;
+  }
+  const { error } = await addDependency(props.task.id, value);
+  if (error) depError.value = error;
+  newDependency.value = undefined;
+}
+
+async function handleRemoveDependency(depId: string) {
+  depError.value = null;
+  await removeDependency(depId);
+}
+
+watch(
+  () => props.task?.id,
+  () => {
+    newDependency.value = undefined;
+    depError.value = null;
+  },
+);
 </script>
 
 <template>
@@ -766,6 +826,85 @@ const customerItems = computed(() => [
               <UButton size="sm" :disabled="!newSubtask.title.trim()" @click="handleAddSubtask">
                 {{ t("common.add") }}
               </UButton>
+            </div>
+          </div>
+        </UFormField>
+
+        <UFormField v-if="isEdit && task" :label="t('tasks.dependencies')">
+          <div class="space-y-3">
+            <div>
+              <p class="mb-1.5 text-xs font-medium text-slate-500">
+                {{ t("tasks.dependsOn") }}
+              </p>
+              <div v-if="dependsOnList.length" class="flex flex-col gap-1.5">
+                <div
+                  v-for="d in dependsOnList"
+                  :key="d.depId"
+                  class="flex items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5"
+                >
+                  <div class="flex min-w-0 items-center gap-2">
+                    <UIcon
+                      :name="
+                        isTaskClosed(d.task.status)
+                          ? 'i-lucide-circle-check'
+                          : 'i-lucide-clock'
+                      "
+                      class="size-4 shrink-0"
+                      :class="isTaskClosed(d.task.status) ? 'text-green-500' : 'text-amber-500'"
+                    />
+                    <span class="truncate text-sm text-slate-700">{{ d.task.title }}</span>
+                    <span class="shrink-0 text-[11px] text-slate-400">
+                      {{
+                        isTaskClosed(d.task.status)
+                          ? t("tasks.dependencyStatusDone")
+                          : t("tasks.dependencyStatusOpen")
+                      }}
+                    </span>
+                  </div>
+                  <UButton
+                    icon="i-lucide-x"
+                    variant="ghost"
+                    color="neutral"
+                    size="xs"
+                    :aria-label="t('common.delete')"
+                    @click="handleRemoveDependency(d.depId)"
+                  />
+                </div>
+              </div>
+              <p v-else class="text-xs text-slate-400">{{ t("tasks.dependenciesHint") }}</p>
+
+              <USelectMenu
+                v-model="newDependency"
+                :items="dependencyOptions"
+                value-key="value"
+                :placeholder="t('tasks.addDependency')"
+                :search-input="{
+                  placeholder: t('tasks.addDependency'),
+                  icon: 'i-lucide-search',
+                }"
+                class="mt-2 w-full"
+                @update:model-value="handleAddDependency"
+              />
+              <p v-if="depError" class="mt-1 text-xs text-red-500">{{ depError }}</p>
+            </div>
+
+            <div>
+              <p class="mb-1.5 text-xs font-medium text-slate-500">{{ t("tasks.blocks") }}</p>
+              <div v-if="blocksList.length" class="flex flex-col gap-1.5">
+                <div
+                  v-for="b in blocksList"
+                  :key="b.id"
+                  class="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 py-1.5"
+                >
+                  <UIcon
+                    :name="isTaskClosed(b.status) ? 'i-lucide-circle-check' : 'i-lucide-clock'"
+                    class="size-4 shrink-0"
+                    :class="isTaskClosed(b.status) ? 'text-green-500' : 'text-amber-500'"
+                  />
+                  <span class="truncate text-sm text-slate-700">{{ b.title }}</span>
+                </div>
+              </div>
+              <p v-else class="text-xs text-slate-400">{{ t("tasks.noDependencies") }}</p>
             </div>
           </div>
         </UFormField>

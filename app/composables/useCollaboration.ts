@@ -1,4 +1,5 @@
-import type { Comment, Milestone, MilestoneStatus, TaskDependency, Notification, Attachment } from "~/types";
+import type { Comment, Milestone, MilestoneStatus, Task, TaskDependency, Notification, Attachment } from "~/types";
+import { isTaskClosed } from "~/types";
 
 export function useComments(
   taskId: Ref<string | undefined>,
@@ -166,12 +167,88 @@ export function useMilestones(projectId: Ref<string | undefined>) {
   return { milestones, fetchMilestones, createMilestone, updateMilestone, deleteMilestone };
 }
 
+/**
+ * Read-only view over shared task + dependency state.
+ * Used by TaskCard / KanbanBoard to compute blocked status without re-fetching.
+ * Requires useTasks() + useDependencies() to have populated the shared state.
+ */
+export function useDependencyGraph() {
+  const tasks = useState<Task[]>("tasks", () => []);
+  const dependencies = useState<TaskDependency[]>("taskDependencies", () => []);
+
+  const taskById = computed(() => new Map(tasks.value.map((t) => [t.id, t])));
+
+  // outgoing: tasks this task waits on
+  function getDependsOn(taskId: string) {
+    return dependencies.value.filter((d) => d.task_id === taskId);
+  }
+
+  // incoming: tasks waiting on this task
+  function getBlocks(taskId: string) {
+    return dependencies.value.filter((d) => d.depends_on_task_id === taskId);
+  }
+
+  // BFS: adding `taskId` depends on `dependsOnTaskId` creates a cycle if
+  // `dependsOnTaskId` already (transitively) depends on `taskId`.
+  // ponytail: O(V+E) scan per check, fine for project-sized graphs — revisit if a project hits thousands of deps.
+  function wouldCreateCycle(taskId: string, dependsOnTaskId: string) {
+    if (taskId === dependsOnTaskId) return true;
+    const queue = [dependsOnTaskId];
+    const seen = new Set<string>();
+    while (queue.length > 0) {
+      const cur = queue.shift() as string;
+      if (cur === taskId) return true;
+      if (seen.has(cur)) continue;
+      seen.add(cur);
+      for (const d of dependencies.value) {
+        if (d.task_id === cur) queue.push(d.depends_on_task_id);
+      }
+    }
+    return false;
+  }
+
+  function isTaskClosedById(taskId: string) {
+    const t = taskById.value.get(taskId);
+    return t ? isTaskClosed(t.status) : false;
+  }
+
+  // list of open prerequisite tasks currently blocking `taskId`
+  function blockedBy(taskId: string): Task[] {
+    return getDependsOn(taskId)
+      .map((d) => taskById.value.get(d.depends_on_task_id))
+      .filter((t): t is Task => !!t && !isTaskClosed(t.status));
+  }
+
+  function isBlocked(taskId: string) {
+    return blockedBy(taskId).length > 0;
+  }
+
+  return {
+    tasks,
+    dependencies,
+    taskById,
+    getDependsOn,
+    getBlocks,
+    wouldCreateCycle,
+    isTaskClosedById,
+    blockedBy,
+    isBlocked,
+  };
+}
+
+export type DependencyErrorCode = "self" | "closed" | "circular";
+
 export function useDependencies(projectId: Ref<string | undefined>) {
   const supabase = useSupabaseClient();
-  const dependencies = ref<TaskDependency[]>([]);
+  const { t } = useI18n();
+  const graph = useDependencyGraph();
+  const dependencies = graph.dependencies;
 
   async function fetchDependencies() {
-    if (!projectId.value) return;
+    if (!projectId.value) {
+      dependencies.value = [];
+      return;
+    }
 
     const { data: projectTasks } = await supabase
       .from("tasks")
@@ -179,8 +256,12 @@ export function useDependencies(projectId: Ref<string | undefined>) {
       .eq("project_id", projectId.value);
 
     const taskIds = (projectTasks ?? []).map((t) => t.id);
-    if (taskIds.length === 0) return;
+    if (taskIds.length === 0) {
+      dependencies.value = [];
+      return;
+    }
 
+    // every dep row has its task_id within the project, so one query covers both directions
     const { data } = await supabase
       .from("task_dependencies")
       .select("*")
@@ -191,18 +272,13 @@ export function useDependencies(projectId: Ref<string | undefined>) {
 
   async function addDependency(taskId: string, dependsOnTaskId: string) {
     if (taskId === dependsOnTaskId) {
-      return { error: "A task cannot depend on itself" };
+      return { error: t("tasks.depErrSelf"), code: "self" as DependencyErrorCode };
     }
-
-    // Check for circular dependency
-    const { data: existing } = await supabase
-      .from("task_dependencies")
-      .select("*")
-      .eq("task_id", dependsOnTaskId)
-      .eq("depends_on_task_id", taskId);
-
-    if (existing && existing.length > 0) {
-      return { error: "Circular dependency detected" };
+    if (graph.isTaskClosedById(dependsOnTaskId)) {
+      return { error: t("tasks.depErrClosed"), code: "closed" as DependencyErrorCode };
+    }
+    if (graph.wouldCreateCycle(taskId, dependsOnTaskId)) {
+      return { error: t("tasks.depErrCircular"), code: "circular" as DependencyErrorCode };
     }
 
     const { error } = await supabase
@@ -220,7 +296,18 @@ export function useDependencies(projectId: Ref<string | undefined>) {
 
   watch(projectId, fetchDependencies, { immediate: true });
 
-  return { dependencies, fetchDependencies, addDependency, removeDependency };
+  return {
+    dependencies,
+    fetchDependencies,
+    addDependency,
+    removeDependency,
+    getDependsOn: graph.getDependsOn,
+    getBlocks: graph.getBlocks,
+    wouldCreateCycle: graph.wouldCreateCycle,
+    isTaskClosedById: graph.isTaskClosedById,
+    blockedBy: graph.blockedBy,
+    isBlocked: graph.isBlocked,
+  };
 }
 
 /** Shared realtime channel — NotificationBell remounts between desktop/mobile layout. */

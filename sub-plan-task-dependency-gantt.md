@@ -36,59 +36,59 @@
 **หลักการ**: มีแค่ "Depends on" field เดียว (ไม่ต้องเลือก direction) + Visual indicator
 
 #### 2.1 "Depends On" Section ใน TaskModal
-- [ ] เพิ่ม "Dependencies" section ใน details tab (ไม่ใช่ tab ใหม่)
-- [ ] แสดงเป็น multi-select dropdown: "งานที่ต้องทำก่อน" (Depends on)
-- [ ] แสดงรายการ tasks ที่เลือกแล้วเป็น chips/tags พร้อมปุ่มลบ
-- [ ] แสดงสถานะของแต่ละ dependency:
+- [x] เพิ่ม "Dependencies" section ใน details tab (ไม่ใช่ tab ใหม่)
+- [x] แสดงเป็น multi-select dropdown: "งานที่ต้องทำก่อน" (Depends on)
+- [x] แสดงรายการ tasks ที่เลือกแล้วเป็น chips/tags พร้อมปุ่มลบ
+- [x] แสดงสถานะของแต่ละ dependency:
   - ✅ = งานนั้น done แล้ว (ไม่ block)
   - ⏳ = งานนั้นยังไม่ done (block อยู่)
-- [ ] เชื่อม `useDependencies()` composable กับ TaskModal
+- [x] เชื่อม `useDependencies()` composable กับ TaskModal
 
 #### 2.2 Visual Blocked Indicator (บน TaskCard / Kanban)
-- [ ] เพิ่ม computed `isBlocked` ใน TaskCard — check ว่ามี incoming dependency ที่ยังไม่ done
-- [ ] แสดง blocked badge (⏳ icon) บน card header
-- [ ] แสดง tooltip: "รอ: [task title]" (แสดงงานที่ block อยู่)
-- [ ] เพิ่ม CSS: `.task-card--blocked` (border สีแดง/ส้ม)
+- [x] เพิ่ม computed `isBlocked` ใน TaskCard — check ว่ามี incoming dependency ที่ยังไม่ done
+- [x] แสดง blocked badge (⏳ icon) บน card header
+- [x] แสดง tooltip: "รอ: [task title]" (แสดงงานที่ block อยู่)
+- [x] เพิ่ม CSS: `.task-card--blocked` (border สีแดง/ส้ม)
 
 #### 2.3 Dependency Info ใน Task Detail
-- [ ] แสดง "Depends on" list ใน task detail (sidebar หรือ section)
-- [ ] แสดง "Blocks" list (งานที่งานนี้ block) — computed จาก reverse lookup
-- [ ] แสดงสถานะแต่ละ dependency (done/not done)
+- [x] แสดง "Depends on" list ใน task detail (sidebar หรือ section)
+- [x] แสดง "Blocks" list (งานที่งานนี้ block) — computed จาก reverse lookup
+- [x] แสดงสถานะแต่ละ dependency (done/not done)
 
 #### 2.4 Data Layer Updates
-- [ ] ปรับปรุง `useDependencies()` composable:
+- [x] ปรับปรุง `useDependencies()` composable:
   - `addDependency(taskId, dependsOnTaskId)` — เพิ่ม dependency (งานนี้ depends on งาน kia)
   - `removeDependency(id)` — ลบ dependency
   - `getDependsOn(taskId)` — งานที่งานนี้ depends on (outgoing)
   - `getBlocks(taskId)` — งานที่งานนี้ blocks (incoming, reverse lookup)
   - `isBlocked(taskId)` — check ว่าถูก block โดยงานที่ยังไม่ done
-- [ ] เพิ่ม transitive circular detection (BFS/DFS)
-- [ ] เพิ่ม validation: ไม่ให้ depends on งานที่ closed แล้ว (done/release/cancelled)
+- [x] เพิ่ม transitive circular detection (BFS/DFS)
+- [x] เพิ่ม validation: ไม่ให้ depends on งานที่ closed แล้ว (done/release/cancelled)
 
 ### TaskModal — Dependencies Section Implementation
-- [ ] สร้าง "Dependencies" section ใน details tab (ด้านล่าง subtasks)
-- [ ] แสดง "Depends on" multi-select dropdown
-- [ ] แสดง chips ของ tasks ที่เลือก พร้อม status icon (✅/⏳)
-- [ ] แสดง "Blocks" section (งานที่งานนี้ block) — read-only
-- [ ] Real-time validation feedback (circular, closed task)
-- [ ] Empty state: "ไม่มีการพึ่งพากัน" + hint
+- [x] สร้าง "Dependencies" section ใน details tab (ด้านล่าง subtasks)
+- [x] แสดง "Depends on" multi-select dropdown
+- [x] แสดง chips ของ tasks ที่เลือก พร้อม status icon (✅/⏳)
+- [x] แสดง "Blocks" section (งานที่งานนี้ block) — read-only
+- [x] Real-time validation feedback (circular, closed task)
+- [x] Empty state: "ไม่มีการพึ่งพากัน" + hint
 
 ### TaskCard — Blocked Indicator
-- [ ] เพิ่ม computed `isBlocked` ใน TaskCard
-- [ ] แสดง blocked badge (⏳) บน card header เมื่อถูก block
-- [ ] แสดง tooltip: "รอ: [task title]"
-- [ ] เพิ่ม CSS: `.task-card--blocked` (border สีส้ม/แดง)
+- [x] เพิ่ม computed `isBlocked` ใน TaskCard
+- [x] แสดง blocked badge (⏳) บน card header เมื่อถูก block
+- [x] แสดง tooltip: "รอ: [task title]"
+- [x] เพิ่ม CSS: `.task-card--blocked` (border สีส้ม/แดง)
 
 ### Kanban Board — Blocked Tasks Visual
-- [ ] เพิ่ม filter option: "ซ่อนงานที่ถูก block" / "แสดงเฉพาะงานที่ถูก block"
-- [ ] แสดง blocked count ใน column header
-- [ ] Sort option: blocked tasks ไปท้าย column
+- [x] เพิ่ม filter option: "ซ่อนงานที่ถูก block" / "แสดงเฉพาะงานที่ถูก block"
+- [x] แสดง blocked count ใน column header
+- [x] Sort option: blocked tasks ไปท้าย column
 
 ### Dependency Validation
-- [ ] ปรับปรุง `addDependency()` ใน `useCollaboration.ts`:
+- [x] ปรับปรุง `addDependency()` ใน `useCollaboration.ts`:
   - Transitive circular detection (BFS)
   - Closed task check
-- [ ] แสดง error/warning messages ที่ชัดเจน
+- [x] แสดง error/warning messages ที่ชัดเจน
 
 ---
 
