@@ -1,4 +1,4 @@
-# PLAND.md — Helm PM Feature Map & Roadmap
+# PLAN.md — Helm PM Feature Map & Roadmap
 
 > ระบบ Project Management สำหรับทีมเล็ก — **steer the ship**
 
@@ -42,8 +42,12 @@
 ### 5. Tasks (งาน)
 | ฟีเจอร์ | รายละเอียด |
 |---------|-------------|
-| Task CRUD | สร้าง/แก้ไข/ลบงาน พร้อม title, description (rich-text), priority, status |
+| Task CRUD | สร้าง/แก้ไข/ลบงาน พร้อม title, description (rich-text), priority, status — ฟอร์ม split layout ซ้าย-ขวาแบบ Jira → [sub-plan-task-form-jira-split-layout.md](./plans/sub-plan-task-form-jira-split-layout.md) |
 | Task Statuses | backlog → todo → in_progress → ready_for_test → testing → done → release / cancelled |
+| SDLC Phase | requirements → analysis → design → development → testing → deployment → done (phase_order อัตโนมัติจาก DB trigger, badge + filter ทุก view) → [sub-plan-task-dependency-gantt.md](./plans/sub-plan-task-dependency-gantt.md) (Phase 1, 5) |
+| Task Dependencies | กำหนดงานที่ต้องทำก่อน-หลัง, blocked badge + tooltip, transitive cycle detection (UI + DB trigger) → [sub-plan-task-dependency-gantt.md](./plans/sub-plan-task-dependency-gantt.md) (Phase 2) |
+| Filters & Bulk Actions | กรอง list ตาม label / milestone / due date + เลือกหลายงานแก้ status, priority, assignee, tester, labels หรือลบพร้อมกัน → [sub-plan-task-filters-bulk-actions-templates.md](./plans/sub-plan-task-filters-bulk-actions-templates.md) (Phase 1–2) |
+| Task Templates | บันทึกงานจริงเป็น template (migration 030) + เรียกใช้ prefill ตอนสร้างงานใหม่ → [sub-plan-task-filters-bulk-actions-templates.md](./plans/sub-plan-task-filters-bulk-actions-templates.md) (Phase 3–4) |
 | Task Priority | low / medium / high / urgent |
 | Assignee + Tester | มอบหมายผู้พัฒนา + ผู้ทดสอบ |
 | Milestones | ผูกงานกับ milestone (date range + status) |
@@ -54,17 +58,17 @@
 | Comments | แสดงความคิดเห็น (rich-text + image upload) |
 | Attachments | แนบไฟล์ผ่าน Supabase Storage |
 | Activity Log | บันทึกประวัติการเปลี่ยนแปลง (status, assignee, field changes) |
-| Task Dependencies | กำหนดงานที่ต้องทำก่อน-หลัง → [sub-plan-task-dependency-gantt.md](./plans/sub-plan-task-dependency-gantt.md) (Phase 2) |
 | Labels per Task | ติดป้ายกำกับหลายอัน |
 | Realtime Sync | Kanban board sync แบบ realtime ผ่าน Supabase Realtime |
 
 ### 6. Views (มุมมอง)
 | ฟีเจอร์ | รายละเอียด |
 |---------|-------------|
-| Kanban Board | ลาก-วาง task ตาม status (vue-draggable-plus) |
+| Kanban Board | ลาก-วาง task ตาม status (vue-draggable-plus), filter/sort งานที่ถูก block |
 | List View | ดูงานเป็นรายการ |
 | Calendar View | ดูงานบนปฏิทิน |
-| Gantt / Timeline | ดูงานแบบ Gantt chart (frappe-gantt) → [sub-plan-task-dependency-gantt.md](./plans/sub-plan-task-dependency-gantt.md) (Phase 3) |
+| Gantt / Timeline | group by milestone / phase (collapsible headers + progress bar), dependency arrows, popup แสดง Depends on / Blocks → [sub-plan-task-dependency-gantt.md](./plans/sub-plan-task-dependency-gantt.md) (Phase 3) |
+| Dashboard | ภาพรวม workspace ข้ามลูกค้า: customer progress, overdue/at-risk, upcoming milestones, team workload, All Tasks view → [sub-plan-task-dependency-gantt.md](./plans/sub-plan-task-dependency-gantt.md) (Phase 4) |
 
 ### 7. My Planner
 | ฟีเจอร์ | รายละเอียด |
@@ -99,6 +103,8 @@
 | ฟีเจอร์ | รายละเอียด |
 |---------|-------------|
 | PWA | ติดตั้งเป็นแอป (via @vite-pwa/nuxt) |
+| Theme | Primary blue `#2563EB` สม่ำเสมอทั้ง Nuxt UI / Tailwind / PWA → [sub-plan-app-theme-primary-blue.md](./plans/sub-plan-app-theme-primary-blue.md) |
+| Testing | Vitest unit (dependency graph, phase, templates) + Playwright E2E (auth, task CRUD, dependency, filters/bulk, templates) → [sub-plan-automated-testing.md](./plans/sub-plan-automated-testing.md), [sub-plan-e2e-testing.md](./plans/sub-plan-e2e-testing.md) |
 | i18n | รองรับหลายภาษา (Nuxt i18n) |
 | RLS Policies | Row Level Security ทุกตาราง |
 | Cloudflare Pages | Deploy ผ่าน Wrangler |
@@ -113,9 +119,6 @@
 
 | ฟีเจอร์ | เหตุผล |
 |---------|--------|
-| **Dashboard / Overview** | หน้าหลักรวมภาพรวม — งานค้าง, งานเลยกำหนด, ภาระทีม, progress รายโปรเจกต์ → [sub-plan-task-dependency-gantt.md](./plans/sub-plan-task-dependency-gantt.md) (Phase 4) |
-| **Task Filters & Bulk Actions** | กรองตาม assignee / label / priority / date + เลือกหลายงานแล้วแก้พร้อมกัน |
-| **Task Templates** | สร้าง template สำหรับงานที่ทำซ้ำ ๆ (ลดงาน manual) |
 | **Export / Report** | ส่งออก CSV/PDF สำหรับรายงานความคืบหน้า, burn-down, workload |
 | **Search (Global)** | ค้นหา task / project / customer จากทุกที่ในแอป |
 | **Dark Mode** | รองรับการแสดงผลแบบมืด |
@@ -126,7 +129,6 @@
 |---------|--------|
 | **Time Tracking** | จับเวลาจริงที่ทำงาน (timer) เปรียบเทียบกับ estimate |
 | **Recurring Tasks** | สร้างงานที่เกิดซ้ำอัตโนมัติ (รายสัปดาห์/รายเดือน) |
-| **Task Dependencies Visualization** | แสดง dependency เป็นเส้นบน Gantt (ปัจจุบันมี data แต่ไม่ได้แสดง) → [sub-plan-task-dependency-gantt.md](./plans/sub-plan-task-dependency-gantt.md) (Phase 2, 3) |
 | **Notifications Digest** | สรุปแจ้งเตือนรายวัน/รายสัปดาห์ แทนที่จะแจ้งทุกเหตุการณ์ |
 | **File Preview** | ดูรูปภาพ/PDF ใน app โดยไม่ต้องดาวน์โหลด |
 | **Mention (@user)** | Tag สมาชิกใน comment + แจ้งเตือน |
@@ -188,7 +190,8 @@
 | `comments` | ความคิดเห็น |
 | `attachments` | ไฟล์แนบ |
 | `activity_logs` | บันทึกกิจกรรม |
-| `task_dependencies` | ความสัมพันธ์ระหว่างงาน |
+| `task_dependencies` | ความสัมพันธ์ระหว่างงาน (มี DB trigger กัน circular) |
+| `task_templates` | เทมเพลตงานระดับ workspace (migration 030) |
 | `task_labels` | ป้ายของงาน |
 | `user_task_preferences` | ค่าตั้งส่วนตัว (pin, schedule) |
 | `notifications` | แจ้งเตือน |
