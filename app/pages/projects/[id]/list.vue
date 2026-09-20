@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Subtask, Task, TaskStatus, TaskPriority } from "~/types";
 import { TASK_STATUS_VALUES } from "~/types";
-import { format, parseISO } from "date-fns";
+import { addDays, format, parseISO } from "date-fns";
 import {
   flattenProjectItems,
   projectItemDueDate,
@@ -20,16 +20,36 @@ const route = useRoute();
 const projectId = computed(() => route.params.id as string);
 
 const { getProject, fetchProjects } = useProjects();
-const { tasks, loading, searchQuery, fetchTasks } = useTasks(projectId);
-const { fetchWorkspace, members } = useWorkspace();
+const {
+  tasks,
+  loading,
+  searchQuery,
+  fetchTasks,
+  bulkUpdateTasks,
+  bulkSetLabels,
+  bulkDeleteTasks,
+} = useTasks(projectId);
+const { fetchWorkspace, members, canManageMembers } = useWorkspace();
+const { labels, fetchLabels } = useLabels();
+const { confirm } = useConfirmDialog();
+const toast = useToast();
 
 const project = computed(() => getProject(projectId.value));
 const statusFilter = ref<TaskStatus | "all">("all");
 const priorityFilter = ref<TaskPriority | "all">("all");
 const assigneeFilter = ref<string | "all">("all");
 const phaseFilter = ref<string>("all");
+const labelFilter = ref<string[]>([]);
+const milestoneFilter = ref<string>("all");
+const dueFilter = ref<"all" | "overdue" | "today" | "next7" | "none">("all");
+const selectedIds = ref<Set<string>>(new Set());
+const bulkLabelIds = ref<string[]>([]);
+const bulkLabelMode = ref<"add" | "replace">("add");
+const bulkAssignee = ref<string | null | undefined>(undefined);
+const bulkTester = ref<string | null | undefined>(undefined);
 
 const showModal = ref(false);
+const showTemplateManager = ref(false);
 const selectedTask = ref<Task | null>(null);
 const showSubtaskModal = ref(false);
 const selectedSubtask = ref<Subtask | null>(null);
@@ -37,6 +57,7 @@ const selectedSubtaskParent = ref<Task | null>(null);
 
 onMounted(async () => {
   await fetchWorkspace();
+  await fetchLabels();
   await fetchProjects();
   await fetchTasks(projectId.value);
 
@@ -47,6 +68,8 @@ onMounted(async () => {
 });
 
 const filteredItems = computed(() => {
+  const today = format(new Date(), "yyyy-MM-dd");
+  const nextWeek = format(addDays(new Date(), 7), "yyyy-MM-dd");
   return flattenProjectItems(tasks.value).filter((item) => {
     if (statusFilter.value !== "all" && projectItemStatus(item) !== statusFilter.value) {
       return false;
@@ -67,6 +90,21 @@ const filteredItems = computed(() => {
     ) {
       return false;
     }
+    if (labelFilter.value.length) {
+      const itemLabels = item.kind === "task"
+        ? item.task.task_labels?.map((tl) => tl.labels?.id).filter(Boolean)
+        : item.subtask.subtask_labels?.map((sl) => sl.labels?.id).filter(Boolean);
+      if (!labelFilter.value.some((id) => itemLabels?.includes(id))) return false;
+    }
+    if (milestoneFilter.value !== "all") {
+      const milestoneId = item.kind === "task" ? item.task.milestone_id : item.parent.milestone_id;
+      if (milestoneId !== milestoneFilter.value) return false;
+    }
+    const dueDate = projectItemDueDate(item);
+    if (dueFilter.value === "overdue" && (!dueDate || dueDate >= today)) return false;
+    if (dueFilter.value === "today" && dueDate !== today) return false;
+    if (dueFilter.value === "next7" && (!dueDate || dueDate < today || dueDate > nextWeek)) return false;
+    if (dueFilter.value === "none" && dueDate) return false;
     return true;
   });
 });
@@ -88,6 +126,108 @@ const assigneeFilterItems = computed(() => [
     value: m.user_id,
   })),
 ]);
+
+const labelFilterItems = computed(() => labels.value.map((label) => ({ label: label.name, value: label.id })));
+const milestoneFilterItems = computed(() => [
+  { label: t("projects.allMilestones"), value: "all" },
+  ...Array.from(
+    new Map(
+      tasks.value
+        .map((task) => task.milestones)
+        .filter((milestone): milestone is NonNullable<Task["milestones"]> => !!milestone)
+        .map((milestone) => [milestone.id, milestone.title]),
+    ),
+  ).map(([value, label]) => ({ value, label })),
+]);
+const dueFilterItems = computed(() => [
+  { label: t("projects.dueAll"), value: "all" },
+  { label: t("projects.dueOverdue"), value: "overdue" },
+  { label: t("projects.dueToday"), value: "today" },
+  { label: t("projects.dueNext7"), value: "next7" },
+  { label: t("projects.dueNone"), value: "none" },
+]);
+const bulkAssigneeItems = computed(() => [
+  { label: t("tasks.unassigned"), value: null },
+  ...members.value.map((member) => ({
+    label: member.profiles?.full_name || member.profiles?.email || member.user_id,
+    value: member.user_id,
+  })),
+]);
+const bulkLabelItems = computed(() => labels.value.map((label) => ({ label: label.name, value: label.id })));
+const selectedTaskIds = computed(() => [...selectedIds.value]);
+const selectableItems = computed(() => filteredItems.value.filter((item) => item.kind === "task"));
+const allVisibleSelected = computed(() =>
+  selectableItems.value.length > 0 && selectableItems.value.every((item) => selectedIds.value.has(item.task.id)),
+);
+const hasActiveFilters = computed(() =>
+  !!searchQuery.value || statusFilter.value !== "all" || priorityFilter.value !== "all" ||
+  assigneeFilter.value !== "all" || phaseFilter.value !== "all" || labelFilter.value.length > 0 ||
+  milestoneFilter.value !== "all" || dueFilter.value !== "all",
+);
+
+function toggleTask(id: string, checked: boolean) {
+  const next = new Set(selectedIds.value);
+  if (checked) next.add(id);
+  else next.delete(id);
+  selectedIds.value = next;
+}
+
+function toggleAll(checked: boolean) {
+  selectedIds.value = checked ? new Set(selectableItems.value.map((item) => item.task.id)) : new Set();
+}
+
+function clearFilters() {
+  searchQuery.value = "";
+  statusFilter.value = "all";
+  priorityFilter.value = "all";
+  assigneeFilter.value = "all";
+  phaseFilter.value = "all";
+  labelFilter.value = [];
+  milestoneFilter.value = "all";
+  dueFilter.value = "all";
+}
+
+async function runBulk(update: Parameters<typeof bulkUpdateTasks>[1]) {
+  const count = selectedTaskIds.value.length;
+  const { error } = await bulkUpdateTasks(selectedTaskIds.value, update);
+  if (error) {
+    toast.add({ title: error, color: "error" });
+    return;
+  }
+  selectedIds.value = new Set();
+  toast.add({ title: t("projects.bulkDone", { count }), color: "success" });
+}
+
+async function runBulkLabels() {
+  const count = selectedTaskIds.value.length;
+  const { error } = await bulkSetLabels(selectedTaskIds.value, bulkLabelIds.value, bulkLabelMode.value);
+  if (error) {
+    toast.add({ title: error, color: "error" });
+    return;
+  }
+  selectedIds.value = new Set();
+  bulkLabelIds.value = [];
+  toast.add({ title: t("projects.bulkDone", { count }), color: "success" });
+}
+
+async function runBulkDelete() {
+  if (!canManageMembers.value) return;
+  const count = selectedTaskIds.value.length;
+  const ok = await confirm({
+    title: t("projects.bulkDelete"),
+    description: t("projects.bulkDeleteConfirm", { count }),
+    confirmLabel: t("common.delete"),
+    color: "error",
+  });
+  if (!ok) return;
+  const { error } = await bulkDeleteTasks(selectedTaskIds.value);
+  if (error) {
+    toast.add({ title: error, color: "error" });
+    return;
+  }
+  selectedIds.value = new Set();
+  toast.add({ title: t("projects.bulkDeleted", { count }), color: "success" });
+}
 
 watch(searchQuery, () => fetchTasks(projectId.value));
 
@@ -152,6 +292,9 @@ function itemMilestone(item: ProjectItem) {
   <div class="p-4 md:p-6">
     <LayoutProjectHeader v-if="project" :project="project" :subtitle="t('projects.listSuffix')">
       <template #actions>
+        <UButton icon="i-lucide-copy" size="sm" variant="soft" data-testid="template-manage" @click="showTemplateManager = true">
+          {{ t("templates.manage") }}
+        </UButton>
         <UButton icon="i-lucide-plus" size="sm" class="shrink-0" @click="openNew">
           {{ t("projects.addTask") }}
         </UButton>
@@ -197,6 +340,79 @@ function itemMilestone(item: ProjectItem) {
           class="w-full"
         />
       </UFormField>
+      <UFormField :label="t('projects.filterLabels')" class="w-full sm:w-48">
+        <USelect v-model="labelFilter" :items="labelFilterItems" multiple class="w-full" data-testid="filter-labels" />
+      </UFormField>
+      <UFormField :label="t('projects.filterMilestone')" class="w-full sm:w-48">
+        <USelect v-model="milestoneFilter" :items="milestoneFilterItems" class="w-full" data-testid="filter-milestone" />
+      </UFormField>
+      <UFormField :label="t('projects.filterDue')" class="w-full sm:w-40">
+        <USelect v-model="dueFilter" :items="dueFilterItems" class="w-full" data-testid="filter-due" />
+      </UFormField>
+      <UButton v-if="hasActiveFilters" variant="link" color="neutral" data-testid="clear-filters" @click="clearFilters">
+        {{ t("projects.clearFilters") }}
+      </UButton>
+    </div>
+
+    <div v-if="selectedIds.size" class="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 p-3" data-testid="bulk-toolbar">
+      <span class="mr-1 text-sm font-medium text-blue-900" data-testid="bulk-count">
+        {{ t("projects.bulkSelected", { count: selectedIds.size }) }}
+      </span>
+      <USelect
+        :items="statusFilterItems.slice(1)"
+        :placeholder="t('projects.bulkStatus')"
+        class="w-36"
+        data-testid="bulk-status"
+        @update:model-value="(value) => runBulk({ status: value as TaskStatus })"
+      />
+      <USelect
+        :items="priorityFilterItems.slice(1)"
+        :placeholder="t('projects.bulkPriority')"
+        class="w-36"
+        data-testid="bulk-priority"
+        @update:model-value="(value) => runBulk({ priority: value as TaskPriority })"
+      />
+      <USelectMenu
+        :items="bulkAssigneeItems"
+        value-key="value"
+        :placeholder="t('projects.bulkAssignee')"
+        class="w-44"
+        data-testid="bulk-assignee"
+        @update:model-value="(value) => runBulk({ assignee_id: value as string | null })"
+      />
+      <USelectMenu
+        :items="bulkAssigneeItems"
+        value-key="value"
+        :placeholder="t('projects.bulkTester')"
+        class="w-44"
+        data-testid="bulk-tester"
+        @update:model-value="(value) => runBulk({ tester_id: value as string | null })"
+      />
+      <USelect
+        v-model="bulkLabelIds"
+        :items="bulkLabelItems"
+        multiple
+        :placeholder="t('projects.bulkLabels')"
+        class="w-44"
+        data-testid="bulk-labels"
+      />
+      <USelect
+        v-model="bulkLabelMode"
+        :items="[
+          { label: t('projects.bulkLabelsAdd'), value: 'add' },
+          { label: t('projects.bulkLabelsReplace'), value: 'replace' },
+        ]"
+        class="w-32"
+      />
+      <UButton size="sm" :disabled="!bulkLabelIds.length" @click="runBulkLabels">
+        {{ t("projects.bulkApplyLabels") }}
+      </UButton>
+      <UButton v-if="canManageMembers" size="sm" color="error" variant="soft" data-testid="bulk-delete" @click="runBulkDelete">
+        {{ t("projects.bulkDelete") }}
+      </UButton>
+      <UButton size="sm" variant="ghost" color="neutral" @click="selectedIds = new Set()">
+        {{ t("projects.bulkClear") }}
+      </UButton>
     </div>
 
     <div v-if="loading" class="flex justify-center py-12">
@@ -252,8 +468,11 @@ function itemMilestone(item: ProjectItem) {
 
       <div class="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white md:block">
         <table class="w-full min-w-[800px] text-sm">
-          <thead class="border-b border-slate-200 bg-slate-50">
-            <tr>
+           <thead class="border-b border-slate-200 bg-slate-50">
+             <tr>
+               <th class="w-10 px-3 py-3">
+                 <UCheckbox data-testid="select-all" :model-value="allVisibleSelected" @update:model-value="(v) => toggleAll(!!v)" />
+               </th>
               <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colTitle") }}</th>
               <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colStatus") }}</th>
               <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colPriority") }}</th>
@@ -264,13 +483,22 @@ function itemMilestone(item: ProjectItem) {
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="item in filteredItems"
-              :key="item.id"
+             <tr
+               v-for="item in filteredItems"
+               :key="item.id"
+               data-testid="task-row"
               class="cursor-pointer border-b border-slate-100 hover:bg-slate-50"
               :class="item.kind === 'subtask' ? 'bg-slate-50/50' : ''"
-              @click="openItem(item)"
-            >
+               @click="openItem(item)"
+             >
+               <td class="w-10 px-3 py-3" @click.stop>
+                 <UCheckbox
+                   v-if="item.kind === 'task'"
+                   :model-value="selectedIds.has(item.task.id)"
+                   data-testid="row-checkbox"
+                   @update:model-value="(v) => toggleTask(item.task.id, !!v)"
+                 />
+               </td>
               <td class="px-4 py-3 font-medium text-slate-800">
                 <span
                   v-if="item.kind === 'subtask'"
@@ -316,6 +544,7 @@ function itemMilestone(item: ProjectItem) {
       @update:open="showModal = $event"
       @saved="onSaved"
     />
+    <TasksTemplateManager v-model:open="showTemplateManager" />
 
     <TasksSubtaskModal
       :subtask="selectedSubtask"

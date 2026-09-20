@@ -341,6 +341,21 @@ export interface Label {
   color: string;
 }
 
+export interface TaskTemplate {
+  id: string;
+  workspace_id: string;
+  created_by: string | null;
+  title: string;
+  description: string | null;
+  priority: TaskPriority;
+  status: TaskStatus;
+  phase: TaskPhase | null;
+  estimate_hours: number | null;
+  label_ids: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Milestone {
   id: string;
   project_id: string;

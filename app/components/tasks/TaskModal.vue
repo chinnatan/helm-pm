@@ -44,6 +44,7 @@ const {
 const { members, canManageMembers } = useWorkspace();
 const { confirm } = useConfirmDialog();
 const { labels, fetchLabels } = useLabels();
+const { templates, fetchTemplates, createTemplate } = useTaskTemplates();
 const projectIdRef = toRef(() => props.projectId);
 const { milestones, fetchMilestones } = useMilestones(projectIdRef);
 const { customers, fetchCustomers } = useCustomers();
@@ -86,6 +87,9 @@ const newSubtask = reactive({
 const sortedSubtasks = ref<Subtask[]>([]);
 const activity = ref<Awaited<ReturnType<typeof fetchActivity>>>([]);
 const saving = ref(false);
+const savingTemplate = ref(false);
+const showSaveTemplate = ref(false);
+const templateName = ref("");
 const activeTab = ref("details");
 const loadingActivity = ref(false);
 
@@ -170,6 +174,7 @@ async function loadActivity(taskId: string) {
 async function loadSupportingData() {
   await Promise.all([
     fetchLabels(),
+    fetchTemplates(),
     fetchMilestones(),
     fetchCustomers(),
     fetchProjects(),
@@ -180,6 +185,41 @@ async function loadSupportingData() {
   } else if (!props.task && !form.customer_id) {
     form.customer_id = getProject(props.projectId)?.customer_id ?? null;
   }
+}
+
+const templateItems = computed(() =>
+  templates.value.map((template) => ({ label: template.title, value: template.id })),
+);
+
+function applyTemplate(id: string | null | undefined) {
+  const template = templates.value.find((item) => item.id === id);
+  if (!template) return;
+  form.title = template.title;
+  form.description = template.description ?? "";
+  form.status = template.status;
+  form.priority = template.priority;
+  form.phase = template.phase;
+  form.estimate_hours = template.estimate_hours == null ? "" : String(template.estimate_hours);
+  form.label_ids = [...template.label_ids];
+  phaseTouched.value = true;
+}
+
+async function saveAsTemplate() {
+  const title = templateName.value.trim();
+  if (!title) return;
+  savingTemplate.value = true;
+  await createTemplate({
+    title,
+    description: form.description || null,
+    status: form.status,
+    priority: form.priority,
+    phase: form.phase,
+    estimate_hours: parseEstimate(form.estimate_hours),
+    label_ids: [...form.label_ids],
+  });
+  savingTemplate.value = false;
+  showSaveTemplate.value = false;
+  templateName.value = "";
 }
 
 const modalTabs = computed(() => [
@@ -664,6 +704,16 @@ watch(
       </div>
 
       <div v-if="activeTab === 'details' || !isEdit" class="space-y-4">
+        <UFormField v-if="!isEdit" :label="t('templates.select')">
+          <USelectMenu
+            :items="templateItems"
+            value-key="value"
+            :placeholder="t('templates.select')"
+            class="w-full"
+            data-testid="template-select"
+            @update:model-value="applyTemplate"
+          />
+        </UFormField>
         <UFormField v-if="!isEdit" :label="t('tasks.parentTask')">
           <USelectMenu
             v-model="form.parent_task_id"
@@ -1050,6 +1100,9 @@ watch(
             </div>
           </div>
         </UFormField>
+        <UButton v-if="isEdit" variant="soft" color="neutral" data-testid="template-save-as" @click="showSaveTemplate = true">
+          {{ t("templates.saveAs") }}
+        </UButton>
       </div>
 
       <TasksTaskComments
@@ -1120,6 +1173,22 @@ watch(
             {{ isEdit ? t("common.save") : t("common.create") }}
           </UButton>
         </div>
+      </div>
+    </template>
+  </UModal>
+
+  <UModal v-model:open="showSaveTemplate" :title="t('templates.saveAs')">
+    <template #body>
+      <UFormField :label="t('templates.saveAsTitle')" required>
+        <UInput v-model="templateName" :placeholder="t('templates.namePlaceholder')" data-testid="template-name" class="w-full" />
+      </UFormField>
+    </template>
+    <template #footer>
+      <div class="flex justify-end gap-2">
+        <UButton variant="ghost" color="neutral" @click="showSaveTemplate = false">{{ t("common.cancel") }}</UButton>
+        <UButton :loading="savingTemplate" :disabled="!templateName.trim()" data-testid="template-save-confirm" @click="saveAsTemplate">
+          {{ t("common.save") }}
+        </UButton>
       </div>
     </template>
   </UModal>
