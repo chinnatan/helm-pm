@@ -69,7 +69,7 @@ export default defineNuxtConfig({
           content: "width=device-width, initial-scale=1",
         },
         { name: "description", content: "Project Management — steer the ship" },
-        { name: "theme-color", content: "#0B6E7A" },
+        { name: "theme-color", content: "#2563EB" },
       ],
       link: [
         {
@@ -112,7 +112,7 @@ export default defineNuxtConfig({
       name: "Helm PM",
       short_name: "Helm",
       description: "Project Management — steer the ship",
-      theme_color: "#0B6E7A",
+      theme_color: "#2563EB",
       background_color: "#ffffff",
       display: "standalone",
       start_url: "/",

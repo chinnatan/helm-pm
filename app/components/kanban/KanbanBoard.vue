@@ -274,7 +274,7 @@ onUnmounted(() => {
     <div
       v-for="col in columns"
       :key="`${projectId}-${col.value}`"
-      class="flex w-[min(18rem,85vw)] shrink-0 snap-start flex-col rounded-xl border border-ocean-200 bg-ocean-100/90 p-3 shadow-sm"
+      class="flex w-[min(18rem,85vw)] shrink-0 snap-start flex-col rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
     >
       <div class="mb-3 flex items-center justify-between gap-2">
         <h3 class="text-sm font-semibold text-ocean-900">{{ col.label }}</h3>
@@ -305,7 +305,7 @@ onUnmounted(() => {
       <VueDraggable
         v-model="localColumns[col.value]"
         group="tasks"
-        class="kanban-column flex min-h-[220px] flex-col gap-2 rounded-lg border border-dashed border-ocean-300/70 bg-white/50 p-1.5 select-none"
+        class="kanban-column flex min-h-[220px] flex-col gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50/70 p-1.5 select-none"
         :animation="200"
         :force-fallback="true"
         :fallback-on-body="true"

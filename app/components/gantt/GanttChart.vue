@@ -356,7 +356,7 @@ function buildGanttData() {
               custom_class: "phase-bar",
               color: taskPhaseMeta(row.phase)?.color ?? "#94a3b8",
             }
-          : { custom_class: "milestone-bar", color: "#0b6e7a" };
+          : { custom_class: "milestone-bar", color: "#2563eb" };
       // a same-day group would render a 0-width (invisible) band — guarantee ≥ 1 column
       const start = row.start || format(new Date(), "yyyy-MM-dd");
       let end = row.end;
@@ -750,7 +750,7 @@ onUnmounted(() => {
 
 /* Milestone = thin summary bar (height comes from custom_bar_height) */
 .gantt-shell .gantt-container .bar-wrapper.milestone-bar .bar {
-  fill: #0b6e7a;
+  fill: #2563eb;
   opacity: 0.85;
 }
 .gantt-shell .gantt-container .bar-wrapper.milestone-bar .bar-progress {

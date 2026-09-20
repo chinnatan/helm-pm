@@ -237,7 +237,7 @@ onBeforeUnmount(() => {
 }
 
 .rich-text-prose a {
-  color: #0b6e7a;
+  color: var(--color-ocean-500);
   text-decoration: underline;
 }
 

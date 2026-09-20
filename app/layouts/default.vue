@@ -84,7 +84,7 @@ watch(
 </script>
 
 <template>
-  <div class="flex h-dvh overflow-hidden bg-ocean-50">
+  <div class="flex h-dvh overflow-hidden bg-slate-50">
     <!-- Desktop sidebar -->
     <aside
       class="hidden w-60 shrink-0 flex-col border-r border-slate-200 bg-white md:flex"
