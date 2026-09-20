@@ -54,7 +54,7 @@
 | Comments | แสดงความคิดเห็น (rich-text + image upload) |
 | Attachments | แนบไฟล์ผ่าน Supabase Storage |
 | Activity Log | บันทึกประวัติการเปลี่ยนแปลง (status, assignee, field changes) |
-| Task Dependencies | กำหนดงานที่ต้องทำก่อน-หลัง → [sub-plan-task-dependency-gantt.md](./sub-plan-task-dependency-gantt.md) (Phase 2) |
+| Task Dependencies | กำหนดงานที่ต้องทำก่อน-หลัง → [sub-plan-task-dependency-gantt.md](./plans/sub-plan-task-dependency-gantt.md) (Phase 2) |
 | Labels per Task | ติดป้ายกำกับหลายอัน |
 | Realtime Sync | Kanban board sync แบบ realtime ผ่าน Supabase Realtime |
 
@@ -64,7 +64,7 @@
 | Kanban Board | ลาก-วาง task ตาม status (vue-draggable-plus) |
 | List View | ดูงานเป็นรายการ |
 | Calendar View | ดูงานบนปฏิทิน |
-| Gantt / Timeline | ดูงานแบบ Gantt chart (frappe-gantt) → [sub-plan-task-dependency-gantt.md](./sub-plan-task-dependency-gantt.md) (Phase 3) |
+| Gantt / Timeline | ดูงานแบบ Gantt chart (frappe-gantt) → [sub-plan-task-dependency-gantt.md](./plans/sub-plan-task-dependency-gantt.md) (Phase 3) |
 
 ### 7. My Planner
 | ฟีเจอร์ | รายละเอียด |
@@ -113,7 +113,7 @@
 
 | ฟีเจอร์ | เหตุผล |
 |---------|--------|
-| **Dashboard / Overview** | หน้าหลักรวมภาพรวม — งานค้าง, งานเลยกำหนด, ภาระทีม, progress รายโปรเจกต์ → [sub-plan-task-dependency-gantt.md](./sub-plan-task-dependency-gantt.md) (Phase 4) |
+| **Dashboard / Overview** | หน้าหลักรวมภาพรวม — งานค้าง, งานเลยกำหนด, ภาระทีม, progress รายโปรเจกต์ → [sub-plan-task-dependency-gantt.md](./plans/sub-plan-task-dependency-gantt.md) (Phase 4) |
 | **Task Filters & Bulk Actions** | กรองตาม assignee / label / priority / date + เลือกหลายงานแล้วแก้พร้อมกัน |
 | **Task Templates** | สร้าง template สำหรับงานที่ทำซ้ำ ๆ (ลดงาน manual) |
 | **Export / Report** | ส่งออก CSV/PDF สำหรับรายงานความคืบหน้า, burn-down, workload |
@@ -126,7 +126,7 @@
 |---------|--------|
 | **Time Tracking** | จับเวลาจริงที่ทำงาน (timer) เปรียบเทียบกับ estimate |
 | **Recurring Tasks** | สร้างงานที่เกิดซ้ำอัตโนมัติ (รายสัปดาห์/รายเดือน) |
-| **Task Dependencies Visualization** | แสดง dependency เป็นเส้นบน Gantt (ปัจจุบันมี data แต่ไม่ได้แสดง) → [sub-plan-task-dependency-gantt.md](./sub-plan-task-dependency-gantt.md) (Phase 2, 3) |
+| **Task Dependencies Visualization** | แสดง dependency เป็นเส้นบน Gantt (ปัจจุบันมี data แต่ไม่ได้แสดง) → [sub-plan-task-dependency-gantt.md](./plans/sub-plan-task-dependency-gantt.md) (Phase 2, 3) |
 | **Notifications Digest** | สรุปแจ้งเตือนรายวัน/รายสัปดาห์ แทนที่จะแจ้งทุกเหตุการณ์ |
 | **File Preview** | ดูรูปภาพ/PDF ใน app โดยไม่ต้องดาวน์โหลด |
 | **Mention (@user)** | Tag สมาชิกใน comment + แจ้งเตือน |
