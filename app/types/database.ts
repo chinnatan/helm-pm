@@ -315,6 +315,50 @@ export interface Database {
         };
         Relationships: [];
       };
+      task_templates: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          created_by: string | null;
+          title: string;
+          description: string | null;
+          priority: string;
+          status: string;
+          phase: string | null;
+          estimate_hours: number | null;
+          label_ids: string[];
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          created_by?: string | null;
+          title: string;
+          description?: string | null;
+          priority?: string;
+          status?: string;
+          phase?: string | null;
+          estimate_hours?: number | null;
+          label_ids?: string[];
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          workspace_id?: string;
+          created_by?: string | null;
+          title?: string;
+          description?: string | null;
+          priority?: string;
+          status?: string;
+          phase?: string | null;
+          estimate_hours?: number | null;
+          label_ids?: string[];
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       tasks: {
         Row: {
           id: string;

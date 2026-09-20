@@ -16,6 +16,7 @@ const { taskCardDensity, updateTaskCardDensity } = useProfile();
 
 const project = computed(() => getProject(projectId.value));
 const showModal = ref(false);
+const showTemplateManager = ref(false);
 const selectedTask = ref<Task | null>(null);
 const showSubtaskModal = ref(false);
 const selectedSubtask = ref<Subtask | null>(null);
@@ -95,6 +96,9 @@ async function onSaved() {
   <div class="p-4 md:p-6">
     <LayoutProjectHeader v-if="project" :project="project">
       <template #actions>
+        <UButton icon="i-lucide-copy" size="sm" variant="soft" data-testid="template-manage" @click="showTemplateManager = true">
+          {{ t("templates.manage") }}
+        </UButton>
         <UButton icon="i-lucide-plus" size="sm" class="shrink-0" data-testid="add-task" @click="openNewTask()">
           {{ t("projects.addTask") }}
         </UButton>
@@ -164,6 +168,7 @@ async function onSaved() {
       @update:open="showModal = $event"
       @saved="onSaved"
     />
+    <TasksTemplateManager v-model:open="showTemplateManager" />
 
     <TasksSubtaskModal
       :subtask="selectedSubtask"

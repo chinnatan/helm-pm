@@ -6,12 +6,15 @@ import type {
   Subtask,
   Label,
   ActivityLog,
+  TaskTemplate,
 } from "~/types";
 import type { Database } from "~/types/database";
 import { isTaskClosed } from "~/types";
 
 type TaskUpdate = Database["public"]["Tables"]["tasks"]["Update"];
 type SubtaskUpdate = Database["public"]["Tables"]["subtasks"]["Update"];
+type TaskTemplateInsert = Database["public"]["Tables"]["task_templates"]["Insert"];
+type TaskTemplateUpdate = Database["public"]["Tables"]["task_templates"]["Update"];
 
 const SUBTASK_SELECT = `
   *,
@@ -134,6 +137,38 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     if (!error) {
       tasks.value = tasks.value.filter((t) => t.id !== id);
     }
+    return { error: error?.message };
+  }
+
+  async function bulkUpdateTasks(ids: string[], updates: TaskUpdate) {
+    if (!ids.length) return { error: undefined };
+    const { error } = await supabase.from("tasks").update(updates).in("id", ids);
+    if (error) return { error: error.message };
+    await fetchTasks();
+    return { error: undefined };
+  }
+
+  async function bulkSetLabels(ids: string[], labelIds: string[], mode: "add" | "replace") {
+    if (!ids.length) return { error: undefined };
+    if (mode === "replace") {
+      const { error } = await supabase.from("task_labels").delete().in("task_id", ids);
+      if (error) return { error: error.message };
+    }
+    if (labelIds.length) {
+      const { error } = await supabase.from("task_labels").upsert(
+        ids.flatMap((task_id) => labelIds.map((label_id) => ({ task_id, label_id }))),
+        { onConflict: "task_id,label_id" },
+      );
+      if (error) return { error: error.message };
+    }
+    await fetchTasks();
+    return { error: undefined };
+  }
+
+  async function bulkDeleteTasks(ids: string[]) {
+    if (!ids.length) return { error: undefined };
+    const { error } = await supabase.from("tasks").delete().in("id", ids);
+    if (!error) tasks.value = tasks.value.filter((task) => !ids.includes(task.id));
     return { error: error?.message };
   }
 
@@ -379,6 +414,9 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     createTask,
     updateTask,
     deleteTask,
+    bulkUpdateTasks,
+    bulkSetLabels,
+    bulkDeleteTasks,
     updateTaskStatus,
     addSubtask,
     updateSubtask,
@@ -392,6 +430,56 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     fetchSubtaskActivity,
     subscribeToProject,
   };
+}
+
+export function useTaskTemplates() {
+  const supabase = useSupabaseClient();
+  const user = useSupabaseUser();
+  const { workspace } = useWorkspace();
+  const templates = useState<TaskTemplate[]>("taskTemplates", () => []);
+
+  async function fetchTemplates() {
+    if (!workspace.value) return;
+    const { data } = await supabase
+      .from("task_templates")
+      .select("*")
+      .eq("workspace_id", workspace.value.id)
+      .order("title");
+    templates.value = (data ?? []) as TaskTemplate[];
+  }
+
+  async function createTemplate(input: Omit<TaskTemplateInsert, "workspace_id" | "created_by">) {
+    if (!workspace.value) return { data: null, error: "Workspace not loaded" };
+    const { data, error } = await supabase
+      .from("task_templates")
+      .insert({ ...input, workspace_id: workspace.value.id, created_by: user.value?.id ?? null })
+      .select()
+      .single();
+    if (!error && data) templates.value.push(data as TaskTemplate);
+    return { data: data as TaskTemplate | null, error: error?.message };
+  }
+
+  async function updateTemplate(id: string, updates: TaskTemplateUpdate) {
+    const { data, error } = await supabase
+      .from("task_templates")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    if (!error && data) {
+      const index = templates.value.findIndex((template) => template.id === id);
+      if (index >= 0) templates.value[index] = data as TaskTemplate;
+    }
+    return { data: data as TaskTemplate | null, error: error?.message };
+  }
+
+  async function deleteTemplate(id: string) {
+    const { error } = await supabase.from("task_templates").delete().eq("id", id);
+    if (!error) templates.value = templates.value.filter((template) => template.id !== id);
+    return { error: error?.message };
+  }
+
+  return { templates, fetchTemplates, createTemplate, updateTemplate, deleteTemplate };
 }
 
 export function useLabels() {

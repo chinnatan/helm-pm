@@ -124,11 +124,16 @@ export async function ensureProject(token: string): Promise<string> {
   return project.id;
 }
 
-export async function createTask(token: string, projectId: string, title: string): Promise<string> {
+export async function createTask(
+  token: string,
+  projectId: string,
+  title: string,
+  fields: Record<string, unknown> = {},
+): Promise<string> {
   const [task] = await rest<{ id: string }[]>(token, "tasks", {
     method: "POST",
     headers: { prefer: "return=representation" },
-    body: JSON.stringify({ project_id: projectId, title }),
+    body: JSON.stringify({ project_id: projectId, title, ...fields }),
   });
   if (!task) throw new Error("สร้าง task ไม่สำเร็จ");
   return task.id;
@@ -153,6 +158,14 @@ export function taskCard(page: Page, title: string) {
   return page
     .getByTestId("task-card")
     .filter({ has: page.locator('[data-testid="task-card-title"]', { hasText: title }) });
+}
+
+export function listRow(page: Page, title: string) {
+  return page.getByTestId("task-row").filter({ hasText: title });
+}
+
+export function listCheckbox(page: Page, title: string) {
+  return listRow(page, title).getByTestId("row-checkbox");
 }
 
 export async function fillLoginForm(page: Page, email: string, password: string): Promise<void> {

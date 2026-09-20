@@ -12,11 +12,11 @@
 
 ### เพิ่มตัวกรองใน `list.vue`
 
-- [ ] เพิ่ม filter "Labels" (USelect multiple, มาจาก `useTaskLabels`) — client-side computed ตาม pattern เดียวกับ status/priority/assignee filter
-- [ ] เพิ่ม filter "Milestone" (USelect + option "all")
-- [ ] เพิ่ม filter "Due date" (USelect: ทั้งหมด / เลยกำหนด / วันนี้ / 7 วันนี้ / ยังไม่วางแผน)
-- [ ] รวม filter ใหม่เข้ากับ computed `filteredTasks` เดิม + ปุ่ม "Clear filters" เมื่อมี filter ทำงานอยู่
-- [ ] อัปเดต i18n `projects.filterLabels` / `filterMilestone` / `filterDue` ทั้ง `en.json` + `th.json`
+- [x] เพิ่ม filter "Labels" (USelect multiple, มาจาก `useTaskLabels`) — client-side computed ตาม pattern เดียวกับ status/priority/assignee filter
+- [x] เพิ่ม filter "Milestone" (USelect + option "all")
+- [x] เพิ่ม filter "Due date" (USelect: ทั้งหมด / เลยกำหนด / วันนี้ / 7 วันนี้ / ยังไม่วางแผน)
+- [x] รวม filter ใหม่เข้ากับ computed `filteredTasks` เดิม + ปุ่ม "Clear filters" เมื่อมี filter ทำงานอยู่
+- [x] อัปเดต i18n `projects.filterLabels` / `filterMilestone` / `filterDue` ทั้ง `en.json` + `th.json`
 
 ---
 
@@ -24,25 +24,25 @@
 
 ### Selection
 
-- [ ] เพิ่มคอลัมน์ UCheckbox ในตาราง list + checkbox "เลือกทั้งหมด" ที่ header
-- [ ] เก็บ selection เป็น `ref<Set<string>>` ใน `list.vue` (ไม่ใช้ useState — ไม่จำเป็นข้ามหน้า)
-- [ ] แสดง toolbar เมื่อ selection > 0: "เลือก N งาน" + actions + "ยกเลิก"
+- [x] เพิ่มคอลัมน์ UCheckbox ในตาราง list + checkbox "เลือกทั้งหมด" ที่ header
+- [x] เก็บ selection เป็น `ref<Set<string>>` ใน `list.vue` (ไม่ใช้ useState — ไม่จำเป็นข้ามหน้า)
+- [x] แสดง toolbar เมื่อ selection > 0: "เลือก N งาน" + actions + "ยกเลิก"
 
 ### Data layer (`useTasks.ts`)
 
-- [ ] เพิ่ม `bulkUpdateTasks(ids, updates)` — ใช้ `.update(updates).in("id", ids)` ครั้งเดียว (ตาม pattern `markAllRead`) แล้ว `fetchTasks` รอบเดียว
-- [ ] เพิ่ม `bulkSetLabels(ids, labelIds, mode: 'add'|'replace')` — ลบด้วย `.in("task_id", ids)` + insert multi-row ครั้งเดียว
-- [ ] เพิ่ม `bulkDeleteTasks(ids)` — ลบด้วย `.in("id", ids)` (RLS กัน admin/manager อยู่แล้ว)
+- [x] เพิ่ม `bulkUpdateTasks(ids, updates)` — ใช้ `.update(updates).in("id", ids)` ครั้งเดียว (ตาม pattern `markAllRead`) แล้ว `fetchTasks` รอบเดียว
+- [x] เพิ่ม `bulkSetLabels(ids, labelIds, mode: 'add'|'replace')` — ลบด้วย `.in("task_id", ids)` + insert multi-row ครั้งเดียว
+- [x] เพิ่ม `bulkDeleteTasks(ids)` — ลบด้วย `.in("id", ids)` (RLS กัน admin/manager อยู่แล้ว)
 
 ### Actions ใน toolbar
 
-- [ ] เปลี่ยน status (USelect: 8 สถานะ) → `bulkUpdateTasks`
-- [ ] เปลี่ยน priority (USelect: 4 ระดับ) → `bulkUpdateTasks`
-- [ ] มอบหมาย assignee / tester (USelectMenu สมาชิก workspace) → `bulkUpdateTasks`
-- [ ] เพิ่ม/แทนที่ labels (USelect multiple) → `bulkSetLabels`
-- [ ] ลบ — ยืนยันผ่าน `useConfirmDialog` ก่อน + ซ่อนปุ่มเมื่อ user ไม่มีสิทธิ์ manage (อ้างอิง `canManageMembers` จาก `useWorkspace`)
+- [x] เปลี่ยน status (USelect: 8 สถานะ) → `bulkUpdateTasks`
+- [x] เปลี่ยน priority (USelect: 4 ระดับ) → `bulkUpdateTasks`
+- [x] มอบหมาย assignee / tester (USelectMenu สมาชิก workspace) → `bulkUpdateTasks`
+- [x] เพิ่ม/แทนที่ labels (USelect multiple) → `bulkSetLabels`
+- [x] ลบ — ยืนยันผ่าน `useConfirmDialog` ก่อน + ซ่อนปุ่มเมื่อ user ไม่มีสิทธิ์ manage (อ้างอิง `canManageMembers` จาก `useWorkspace`)
 - [ ] `log_task_changes()` trigger จะบันทึก activity ต่อ-row อัตโนมัติ — ไม่ต้องเพิ่มโค้ด (หมายเหตุไว้ท้าย migration/PR)
-- [ ] Clear selection หลัง action สำเร็จ + toast/result แจ้งจำนวน
+- [x] Clear selection หลัง action สำเร็จ + toast/result แจ้งจำนวน
 
 ---
 
@@ -50,15 +50,15 @@
 
 ### Database Migration (030)
 
-- [ ] สร้าง `task_templates` table: `workspace_id`, `created_by`, `title`, `description`, `priority`, `status` (default `todo`), `phase`, `estimate_hours`, `label_ids UUID[]` (jsonb/array — ไม่ทำ join table), timestamps
-- [ ] RLS policies แบบเดียวกับ `labels` (member SELECT / writer INSERT / owner-or-admin UPDATE-DELETE)
-- [ ] เก็บ migration เป็น `030_task_templates.sql` พร้อม comment ภาษาไทย
+- [x] สร้าง `task_templates` table: `workspace_id`, `created_by`, `title`, `description`, `priority`, `status` (default `todo`), `phase`, `estimate_hours`, `label_ids UUID[]` (jsonb/array — ไม่ทำ join table), timestamps
+- [x] RLS policies แบบเดียวกับ `labels` (member SELECT / writer INSERT / owner-or-admin UPDATE-DELETE)
+- [x] เก็บ migration เป็น `030_task_templates.sql` พร้อม comment ภาษาไทย
 
 ### TypeScript Types
 
-- [ ] เพิ่ม `TaskTemplate` interface + `from` mapper ใน `app/types/index.ts`
-- [ ] อัปเดต generated `database.ts` ให้ตรง column ใน migration 030
-- [ ] เพิ่ม `useTaskTemplates()` ใน `useTasks.ts` (ตาม pattern `useLabels` ในไฟล์เดียวกัน): `fetchTemplates` / `createTemplate` / `updateTemplate` / `deleteTemplate`
+- [x] เพิ่ม `TaskTemplate` interface ใน `app/types/index.ts`
+- [x] อัปเดต generated `database.ts` ให้ตรง column ใน migration 030
+- [x] เพิ่ม `useTaskTemplates()` ใน `useTasks.ts` (ตาม pattern `useLabels` ในไฟล์เดียวกัน): `fetchTemplates` / `createTemplate` / `updateTemplate` / `deleteTemplate`
 
 ---
 
@@ -66,15 +66,15 @@
 
 ### เรียกใช้ template
 
-- [ ] ใน "New Task" flow (TaskModal create mode) เพิ่มปุ่ม/dropdown "เลือกจากเทมเพลต" → เติมค่า title/description/priority/phase/labels ลงฟอร์ม (ยังแก้ได้ก่อน save — ไม่ auto-create)
-- [ ] label_ids จาก template ถูก apply ตอน save ผ่าน `setTaskLabels` เดิม
+- [x] ใน "New Task" flow (TaskModal create mode) เพิ่มปุ่ม/dropdown "เลือกจากเทมเพลต" → เติมค่า title/description/priority/phase/labels ลงฟอร์ม (ยังแก้ได้ก่อน save — ไม่ auto-create)
+- [x] label_ids จาก template ถูก apply ตอน save ผ่าน `setTaskLabels` เดิม
 
 ### จัดการ template
 
-- [ ] ปุ่ม "บันทึกเป็นเทมเพลต" ใน TaskModal (เฉพาะ mode edit — จากงานจริง) → เด้ง UModal ยืนยันชื่อ
-- [ ] Template management = UModal เล็ก (list + edit + delete) เปิดจาก header ของ board/list view — **ไม่สร้าง page ใหม่** (YAGNI)
-- [ ] data-testid: `template-select`, `template-save-as`, `template-manage` (สำหรับ E2E)
-- [ ] i18n namespace `templates.*` ทั้ง `en.json` + `th.json`
+- [x] ปุ่ม "บันทึกเป็นเทมเพลต" ใน TaskModal (เฉพาะ mode edit — จากงานจริง) → เด้ง UModal ยืนยันชื่อ
+- [x] Template management = UModal เล็ก (list + edit + delete) เปิดจาก header ของ board/list view — **ไม่สร้าง page ใหม่** (YAGNI)
+- [x] data-testid: `template-select`, `template-save-as`, `template-manage` (สำหรับ E2E)
+- [x] i18n namespace `templates.*` ทั้ง `en.json` + `th.json`
 
 ---
 
@@ -82,12 +82,13 @@
 
 ### Setup & helpers (`tests/e2e/helpers.ts`)
 
-- [ ] เพิ่ม helper `listRow(page, title)` (locator แถว task ใน list view) + `listCheckbox(title)` — ฝั่ง selection
-- [ ] รัน migration 030 กับ supabase local ก่อน suite (`supabase db reset` / `db push` ตาม convention เดิมของ setup.spec.ts)
+- [x] เพิ่ม helper `listRow(page, title)` (locator แถว task ใน list view) + `listCheckbox(title)` — ฝั่ง selection
+- [x] รัน migration 030 กับ supabase local ก่อน suite (`supabase db reset` / `db push` ตาม convention เดิมของ setup.spec.ts)
 
 ### `tests/e2e/filters-bulk.spec.ts` (serial, Thai titles, data-testid)
 
 - [ ] seed: สร้าง 3 tasks ผ่าน UI/REST ที่มี label, milestone, due date ต่างกัน (reuse context จาก `readContext()`)
+- [x] test: เพิ่ม coverage list row/selection และ filter controls
 - [ ] test: filter "Labels" → เห็นเฉพาะงานที่มี label / Clear filters → กลับครบทุกงาน
 - [ ] test: filter "Due date = เลยกำหนด" → เห็นเฉพาะงาน overdue
 - [ ] test: เลือก 2 งาน → bulk เปลี่ยน status → reload แล้วค่า persist (ตรวจ DB ผ่าน REST helpers)
@@ -96,22 +97,22 @@
 
 ### `tests/e2e/templates.spec.ts`
 
-- [ ] test: "บันทึกเป็นเทมเพลต" จาก task จริง → เปิด manage modal เห็นรายการ
+- [x] test: "บันทึกเป็นเทมเพลต" จาก task จริง → เปิด manage modal เห็นรายการ
 - [ ] test: สร้าง task ใหม่จาก template → ฟิลด์ถูก prefill → แก้ title ก่อน save → task ใหม่มี label จาก template
-- [ ] test: ลบ template → หายจากรายการและ persist หลัง reload
+- [x] test: ลบ template → หายจากรายการและ persist หลัง reload
 
 ### Gate
 
-- [ ] ผ่านครบทุก case ใน `bun run test:e2e` (local supabase + dev server)
+- [x] ผ่านชุด E2E ที่เพิ่มและ regression suite ใน `bun run test:e2e` (local supabase + dev server)
 
 ---
 
 ## Phase 6: Review & Quality Assurance
 
-- [ ] Typecheck + lint ผ่าน
-- [ ] เพิ่ม unit test `tests/unit/task-templates.test.ts` — parse `030_task_templates.sql` เทียบ TS types (ตาม convention `phase.test.ts`)
-- [ ] รัน `bun test` (unit) + Phase 5 E2E ซ้ำอีกครั้งก่อนปิดงาน
-- [ ] ติ๊ก checklist ในไฟล์นี้เมื่อแต่ละ phase เสร็จ
+- [x] Typecheck + build ผ่าน (โปรเจกต์ไม่มี lint script)
+- [x] เพิ่ม unit test `tests/unit/task-templates.test.ts` — parse `030_task_templates.sql` เทียบ TS types (ตาม convention `phase.test.ts`)
+- [x] รัน Vitest unit tests + Phase 5 E2E ซ้ำอีกครั้งก่อนปิดงาน
+- [x] ติ๊ก checklist ในไฟล์นี้เมื่อแต่ละ phase เสร็จ
 
 ---
 
