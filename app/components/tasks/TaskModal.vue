@@ -683,6 +683,7 @@ watch(
     :open="open"
     :title="isEdit ? t('tasks.editTask') : isCreateAsSubtask ? t('tasks.newSubtask') : t('tasks.newTask')"
     :fullscreen="isMobile"
+    :ui="{ content: 'sm:max-w-5xl' }"
     @update:open="emit('update:open', $event)"
   >
     <template #body>
@@ -704,41 +705,47 @@ watch(
       </div>
 
       <div v-if="activeTab === 'details' || !isEdit" class="space-y-4">
-        <UFormField v-if="!isEdit" :label="t('templates.select')">
-          <USelectMenu
-            :items="templateItems"
-            value-key="value"
-            :placeholder="t('templates.select')"
-            class="w-full"
-            data-testid="template-select"
-            @update:model-value="applyTemplate"
-          />
-        </UFormField>
-        <UFormField v-if="!isEdit" :label="t('tasks.parentTask')">
-          <USelectMenu
-            v-model="form.parent_task_id"
-            :items="parentTaskItems"
-            value-key="value"
-            :placeholder="t('tasks.selectParentTask')"
-            :search-input="{ placeholder: t('tasks.searchParentTask'), icon: 'i-lucide-search' }"
-            class="w-full"
-          />
-        </UFormField>
+        <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div class="flex flex-col gap-4 lg:min-h-[600px]">
+            <UFormField v-if="!isEdit" :label="t('templates.select')">
+              <USelectMenu
+                :items="templateItems"
+                value-key="value"
+                :placeholder="t('templates.select')"
+                class="w-full"
+                data-testid="template-select"
+                @update:model-value="applyTemplate"
+              />
+            </UFormField>
+            <UFormField v-if="!isEdit" :label="t('tasks.parentTask')">
+              <USelectMenu
+                v-model="form.parent_task_id"
+                :items="parentTaskItems"
+                value-key="value"
+                :placeholder="t('tasks.selectParentTask')"
+                :search-input="{ placeholder: t('tasks.searchParentTask'), icon: 'i-lucide-search' }"
+                class="w-full"
+              />
+            </UFormField>
 
-        <UFormField :label="t('tasks.title')" required>
-          <UInput v-model="form.title" :placeholder="t('tasks.titlePlaceholder')" class="w-full" data-testid="task-title" />
-        </UFormField>
+            <UFormField :label="t('tasks.title')" required>
+              <UInput v-model="form.title" :placeholder="t('tasks.titlePlaceholder')" class="w-full" data-testid="task-title" />
+            </UFormField>
 
-        <UFormField :label="t('tasks.description')">
-          <RichTextEditor
-            v-model="form.description"
-            :placeholder="t('tasks.descriptionPlaceholder')"
-            :rows="3"
-            variant="full"
-          />
-        </UFormField>
+            <UFormField class="lg:flex lg:min-h-0 lg:flex-1 lg:flex-col" :label="t('tasks.description')">
+              <div class="min-h-0 lg:flex lg:flex-1">
+                <RichTextEditor
+                  v-model="form.description"
+                  :placeholder="t('tasks.descriptionPlaceholder')"
+                  :rows="6"
+                  variant="full"
+                  class="h-full w-full lg:min-h-[560px]"
+                />
+              </div>
+            </UFormField>
+          </div>
 
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div class="space-y-4">
           <UFormField :label="t('tasks.assignee')">
             <USelect
               v-model="form.assignee_id"
@@ -831,6 +838,7 @@ watch(
               class="w-full"
             />
           </UFormField>
+          </div>
         </div>
 
         <UFormField v-if="isEdit && task" :label="t('tasks.subtasks')">

@@ -272,6 +272,7 @@ function openParent() {
     :open="open"
     :title="t('tasks.editSubtask')"
     :fullscreen="isMobile"
+    :ui="{ content: 'sm:max-w-5xl' }"
     @update:open="emit('update:open', $event)"
   >
     <template #body>
@@ -290,48 +291,54 @@ function openParent() {
       </div>
 
       <div v-if="activeTab === 'details'" class="space-y-4">
-        <button
-          v-if="parent"
-          type="button"
-          class="flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm text-slate-600 transition-colors hover:bg-slate-100"
-          @click="openParent"
-        >
-          <UIcon name="i-lucide-corner-left-up" class="size-4 shrink-0 text-slate-400" />
-          <span class="min-w-0 truncate">
-            {{ t("tasks.subtaskOf", { title: parent.title }) }}
-          </span>
-          <UIcon name="i-lucide-chevron-right" class="ml-auto size-4 shrink-0 text-slate-400" />
-        </button>
+        <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div class="flex flex-col gap-4 lg:min-h-[600px]">
+            <button
+              v-if="parent"
+              type="button"
+              class="flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm text-slate-600 transition-colors hover:bg-slate-100"
+              @click="openParent"
+            >
+              <UIcon name="i-lucide-corner-left-up" class="size-4 shrink-0 text-slate-400" />
+              <span class="min-w-0 truncate">
+                {{ t("tasks.subtaskOf", { title: parent.title }) }}
+              </span>
+              <UIcon name="i-lucide-chevron-right" class="ml-auto size-4 shrink-0 text-slate-400" />
+            </button>
 
-        <UFormField :label="t('tasks.parentTask')">
-          <USelectMenu
-            v-model="form.task_id"
-            :items="parentTaskItems"
-            value-key="value"
-            :placeholder="t('tasks.selectParentTask')"
-            :search-input="{ placeholder: t('tasks.searchParentTask'), icon: 'i-lucide-search' }"
-            class="w-full"
-          />
-        </UFormField>
+            <UFormField :label="t('tasks.parentTask')">
+              <USelectMenu
+                v-model="form.task_id"
+                :items="parentTaskItems"
+                value-key="value"
+                :placeholder="t('tasks.selectParentTask')"
+                :search-input="{ placeholder: t('tasks.searchParentTask'), icon: 'i-lucide-search' }"
+                class="w-full"
+              />
+            </UFormField>
 
-        <UFormField :label="t('tasks.title')" required>
-          <UInput
-            v-model="form.title"
-            :placeholder="t('tasks.addSubtask')"
-            class="w-full"
-          />
-        </UFormField>
+            <UFormField :label="t('tasks.title')" required>
+              <UInput
+                v-model="form.title"
+                :placeholder="t('tasks.addSubtask')"
+                class="w-full"
+              />
+            </UFormField>
 
-        <UFormField :label="t('tasks.description')">
-          <RichTextEditor
-            v-model="form.description"
-            :placeholder="t('tasks.descriptionPlaceholder')"
-            :rows="3"
-            variant="full"
-          />
-        </UFormField>
+            <UFormField class="lg:flex lg:min-h-0 lg:flex-1 lg:flex-col" :label="t('tasks.description')">
+              <div class="min-h-0 lg:flex lg:flex-1">
+                <RichTextEditor
+                  v-model="form.description"
+                  :placeholder="t('tasks.descriptionPlaceholder')"
+                  :rows="6"
+                  variant="full"
+                  class="h-full w-full lg:min-h-[560px]"
+                />
+              </div>
+            </UFormField>
+          </div>
 
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div class="space-y-4">
           <UFormField :label="t('tasks.status')">
             <USelect v-model="form.status" :items="statusItems" class="w-full" />
           </UFormField>
@@ -385,6 +392,7 @@ function openParent() {
               class="w-full"
             />
           </UFormField>
+          </div>
         </div>
       </div>
 

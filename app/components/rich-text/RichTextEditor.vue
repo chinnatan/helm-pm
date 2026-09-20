@@ -1,4 +1,6 @@
 <script setup lang="ts">
+defineOptions({ inheritAttrs: false });
+
 withDefaults(
   defineProps<{
     modelValue?: string;
@@ -28,6 +30,7 @@ function onUpdate(value: string) {
 <template>
   <ClientOnly>
     <RichTextEditorInner
+      v-bind="$attrs"
       :model-value="modelValue"
       :placeholder="placeholder"
       :variant="variant"
