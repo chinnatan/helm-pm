@@ -68,9 +68,13 @@ onMounted(async () => {
       @select="select"
     />
 
-    <p v-if="unlinkedTaskCount" class="mt-3 text-sm text-amber-700">
+    <NuxtLink
+      v-if="unlinkedTaskCount"
+      :to="{ path: '/tasks/list', query: { unlinked: '1' } }"
+      class="mt-3 inline-block text-sm text-amber-700 hover:underline"
+    >
       {{ t("rollouts.unlinkedTasks", { n: unlinkedTaskCount }) }}
-    </p>
+    </NuxtLink>
 
     <RolloutsRolloutPanel v-model:open="panelOpen" :rollout-id="selectedId" />
     <RolloutsRolloutCreateModal v-model:open="createOpen" />

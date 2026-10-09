@@ -9,7 +9,7 @@ import type {
   TaskTemplate,
 } from "~/types";
 import type { Database } from "~/types/database";
-import { isTaskClosed } from "~/types";
+import { isTaskClosed, TASK_CLOSED_STATUSES } from "~/types";
 
 type TaskUpdate = Database["public"]["Tables"]["tasks"]["Update"];
 type SubtaskUpdate = Database["public"]["Tables"]["subtasks"]["Update"];
@@ -49,6 +49,8 @@ export type TaskFilters = {
   featureId?: string | null;
   taskType?: TaskType | null;
   assigneeId?: string | null;
+  /** ยังไม่ผูก Customer หรือ Feature (เฉพาะงานที่ยังเปิด) */
+  unlinked?: boolean;
 };
 
 export function useTasks(filters?: Ref<TaskFilters | undefined>) {
@@ -75,6 +77,11 @@ export function useTasks(filters?: Ref<TaskFilters | undefined>) {
     if (f.featureId) query = query.eq("feature_id", f.featureId);
     if (f.taskType) query = query.eq("task_type", f.taskType);
     if (f.assigneeId) query = query.eq("assignee_id", f.assigneeId);
+    if (f.unlinked) {
+      query = query
+        .or("customer_id.is.null,feature_id.is.null")
+        .not("status", "in", `(${TASK_CLOSED_STATUSES.join(",")})`);
+    }
 
     if (searchQuery.value) {
       query = query.or(

@@ -121,9 +121,11 @@ export function usePlanner() {
         .not("status", "in", `(${TASK_CLOSED_STATUSES.join(",")})`)
         .order("sort_order");
 
-      tasks.value = ((data ?? []) as unknown as Task[]).filter((t) =>
-        taskInvolvesUser(t, uid),
-      );
+      const focusOrder = (t: Task) =>
+        t.user_task_preferences?.find((p) => p.user_id === uid)?.sort_order ?? 0;
+      tasks.value = ((data ?? []) as unknown as Task[])
+        .filter((t) => taskInvolvesUser(t, uid))
+        .sort((a, b) => focusOrder(a) - focusOrder(b));
     } else {
       let result = await fetchTasksInvolvingUser();
 
@@ -165,11 +167,21 @@ export function usePlanner() {
     if (!user.value) return;
 
     if (pinned) {
+      // ต่อท้ายลำดับ focus ของตัวเอง (เดิมเป็น 0 ทุกงาน → เรียงไม่ได้)
+      const { data: last } = await supabase
+        .from("user_task_preferences")
+        .select("sort_order")
+        .eq("user_id", user.value.id)
+        .eq("is_pinned", true)
+        .order("sort_order", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
       await supabase.from("user_task_preferences").upsert({
         user_id: user.value.id,
         task_id: taskId,
         is_pinned: true,
-        sort_order: 0,
+        sort_order: (last?.sort_order ?? -1) + 1,
       });
     } else {
       await supabase

@@ -100,7 +100,7 @@
     "subtitle": "Your personal task view",
     "today": "Today",
     "week": "This Week",
-    "inbox": "Inbox",
+    "inbox": "No due date",
     "focus": "Focus",
     "empty": "No tasks for this view"
   },
@@ -193,7 +193,8 @@
       "designer": "Designer",
       "pm": "PM",
       "other": "Other"
-    }
+    },
+    "tabMembers": "Members"
   },
   "invite": {
     "title": "Workspace invite",
@@ -356,7 +357,8 @@
       "bug": "Bug",
       "infra": "Infra",
       "customer-request": "Customer request"
-    }
+    },
+    "scopeUnlinked": "Unlinked"
   },
   "customers": {
     "title": "Customers",
@@ -474,5 +476,19 @@
     "rename": "Rename",
     "moveUp": "Move up",
     "moveDown": "Move down"
+  },
+  "quickCapture": {
+    "title": "Quick capture",
+    "placeholder": "Type a task, e.g. Fix export button #SJC #change_control",
+    "hint": "Add #customer or #feature to link automatically — optional, sort it out later",
+    "saved": "Saved to Inbox"
+  },
+  "focus": {
+    "tab": "What's the team on",
+    "hint": "Each person's focus (pinned) tasks in working order — you can only reorder your own. Pin tasks from the cards in My Planner",
+    "none": "No focus tasks",
+    "overLimit": "More than {n} focus tasks — consider keeping only what you're really working on",
+    "more": "{n} more",
+    "remove": "Remove from focus"
   }
 }

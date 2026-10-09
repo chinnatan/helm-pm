@@ -44,6 +44,12 @@ async function fetchTaskCounts() {
   taskCounts.value = counts;
 }
 
+const activeTab = ref<"members" | "focus">("focus");
+const tabItems = computed(() => [
+  { label: t("focus.tab"), value: "focus" as const },
+  { label: t("team.tabMembers"), value: "members" as const },
+]);
+
 const linkType = ref<InviteType>("open");
 const linkEmail = ref("");
 const linkRole = ref<MemberRole>("member");
@@ -257,7 +263,23 @@ const listedInvites = computed(() => invites.value);
       </p>
     </div>
 
-    <div>
+    <div class="mb-6 flex gap-2 border-b border-slate-200 pb-2">
+      <UButton
+        v-for="tab in tabItems"
+        :key="tab.value"
+        :variant="activeTab === tab.value ? 'solid' : 'ghost'"
+        color="neutral"
+        size="sm"
+        :data-testid="`team-tab-${tab.value}`"
+        @click="activeTab = tab.value"
+      >
+        {{ tab.label }}
+      </UButton>
+    </div>
+
+    <TeamFocusBoard v-if="activeTab === 'focus'" />
+
+    <div v-else>
       <!-- Invite links (admin) -->
       <div
         v-if="isWorkspaceAdmin"

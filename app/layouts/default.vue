@@ -4,6 +4,10 @@ const route = useRoute();
 const { t, locale, setLocale } = useI18n();
 
 const menuOpen = ref(false);
+const quickCaptureOpen = ref(false);
+
+// c = จดงานด่วน (Nuxt UI ไม่ trigger คีย์ลัดขณะพิมพ์ในช่อง input)
+defineShortcuts({ c: () => (quickCaptureOpen.value = true) });
 const isDesktop = ref(
   import.meta.client ? window.matchMedia("(min-width: 768px)").matches : false,
 );
@@ -26,6 +30,10 @@ onUnmounted(() => {
 
 const { isWorkspaceAdmin, canManageMembers, fetchWorkspace } = useWorkspace();
 const { fetchMyProfile } = useProfile();
+const { inboxCount, fetchInboxCount } = useInboxCount();
+const { workspace } = useWorkspace();
+
+watch([() => workspace.value?.id, () => route.fullPath], () => void fetchInboxCount(), { immediate: true });
 
 onMounted(() => {
   fetchWorkspace();
@@ -35,7 +43,7 @@ onMounted(() => {
 const navItems = computed(() => {
   const items = [
     { label: t("nav.overview"), to: "/", match: "/", icon: "i-lucide-grid-3x3" },
-    { label: t("nav.tasks"), to: "/tasks/board", match: "/tasks", icon: "i-lucide-list-checks" },
+    { label: t("nav.tasks"), to: "/tasks/board", match: "/tasks", icon: "i-lucide-list-checks", badge: inboxCount.value || undefined },
     { label: t("nav.planner"), to: "/planner", match: "/planner", icon: "i-lucide-calendar-days" },
     { label: t("nav.customers"), to: "/customers", match: "/customers", icon: "i-lucide-building-2" },
     { label: t("nav.team"), to: "/team", match: "/team", icon: "i-lucide-users" },
@@ -120,6 +128,9 @@ watch(
         >
           <UIcon :name="item.icon" class="h-4 w-4" />
           {{ item.label }}
+          <UBadge v-if="item.badge" color="warning" variant="subtle" size="xs" class="ml-auto" data-testid="inbox-badge">
+            {{ item.badge }}
+          </UBadge>
         </NuxtLink>
       </nav>
 
@@ -206,6 +217,9 @@ watch(
           >
             <UIcon :name="item.icon" class="h-4 w-4" />
             {{ item.label }}
+            <UBadge v-if="item.badge" color="warning" variant="subtle" size="xs" class="ml-auto">
+              {{ item.badge }}
+            </UBadge>
           </button>
 
           <div class="space-y-3 pt-3">
@@ -236,6 +250,16 @@ watch(
         </div>
       </template>
     </USlideover>
+
+    <UButton
+      icon="i-lucide-zap"
+      class="fixed bottom-4 right-4 z-40 rounded-full shadow-lg"
+      size="lg"
+      :aria-label="t('quickCapture.title')"
+      data-testid="quick-capture-open"
+      @click="quickCaptureOpen = true"
+    />
+    <TasksQuickCaptureModal v-model:open="quickCaptureOpen" @saved="fetchInboxCount" />
 
     <ConfirmDialog />
   </div>

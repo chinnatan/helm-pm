@@ -64,6 +64,16 @@ const tabs = computed(() => [
     <div class="flex flex-wrap items-center gap-2">
       <USelect :model-value="filters.customerId ?? ALL" :items="customerItems" size="sm" class="w-48" data-testid="scope-customer" @update:model-value="(v) => setScope({ customer: pick(v) })" />
       <USelect :model-value="filters.featureId ?? ALL" :items="featureItems" size="sm" class="w-48" data-testid="scope-feature" @update:model-value="(v) => setScope({ feature: pick(v) })" />
+      <UButton
+        size="sm"
+        :variant="filters.unlinked ? 'solid' : 'outline'"
+        color="neutral"
+        icon="i-lucide-unlink"
+        data-testid="scope-unlinked"
+        @click="setScope({ unlinked: filters.unlinked ? null : '1' })"
+      >
+        {{ t("tasks.scopeUnlinked") }}
+      </UButton>
       <USelect :model-value="filters.taskType ?? ALL" :items="typeItems" size="sm" class="w-44" data-testid="scope-type" @update:model-value="(v) => setScope({ type: pick(v) })" />
     </div>
   </div>
