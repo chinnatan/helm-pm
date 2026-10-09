@@ -42,6 +42,7 @@
 | Task Types | feature / bug / infra / customer-request |
 | Quick Capture | จดงานด่วนจากทุกหน้า (คีย์ `c` / ปุ่มลอย) พิมพ์ `#ลูกค้า #ฟีเจอร์` ผูกอัตโนมัติ งานเข้า Inbox → [sub-plan-rollout-domain-b.md](./plans/sub-plan-rollout-domain-b.md) |
 | Inbox | งานสถานะ inbox + ตัวกรอง "ยังไม่ผูก" (`/tasks/list?unlinked=1`) + badge บนเมนู |
+| Customer Response | คำขอลูกค้า (Task type customer-request) มีสถานะคำตอบ accepted/deferred/rejected + ข้อความตอบ + สวิตช์แสดงให้ลูกค้าเห็น + วันที่รับคำขอ → [sub-plan-rollout-domain-c.md](./plans/sub-plan-rollout-domain-c.md) |
 | Task Scope | ผูก Customer และ/หรือ Feature ได้ไม่บังคับ (ไม่ผูก = แสดงเป็น "ยังไม่ผูก") |
 | Task Dependencies | งานที่ต้องทำก่อน-หลัง, blocked badge, กัน circular (UI + DB trigger) → [sub-plan-task-dependency-gantt.md](./plans/sub-plan-task-dependency-gantt.md) (ไม่มี UI Gantt แล้ว) |
 | Filters & Bulk Actions | กรองตามลูกค้า/ฟีเจอร์/ประเภท (URL query) + label / due date + bulk แก้ status, priority, assignee, tester, labels, ลบ → [sub-plan-task-filters-bulk-actions-templates.md](./plans/sub-plan-task-filters-bulk-actions-templates.md) |
@@ -59,6 +60,8 @@
 | Overview Matrix | `/` ภาพรวม Rollout (ดูหัวข้อ 3) |
 | Kanban Board | `/tasks/board` ลาก-วาง task ตาม status, filter งานที่ถูก block |
 | List View | `/tasks/list` ตารางงาน + ตัวกรอง + bulk actions |
+| Issue Log | `/customers/[id]/issue-log` เลือกช่วงวันที่รับคำขอ ฉบับลูกค้า/ภายใน คัดลอก Markdown (รูปแบบเดียวกับโน้ต Obsidian) หรือพิมพ์ PDF |
+| Share Link | `/share/[token]` ลูกค้าดูแผนส่งมอบรายเดือนและคำขอ/คำตอบโดยไม่ต้อง login (migration 034, RPC `get_customer_share`) จัดการลิงก์ที่ `customers/[id]` |
 | Customer Detail | `/customers/[id]` Rollout และงานค้างของลูกค้า |
 | Team Focus | แท็บใน `/team` งาน focus (pin) ของแต่ละคนตามลำดับ จัดลำดับได้เฉพาะของตัวเอง (migration 032) |
 | Team | `/team` สมาชิก, สิทธิ์, job role, จำนวนงานค้าง/เลยกำหนด, invite link |
@@ -165,6 +168,7 @@
 | `rollouts` | Customer × Feature + status |
 | `commitments` | สัญญาต่อลูกค้าระดับเดือนต่อ Rollout |
 | `commitment_reschedules` | ประวัติการเลื่อนเดือน |
+| `customer_share_links` | ลิงก์แชร์ให้ลูกค้า (migration 034) |
 | `labels` | ป้ายกำกับ |
 | `tasks` | งานหลัก |
 | `subtasks` | งานย่อย |
