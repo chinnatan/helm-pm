@@ -139,6 +139,25 @@ export const createRollout = (
 export const createCommitment = (token: string, rolloutId: string, month: string) =>
   insertOne(token, "commitments", { rollout_id: rolloutId, month });
 
+export async function deleteTasksByTitle(token: string, workspaceId: string, fragment: string): Promise<void> {
+  await fetch(
+    `${sb.url}/rest/v1/tasks?workspace_id=eq.${workspaceId}&title=like.${encodeURIComponent(`*${fragment}*`)}`,
+    { method: "DELETE", headers: { apikey: sb.key, authorization: `Bearer ${token}` } },
+  );
+}
+
+export async function myUserId(token: string): Promise<string> {
+  const res = await fetch(`${sb.url}/auth/v1/user`, { headers: { apikey: sb.key, authorization: `Bearer ${token}` } });
+  return ((await json(res)) as { id: string }).id;
+}
+
+export async function pinTask(token: string, userId: string, taskId: string, sortOrder = 0): Promise<void> {
+  await rest(token, "user_task_preferences", {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId, task_id: taskId, is_pinned: true, sort_order: sortOrder }),
+  });
+}
+
 export async function deleteRows(token: string, table: string, id: string): Promise<void> {
   await fetch(`${sb.url}/rest/v1/${table}?id=eq.${id}`, {
     method: "DELETE",
