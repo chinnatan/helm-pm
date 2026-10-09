@@ -5,7 +5,6 @@ export interface Env {
   ONESIGNAL_REST_API_KEY: string;
   WEBHOOK_SECRET: string;
   NUXT_PUBLIC_APP_URL: string;
-  CRON_SECRET?: string;
 }
 
 export interface NotificationRow {

@@ -133,7 +133,7 @@ tasks:
       - bash scripts/print-webhook-setup.sh
 
   notifications:dev:
-    desc: รัน notifications worker local (Wrangler dev, webhook + cron)
+    desc: รัน notifications worker local (Wrangler dev, webhook)
     dir: workers/notifications
     deps: [notifications:install]
     cmds:

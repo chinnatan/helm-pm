@@ -3,7 +3,6 @@
 Cloudflare Worker สำหรับ:
 
 - **Database webhook** — `POST /webhooks/notifications` → OneSignal Web Push
-- **Cron** — capacity / overdue alerts (`0 * * * *`)
 
 ## ทดสอบบนเครื่อง (แนะนำ — ทำตามลำดับ)
 

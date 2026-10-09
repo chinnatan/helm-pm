@@ -1,5 +1,4 @@
 import type { Env } from "./env";
-import { runCapacityCron } from "./capacity";
 import { handleNotificationWebhook, parseWebhookBody, verifyWebhookAuth } from "./webhook";
 
 export default {
@@ -23,25 +22,10 @@ export default {
       return handleNotificationWebhook(env, record);
     }
 
-    if (url.pathname === "/cron/capacity" && request.method === "POST") {
-      if (env.CRON_SECRET) {
-        const auth = request.headers.get("Authorization");
-        if (auth !== `Bearer ${env.CRON_SECRET}`) {
-          return new Response("Unauthorized", { status: 401 });
-        }
-      }
-      const result = await runCapacityCron(env);
-      return Response.json(result);
-    }
-
     if (url.pathname === "/health") {
       return new Response("ok");
     }
 
     return new Response("Not found", { status: 404 });
-  },
-
-  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(runCapacityCron(env));
   },
 };
