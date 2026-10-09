@@ -19,10 +19,11 @@ export function useTaskScope() {
       featureId: one("feature"),
       taskType: TASK_TYPE_VALUES.includes(type as TaskType) ? (type as TaskType) : null,
       unlinked: one("unlinked") === "1",
+      unanswered: one("unanswered") === "1",
     };
   });
 
-  function setScope(next: { customer?: string | null; feature?: string | null; type?: string | null; unlinked?: string | null }) {
+  function setScope(next: { customer?: string | null; feature?: string | null; type?: string | null; unlinked?: string | null; unanswered?: string | null }) {
     const query = { ...route.query };
     for (const [k, v] of Object.entries(next)) {
       if (v) query[k] = v;

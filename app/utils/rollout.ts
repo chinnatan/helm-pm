@@ -26,3 +26,28 @@ export function toMonthStart(date: string | Date) {
   const d = typeof date === "string" ? new Date(date) : date;
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
 }
+
+export type ShareRollout = {
+  feature: string;
+  status: RolloutStatus;
+  commitments: { month: string; target_status: string }[];
+};
+
+/**
+ * จัดกลุ่ม Rollout ตามเดือนที่สัญญาไว้ (เรียงเดือนเก่า→ใหม่) — Rollout ที่ยังไม่มี Commitment อยู่กลุ่ม month = null ท้ายสุด
+ * Rollout ที่มีหลาย Commitment ปรากฏในทุกเดือนนั้น
+ */
+export function groupShareTimeline(rollouts: ShareRollout[]) {
+  const byMonth = new Map<string | null, { feature: string; status: RolloutStatus }[]>();
+  for (const r of rollouts) {
+    const months = r.commitments.length ? r.commitments.map((c) => c.month) : [null];
+    for (const m of months) {
+      const list = byMonth.get(m) ?? [];
+      list.push({ feature: r.feature, status: r.status });
+      byMonth.set(m, list);
+    }
+  }
+  return [...byMonth.entries()]
+    .map(([month, items]) => ({ month, items }))
+    .sort((a, b) => (a.month === null ? 1 : b.month === null ? -1 : a.month.localeCompare(b.month)));
+}

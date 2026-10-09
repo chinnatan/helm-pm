@@ -130,6 +130,15 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
       <UBadge v-if="task.task_type !== 'feature'" color="neutral" variant="subtle" size="xs">
         {{ t(`tasks.type.${task.task_type}`) }}
       </UBadge>
+      <UBadge
+        v-if="task.task_type === 'customer-request'"
+        :color="task.response_status ? 'success' : 'warning'"
+        variant="subtle"
+        size="xs"
+        data-testid="response-badge"
+      >
+        {{ task.response_status ? t(`response.status.${task.response_status}`) : t("response.unanswered") }}
+      </UBadge>
 
       <span v-if="dueDateLabel" class="text-xs text-slate-500">
         {{ dueDateLabel }}

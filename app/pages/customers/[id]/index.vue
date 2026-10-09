@@ -22,6 +22,33 @@ const {
 const { features, fetchFeatures } = useFeatures();
 const { rollouts, fetchRollouts } = useRollouts();
 const { createTask } = useTasks();
+const { canManageMembers } = useWorkspace();
+const customerIdRef = computed(() => route.params.id as string);
+const { links, isActive, fetchLinks, createLink, revokeLink, linkUrl } = useShareLinks(customerIdRef);
+const shareDays = ref(30);
+const shareDayItems = [7, 30, 90].map((d) => ({ label: t('share.days', { n: d }), value: d }));
+
+async function handleCreateLink() {
+  const { error } = await createLink(shareDays.value);
+  if (error) toast.add({ title: error, color: 'error' });
+}
+
+async function copyLink(token: string) {
+  try {
+    await navigator.clipboard.writeText(linkUrl(token));
+    toast.add({ title: t('issueLog.copied'), color: 'success' });
+  } catch {
+    toast.add({ title: t('issueLog.copyFailed'), color: 'error' });
+  }
+}
+
+async function handleRevoke(id: string) {
+  const ok = await confirm({ title: t('share.revokeConfirm'), color: 'error', confirmLabel: t('share.revoke') });
+  if (ok) {
+    const { error } = await revokeLink(id);
+    if (error) toast.add({ title: error, color: 'error' });
+  }
+}
 const { confirm } = useConfirmDialog();
 
 const customer = ref<Customer | null>(null);
@@ -90,6 +117,7 @@ async function load() {
     editForm.notes = customer.value.notes ?? "";
   }
   openTasks.value = await fetchOpenTasksForCustomer(customerId.value);
+  if (canManageMembers.value) await fetchLinks();
   loading.value = false;
 }
 
@@ -235,6 +263,27 @@ async function handleDelete() {
         </section>
 
         <div class="space-y-6 lg:col-span-2">
+          <!-- Share links -->
+          <section v-if="canManageMembers" class="rounded-xl border border-slate-200 bg-white p-4" data-testid="share-section">
+            <h2 class="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-500">{{ t("share.sectionTitle") }}</h2>
+            <p class="mb-3 text-xs text-slate-500">{{ t("share.sectionHint") }}</p>
+            <ul v-if="links.length" class="mb-3 space-y-2">
+              <li v-for="l in links" :key="l.id" class="flex items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm" data-testid="share-link-row">
+                <span class="min-w-0 truncate" :class="isActive(l) ? 'text-slate-700' : 'text-slate-400 line-through'">
+                  {{ t("share.expiresOn", { date: l.expires_at.slice(0, 10) }) }}
+                </span>
+                <div class="flex shrink-0 gap-1">
+                  <UButton size="xs" variant="ghost" color="neutral" icon="i-lucide-copy" :disabled="!isActive(l)" :aria-label="t('issueLog.copy')" data-testid="share-copy" @click="copyLink(l.token)" />
+                  <UButton size="xs" variant="ghost" color="error" icon="i-lucide-link-2-off" :aria-label="t('share.revoke')" data-testid="share-revoke" @click="handleRevoke(l.id)" />
+                </div>
+              </li>
+            </ul>
+            <div class="flex items-center gap-2">
+              <USelect v-model="shareDays" :items="shareDayItems" size="sm" class="w-32" />
+              <UButton size="sm" icon="i-lucide-link" data-testid="share-create" @click="handleCreateLink">{{ t("share.create") }}</UButton>
+            </div>
+          </section>
+
           <!-- Rollouts -->
           <section class="rounded-xl border border-slate-200 bg-white p-4">
             <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
@@ -273,6 +322,13 @@ async function handleDelete() {
                   class="text-xs font-medium text-ocean-800 hover:underline"
                 >
                   {{ t("customers.viewProject") }}
+                </NuxtLink>
+                <NuxtLink
+                  :to="`/customers/${customerId}/issue-log`"
+                  class="text-xs font-medium text-ocean-800 hover:underline"
+                  data-testid="issuelog-link"
+                >
+                  {{ t("issueLog.open") }}
                 </NuxtLink>
                 <UButton size="xs" icon="i-lucide-plus" @click="openQuickTask">
                   {{ t("customers.quickCreate") }}

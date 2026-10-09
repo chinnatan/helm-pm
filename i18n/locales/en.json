@@ -358,7 +358,8 @@
       "infra": "Infra",
       "customer-request": "Customer request"
     },
-    "scopeUnlinked": "Unlinked"
+    "scopeUnlinked": "Unlinked",
+    "scopeUnanswered": "Unanswered"
   },
   "customers": {
     "title": "Customers",
@@ -490,5 +491,54 @@
     "overLimit": "More than {n} focus tasks — consider keeping only what you're really working on",
     "more": "{n} more",
     "remove": "Remove from focus"
+  },
+  "response": {
+    "title": "Customer response",
+    "statusLabel": "Response status",
+    "requestedOn": "Requested on",
+    "text": "Response text",
+    "customerVisible": "Visible to customer",
+    "unanswered": "Not answered",
+    "status": {
+      "accepted": "Accepted",
+      "deferred": "Deferred",
+      "rejected": "Rejected"
+    }
+  },
+  "issueLog": {
+    "title": "Issue Log",
+    "subtitle": "Customer requests and our responses — copy as Markdown or print to PDF",
+    "from": "Requested from",
+    "to": "Requested to",
+    "forCustomer": "Customer version (hide internal items)",
+    "forCustomerHint": "{n} internal items hidden",
+    "internalHint": "Internal version — all items shown",
+    "intro": "Intro text (optional)",
+    "introPlaceholder": "e.g. The main plan continues on the timeline we shared.",
+    "count": "{n} items",
+    "copy": "Copy Markdown",
+    "print": "Print / save PDF",
+    "copied": "Copied",
+    "copyFailed": "Copy failed",
+    "empty": "No requests in this date range",
+    "open": "Issue Log"
+  },
+  "share": {
+    "invalidTitle": "This link is not valid",
+    "invalidHint": "It may have expired or been revoked. Please contact the team.",
+    "subtitle": "Delivery status and our responses",
+    "timeline": "Delivery plan",
+    "noTimeline": "No delivery plan yet",
+    "requests": "Requests and responses",
+    "noRequests": "No requests yet",
+    "awaiting": "Awaiting our response",
+    "expires": "This link is valid until {date}",
+    "sectionTitle": "Customer share link",
+    "sectionHint": "The customer can view the delivery plan and responses without logging in (only items marked visible to the customer).",
+    "days": "{n} days",
+    "create": "Create link",
+    "expiresOn": "Valid until {date}",
+    "revoke": "Revoke",
+    "revokeConfirm": "Revoke this link? The customer will no longer be able to open it."
   }
 }

@@ -95,10 +95,10 @@ watch(
 </script>
 
 <template>
-  <div class="flex h-dvh overflow-hidden bg-slate-50">
+  <div class="flex h-dvh overflow-hidden bg-slate-50 print:h-auto print:overflow-visible">
     <!-- Desktop sidebar -->
     <aside
-      class="hidden w-60 shrink-0 flex-col border-r border-slate-200 bg-white md:flex"
+      class="hidden w-60 shrink-0 flex-col border-r border-slate-200 bg-white md:flex print:hidden"
     >
       <!-- Header -->
       <div class="shrink-0 flex items-center justify-between border-b border-slate-200 px-5 py-4">
@@ -166,7 +166,7 @@ watch(
     <div class="flex min-h-0 min-w-0 flex-1 flex-col">
       <!-- Mobile top bar -->
       <header
-        class="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden"
+        class="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden print:hidden"
       >
         <div class="flex items-center gap-2">
           <UButton
@@ -189,7 +189,7 @@ watch(
         <LayoutNotificationBell v-if="!isDesktop" />
       </header>
 
-      <main class="min-h-0 flex-1 overflow-auto">
+      <main class="min-h-0 flex-1 overflow-auto print:overflow-visible">
         <slot />
       </main>
     </div>
@@ -253,7 +253,7 @@ watch(
 
     <UButton
       icon="i-lucide-zap"
-      class="fixed bottom-4 right-4 z-40 rounded-full shadow-lg"
+      class="fixed bottom-4 right-4 z-40 rounded-full shadow-lg print:hidden"
       size="lg"
       :aria-label="t('quickCapture.title')"
       data-testid="quick-capture-open"

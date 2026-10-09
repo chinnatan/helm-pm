@@ -1,5 +1,6 @@
 import type {
   Task,
+  ResponseStatus,
   TaskStatus,
   TaskType,
   TaskPriority,
@@ -51,6 +52,8 @@ export type TaskFilters = {
   assigneeId?: string | null;
   /** ยังไม่ผูก Customer หรือ Feature (เฉพาะงานที่ยังเปิด) */
   unlinked?: boolean;
+  /** คำขอลูกค้าที่ยังไม่ตอบ (เฉพาะงานที่ยังเปิด) */
+  unanswered?: boolean;
 };
 
 export function useTasks(filters?: Ref<TaskFilters | undefined>) {
@@ -77,6 +80,12 @@ export function useTasks(filters?: Ref<TaskFilters | undefined>) {
     if (f.featureId) query = query.eq("feature_id", f.featureId);
     if (f.taskType) query = query.eq("task_type", f.taskType);
     if (f.assigneeId) query = query.eq("assignee_id", f.assigneeId);
+    if (f.unanswered) {
+      query = query
+        .eq("task_type", "customer-request")
+        .is("response_status", null)
+        .not("status", "in", `(${TASK_CLOSED_STATUSES.join(",")})`);
+    }
     if (f.unlinked) {
       query = query
         .or("customer_id.is.null,feature_id.is.null")
@@ -107,6 +116,10 @@ export function useTasks(filters?: Ref<TaskFilters | undefined>) {
     customer_id?: string | null;
     feature_id?: string | null;
     task_type?: TaskType;
+    response_status?: ResponseStatus | null;
+    response_text?: string | null;
+    customer_visible?: boolean;
+    requested_on?: string;
     status?: TaskStatus;
     priority?: TaskPriority;
     due_date?: string | null;

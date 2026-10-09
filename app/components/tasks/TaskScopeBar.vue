@@ -74,6 +74,16 @@ const tabs = computed(() => [
       >
         {{ t("tasks.scopeUnlinked") }}
       </UButton>
+      <UButton
+        size="sm"
+        :variant="filters.unanswered ? 'solid' : 'outline'"
+        color="neutral"
+        icon="i-lucide-message-circle-question"
+        data-testid="scope-unanswered"
+        @click="setScope({ unanswered: filters.unanswered ? null : '1' })"
+      >
+        {{ t("tasks.scopeUnanswered") }}
+      </UButton>
       <USelect :model-value="filters.taskType ?? ALL" :items="typeItems" size="sm" class="w-44" data-testid="scope-type" @update:model-value="(v) => setScope({ type: pick(v) })" />
     </div>
   </div>

@@ -6,6 +6,7 @@ export type TaskStatus =
   | "done"
   | "cancelled";
 export type TaskType = "feature" | "bug" | "infra" | "customer-request";
+export type ResponseStatus = "accepted" | "deferred" | "rejected";
 export type RolloutStatus =
   | "planned"
   | "developing"
@@ -43,6 +44,8 @@ export const TASK_STATUS_VALUES: TaskStatus[] = [
 ];
 
 export const TASK_TYPE_VALUES: TaskType[] = ["feature", "bug", "infra", "customer-request"];
+
+export const RESPONSE_STATUS_VALUES: ResponseStatus[] = ["accepted", "deferred", "rejected"];
 
 export const ROLLOUT_STATUS_VALUES: RolloutStatus[] = [
   "planned",
@@ -234,6 +237,35 @@ export interface CommitmentReschedule {
   created_at: string;
 }
 
+export interface CustomerShareLink {
+  id: string;
+  workspace_id: string;
+  customer_id: string;
+  token: string;
+  expires_at: string;
+  revoked_at: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface CustomerShare {
+  status: "valid" | "not_found";
+  expires_at?: string;
+  customer?: { name: string; company: string | null };
+  rollouts?: {
+    feature: string;
+    status: RolloutStatus;
+    commitments: { month: string; target_status: CommitmentTargetStatus }[];
+  }[];
+  requests?: {
+    title: string;
+    feature: string | null;
+    response_status: ResponseStatus | null;
+    response_text: string | null;
+    requested_on: string;
+  }[];
+}
+
 export interface Label {
   id: string;
   workspace_id: string;
@@ -260,6 +292,11 @@ export interface Task {
   workspace_id: string;
   feature_id: string | null;
   task_type: TaskType;
+  /** คำตอบต่อคำขอลูกค้า (เฉพาะ task_type customer-request); null = ยังไม่ตอบ */
+  response_status: ResponseStatus | null;
+  response_text: string | null;
+  customer_visible: boolean;
+  requested_on: string;
   assignee_id: string | null;
   tester_id: string | null;
   customer_id: string | null;

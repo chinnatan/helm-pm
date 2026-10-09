@@ -257,6 +257,13 @@ function itemFeature(item: ProjectItem) {
   return item.kind === "task" ? item.task.features?.name : item.parent.features?.name;
 }
 
+/** เฉพาะ customer-request: ป้ายสถานะคำตอบ (ว่าง = ยังไม่ตอบ) งานประเภทอื่นแสดง — */
+function itemResponse(item: ProjectItem) {
+  const task = item.kind === "task" ? item.task : item.parent;
+  if (item.kind === "subtask" || task.task_type !== "customer-request") return t("common.emDash");
+  return task.response_status ? t(`response.status.${task.response_status}`) : t("response.unanswered");
+}
+
 function itemCustomer(item: ProjectItem) {
   const task = item.kind === "task" ? item.task : item.parent;
   return task.customers?.name;
@@ -444,6 +451,7 @@ function itemCustomer(item: ProjectItem) {
               <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colTester") }}</th>
               <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("rollouts.customer") }}</th>
               <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("rollouts.feature") }}</th>
+              <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("response.title") }}</th>
               <th class="px-4 py-3 text-left font-medium text-slate-600">{{ t("projects.colDueDate") }}</th>
             </tr>
           </thead>
@@ -485,6 +493,7 @@ function itemCustomer(item: ProjectItem) {
               <td class="px-4 py-3 text-slate-600">{{ personName(itemTester(item)) }}</td>
               <td class="px-4 py-3 text-slate-600">{{ itemCustomer(item) || t("common.emDash") }}</td>
               <td class="px-4 py-3 text-slate-600">{{ itemFeature(item) || t("common.emDash") }}</td>
+              <td class="px-4 py-3 text-slate-600" data-testid="response-cell">{{ itemResponse(item) }}</td>
               <td class="px-4 py-3 text-slate-600">
                 {{
                   projectItemDueDate(item)

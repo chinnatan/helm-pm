@@ -179,6 +179,33 @@ export interface Database {
         };
         Relationships: [];
       };
+      customer_share_links: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          customer_id: string;
+          token: string;
+          expires_at: string;
+          revoked_at: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          customer_id: string;
+          token?: string;
+          expires_at: string;
+          revoked_at?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          expires_at?: string;
+          revoked_at?: string | null;
+        };
+        Relationships: [];
+      };
       features: {
         Row: {
           id: string;
@@ -294,6 +321,10 @@ export interface Database {
           workspace_id: string;
           feature_id: string | null;
           task_type: string;
+          response_status: string | null;
+          response_text: string | null;
+          customer_visible: boolean;
+          requested_on: string;
           assignee_id: string | null;
           tester_id: string | null;
           customer_id: string | null;
@@ -314,6 +345,10 @@ export interface Database {
           workspace_id: string;
           feature_id?: string | null;
           task_type?: string;
+          response_status?: string | null;
+          response_text?: string | null;
+          customer_visible?: boolean;
+          requested_on?: string;
           assignee_id?: string | null;
           tester_id?: string | null;
           customer_id?: string | null;
@@ -334,6 +369,10 @@ export interface Database {
           workspace_id?: string;
           feature_id?: string | null;
           task_type?: string;
+          response_status?: string | null;
+          response_text?: string | null;
+          customer_visible?: boolean;
+          requested_on?: string;
           assignee_id?: string | null;
           tester_id?: string | null;
           customer_id?: string | null;
@@ -705,6 +744,10 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      get_customer_share: {
+        Args: { p_token: string };
+        Returns: Json;
+      };
       create_workspace: {
         Args: { ws_name: string };
         Returns: string;

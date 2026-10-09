@@ -6,8 +6,9 @@ import type {
   TaskStatus,
   TaskPriority,
   TaskType,
+  ResponseStatus,
 } from "~/types";
-import { PRIORITY_DEFAULT_HOURS, isTaskClosed, TASK_TYPE_VALUES } from "~/types";
+import { PRIORITY_DEFAULT_HOURS, RESPONSE_STATUS_VALUES, isTaskClosed, TASK_TYPE_VALUES } from "~/types";
 import { format, parseISO } from "date-fns";
 import { VueDraggable } from "vue-draggable-plus";
 
@@ -66,6 +67,10 @@ const form = reactive({
   feature_id: null as string | null,
   customer_id: null as string | null,
   task_type: "feature" as TaskType,
+  response_status: null as ResponseStatus | null,
+  response_text: "",
+  customer_visible: true,
+  requested_on: "",
   status: "todo" as TaskStatus,
   priority: "medium" as TaskPriority,
   due_date: "",
@@ -113,6 +118,10 @@ function hydrateFormFromTask(task: Task) {
   form.feature_id = task.feature_id;
   form.customer_id = task.customer_id;
   form.task_type = task.task_type;
+  form.response_status = task.response_status;
+  form.response_text = task.response_text ?? "";
+  form.customer_visible = task.customer_visible;
+  form.requested_on = task.requested_on ?? "";
   form.status = task.status;
   form.priority = task.priority;
   form.due_date = task.due_date ?? "";
@@ -134,6 +143,10 @@ function hydrateFormForCreate() {
   form.feature_id = props.defaultFeatureId ?? null;
   form.customer_id = props.defaultCustomerId ?? null;
   form.task_type = "feature";
+  form.response_status = null;
+  form.response_text = "";
+  form.customer_visible = true;
+  form.requested_on = format(new Date(), "yyyy-MM-dd");
   form.status = props.defaultStatus ?? "todo";
   form.priority = "medium";
   form.due_date = props.defaultDueDate ?? "";
@@ -327,6 +340,23 @@ watch(
   { deep: true },
 );
 
+const isRequest = computed(() => form.task_type === "customer-request");
+
+/** คำตอบใช้ได้เฉพาะ customer-request (DB CHECK) — เปลี่ยนประเภทออกต้องล้างคำตอบด้วย */
+function responseFields() {
+  return {
+    response_status: isRequest.value ? form.response_status : null,
+    response_text: isRequest.value ? form.response_text.trim() || null : null,
+    customer_visible: form.customer_visible,
+    requested_on: form.requested_on || undefined,
+  };
+}
+
+const responseItems = computed(() => [
+  { label: t("response.unanswered"), value: null },
+  ...RESPONSE_STATUS_VALUES.map((v) => ({ label: t(`response.status.${v}`), value: v })),
+]);
+
 async function save() {
   saving.value = true;
 
@@ -341,6 +371,7 @@ async function save() {
       feature_id: form.feature_id || null,
       customer_id: form.customer_id || null,
       task_type: form.task_type,
+      ...responseFields(),
       status: form.status,
       priority: form.priority,
       due_date: form.due_date || null,
@@ -370,6 +401,7 @@ async function save() {
       feature_id: form.feature_id || null,
       customer_id: form.customer_id || null,
       task_type: form.task_type,
+      ...responseFields(),
       status: form.status,
       priority: form.priority,
       due_date: form.due_date || null,
@@ -686,6 +718,22 @@ watch(
             <UFormField :label="t('tasks.title')" required>
               <UInput v-model="form.title" :placeholder="t('tasks.titlePlaceholder')" class="w-full" data-testid="task-title" />
             </UFormField>
+
+            <div v-if="isRequest && !isCreateAsSubtask" class="space-y-3 rounded-lg border border-blue-200 bg-blue-50/50 p-3" data-testid="response-section">
+              <h4 class="text-sm font-semibold text-blue-900">{{ t("response.title") }}</h4>
+              <div class="grid gap-3 sm:grid-cols-2">
+                <UFormField :label="t('response.statusLabel')">
+                  <USelect v-model="form.response_status" :items="responseItems" class="w-full" data-testid="response-status" />
+                </UFormField>
+                <UFormField :label="t('response.requestedOn')">
+                  <UInput v-model="form.requested_on" type="date" class="w-full" />
+                </UFormField>
+              </div>
+              <UFormField :label="t('response.text')">
+                <UTextarea v-model="form.response_text" :rows="3" class="w-full" data-testid="response-text" />
+              </UFormField>
+              <USwitch v-model="form.customer_visible" :label="t('response.customerVisible')" data-testid="response-visible" />
+            </div>
 
             <UFormField class="lg:flex lg:min-h-0 lg:flex-1 lg:flex-col" :label="t('tasks.description')">
               <div class="min-h-0 lg:flex lg:flex-1">
