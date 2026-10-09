@@ -146,6 +146,14 @@ export async function deleteTasksByTitle(token: string, workspaceId: string, fra
   );
 }
 
+export async function listShareTokens(token: string, customerId: string): Promise<string[]> {
+  const rows = await rest<{ token: string }[]>(
+    token,
+    `customer_share_links?select=token&customer_id=eq.${customerId}&revoked_at=is.null&order=created_at.desc`,
+  );
+  return rows.map((r) => r.token);
+}
+
 export async function myUserId(token: string): Promise<string> {
   const res = await fetch(`${sb.url}/auth/v1/user`, { headers: { apikey: sb.key, authorization: `Bearer ${token}` } });
   return ((await json(res)) as { id: string }).id;
