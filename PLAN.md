@@ -40,6 +40,8 @@
 | Task CRUD | title, description (rich-text), priority, status — ฟอร์ม split layout แบบ Jira → [sub-plan-task-form-jira-split-layout.md](./plans/sub-plan-task-form-jira-split-layout.md) |
 | Task Statuses | inbox → todo → in_progress → testing → done / cancelled (การปล่อยใช้งานอยู่ที่ Rollout status) |
 | Task Types | feature / bug / infra / customer-request |
+| Quick Capture | จดงานด่วนจากทุกหน้า (คีย์ `c` / ปุ่มลอย) พิมพ์ `#ลูกค้า #ฟีเจอร์` ผูกอัตโนมัติ งานเข้า Inbox → [sub-plan-rollout-domain-b.md](./plans/sub-plan-rollout-domain-b.md) |
+| Inbox | งานสถานะ inbox + ตัวกรอง "ยังไม่ผูก" (`/tasks/list?unlinked=1`) + badge บนเมนู |
 | Task Scope | ผูก Customer และ/หรือ Feature ได้ไม่บังคับ (ไม่ผูก = แสดงเป็น "ยังไม่ผูก") |
 | Task Dependencies | งานที่ต้องทำก่อน-หลัง, blocked badge, กัน circular (UI + DB trigger) → [sub-plan-task-dependency-gantt.md](./plans/sub-plan-task-dependency-gantt.md) (ไม่มี UI Gantt แล้ว) |
 | Filters & Bulk Actions | กรองตามลูกค้า/ฟีเจอร์/ประเภท (URL query) + label / due date + bulk แก้ status, priority, assignee, tester, labels, ลบ → [sub-plan-task-filters-bulk-actions-templates.md](./plans/sub-plan-task-filters-bulk-actions-templates.md) |
@@ -58,6 +60,7 @@
 | Kanban Board | `/tasks/board` ลาก-วาง task ตาม status, filter งานที่ถูก block |
 | List View | `/tasks/list` ตารางงาน + ตัวกรอง + bulk actions |
 | Customer Detail | `/customers/[id]` Rollout และงานค้างของลูกค้า |
+| Team Focus | แท็บใน `/team` งาน focus (pin) ของแต่ละคนตามลำดับ จัดลำดับได้เฉพาะของตัวเอง (migration 032) |
 | Team | `/team` สมาชิก, สิทธิ์, job role, จำนวนงานค้าง/เลยกำหนด, invite link |
 
 ### 7. My Planner
