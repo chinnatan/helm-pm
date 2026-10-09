@@ -16,6 +16,6 @@ export default defineNuxtRouteMiddleware(async (to) => {
     if (redirect?.startsWith("/") && !redirect.startsWith("//")) {
       return navigateTo(redirect);
     }
-    return navigateTo("/planner");
+    return navigateTo("/");
   }
 });

@@ -31,7 +31,6 @@
     "@tiptap/vue-3": "^3.29.0",
     "@vite-pwa/nuxt": "^1.1.1",
     "date-fns": "^4.1.0",
-    "frappe-gantt": "^1.0.3",
     "isomorphic-dompurify": "^3.19.0",
     "marked": "^18.0.7",
     "nuxt": "3.21.2",

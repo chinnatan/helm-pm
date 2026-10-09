@@ -1,7 +1,7 @@
 import type {
   Task,
-  TaskPhase,
   TaskStatus,
+  TaskType,
   TaskPriority,
   Subtask,
   Label,
@@ -27,7 +27,7 @@ const TASK_SELECT = `
   *,
   profiles:assignee_id(id, email, full_name, avatar_url),
   tester:tester_id(id, email, full_name, avatar_url),
-  milestones:milestone_id(id, title, date, start_date, due_date),
+  features:feature_id(id, name, color),
   customers:customer_id(id, name),
   subtasks(${SUBTASK_SELECT}),
   task_labels(label_id, labels(*)),
@@ -44,24 +44,37 @@ export type AddSubtaskInput = {
   description?: string | null;
 };
 
-export function useTasks(projectId?: Ref<string | undefined>) {
+export type TaskFilters = {
+  customerId?: string | null;
+  featureId?: string | null;
+  taskType?: TaskType | null;
+  assigneeId?: string | null;
+};
+
+export function useTasks(filters?: Ref<TaskFilters | undefined>) {
   const supabase = useSupabaseClient();
   const user = useSupabaseUser();
+  const { workspace } = useWorkspace();
 
   const tasks = useState<Task[]>("tasks", () => []);
   const loading = ref(false);
   const searchQuery = ref("");
 
-  async function fetchTasks(pid?: string) {
-    const id = pid ?? projectId?.value;
-    if (!id) return;
+  async function fetchTasks(override?: TaskFilters) {
+    if (!workspace.value) return;
+    const f = override ?? filters?.value ?? {};
     loading.value = true;
 
     let query = supabase
       .from("tasks")
       .select(TASK_SELECT)
-      .eq("project_id", id)
+      .eq("workspace_id", workspace.value.id)
       .order("sort_order");
+
+    if (f.customerId) query = query.eq("customer_id", f.customerId);
+    if (f.featureId) query = query.eq("feature_id", f.featureId);
+    if (f.taskType) query = query.eq("task_type", f.taskType);
+    if (f.assigneeId) query = query.eq("assignee_id", f.assigneeId);
 
     if (searchQuery.value) {
       query = query.or(
@@ -80,26 +93,27 @@ export function useTasks(projectId?: Ref<string | undefined>) {
   }
 
   async function createTask(input: {
-    project_id: string;
     title: string;
     description?: string;
     assignee_id?: string | null;
     tester_id?: string | null;
-    milestone_id?: string | null;
     customer_id?: string | null;
+    feature_id?: string | null;
+    task_type?: TaskType;
     status?: TaskStatus;
     priority?: TaskPriority;
-    phase?: TaskPhase | null;
     due_date?: string | null;
     start_date?: string | null;
     estimate_hours?: number | null;
   }) {
+    if (!workspace.value) return { data: null, error: "No workspace" };
     const maxSort = tasks.value.reduce((max, t) => Math.max(max, t.sort_order), -1);
 
     const { data, error } = await supabase
       .from("tasks")
       .insert({
         ...input,
+        workspace_id: workspace.value.id,
         created_by: user.value?.id,
         sort_order: maxSort + 1,
       })
@@ -229,7 +243,7 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     if (isReparent) {
       const newParent = tasks.value.find((t) => t.id === nextTaskId);
       if (!newParent) {
-        return { data: null, error: "Parent task not found in this project" };
+        return { data: null, error: "Parent task not found in this workspace" };
       }
       const maxSort =
         newParent.subtasks?.reduce((max, s) => Math.max(max, s.sort_order), -1) ?? -1;
@@ -363,17 +377,19 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     return (data ?? []) as unknown as ActivityLog[];
   }
 
-  function subscribeToProject(pid: string, onUpdate: () => void) {
-    // ไม่ใส่ filter บน project_id — กัน "invalid column for filter"
+  function subscribeToWorkspace(onUpdate: () => void) {
+    if (!workspace.value) return () => {};
+    const wid = workspace.value.id;
+    // ไม่ใส่ filter บน workspace_id — กัน "invalid column for filter"
     // กรองฝั่ง client จาก payload แทน
     const channel = supabase
-      .channel(`tasks:${pid}`)
+      .channel(`tasks:${wid}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "tasks" },
         (payload) => {
-          const row = (payload.new ?? payload.old) as { project_id?: string };
-          if (row.project_id === pid) onUpdate();
+          const row = (payload.new ?? payload.old) as { workspace_id?: string };
+          if (row.workspace_id === wid) onUpdate();
         },
       )
       .subscribe();
@@ -385,13 +401,11 @@ export function useTasks(projectId?: Ref<string | undefined>) {
 
   const tasksByStatus = computed(() => {
     const grouped: Record<TaskStatus, Task[]> = {
-      backlog: [],
+      inbox: [],
       todo: [],
       in_progress: [],
-      ready_for_test: [],
       testing: [],
       done: [],
-      release: [],
       cancelled: [],
     };
     for (const task of tasks.value) {
@@ -428,7 +442,7 @@ export function useTasks(projectId?: Ref<string | undefined>) {
     setSubtaskLabels,
     fetchActivity,
     fetchSubtaskActivity,
-    subscribeToProject,
+    subscribeToWorkspace,
   };
 }
 

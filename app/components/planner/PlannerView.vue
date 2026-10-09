@@ -36,7 +36,7 @@ const emit = defineEmits<{
       <div class="flex-1 min-w-0" @click="emit('task-click', task)">
         <TasksTaskCard
           :task="task"
-          :show-project="true"
+          :pinnable="true"
           class="border-0 shadow-none p-0"
           @pin="(task, pinned) => emit('pin', task, pinned)"
           @delete="emit('delete', $event)"

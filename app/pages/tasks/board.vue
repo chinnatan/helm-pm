@@ -6,15 +6,13 @@ definePageMeta({ middleware: "auth" });
 
 const { t } = useI18n();
 const route = useRoute();
-const projectId = computed(() => route.params.id as string);
+const { filters } = useTaskScope();
 
-const { getProject, fetchProjects } = useProjects();
-const { fetchTasks, tasks } = useTasks(projectId);
+const { fetchTasks, tasks } = useTasks(filters);
 const { fetchWorkspace } = useWorkspace();
 const { fetchLabels } = useLabels();
 const { taskCardDensity, updateTaskCardDensity } = useProfile();
 
-const project = computed(() => getProject(projectId.value));
 const showModal = ref(false);
 const showTemplateManager = ref(false);
 const selectedTask = ref<Task | null>(null);
@@ -45,11 +43,12 @@ async function setDensity(density: TaskCardDensity) {
   savingDensity.value = false;
 }
 
+watch(filters, () => fetchTasks(), { deep: true });
+
 onMounted(async () => {
   await fetchWorkspace();
-  await fetchProjects();
   await fetchLabels();
-  await fetchTasks(projectId.value);
+  await fetchTasks();
   await openTaskFromQuery();
 });
 
@@ -82,7 +81,7 @@ function openSubtask(payload: { subtask: Subtask; parent: Task }) {
 }
 
 async function onSaved() {
-  await fetchTasks(projectId.value);
+  await fetchTasks();
   if (selectedSubtask.value) {
     const parent = tasks.value.find((t) => t.id === selectedSubtaskParent.value?.id);
     const fresh = parent?.subtasks?.find((s) => s.id === selectedSubtask.value?.id);
@@ -94,7 +93,7 @@ async function onSaved() {
 
 <template>
   <div class="p-4 md:p-6">
-    <LayoutProjectHeader v-if="project" :project="project">
+    <TasksTaskScopeBar>
       <template #actions>
         <UButton icon="i-lucide-copy" size="sm" variant="soft" data-testid="template-manage" @click="showTemplateManager = true">
           {{ t("templates.manage") }}
@@ -103,9 +102,7 @@ async function onSaved() {
           {{ t("projects.addTask") }}
         </UButton>
       </template>
-    </LayoutProjectHeader>
-
-    <LayoutProjectNav class="mb-4" />
+    </TasksTaskScopeBar>
 
     <div class="mb-3 flex flex-wrap items-center gap-2">
       <div class="inline-flex rounded-lg border border-slate-200 bg-white p-0.5">
@@ -153,7 +150,7 @@ async function onSaved() {
     </div>
 
     <KanbanBoard
-      :project-id="projectId"
+      :filters="filters"
       :mine-only="mineOnly"
       @task-click="openTask"
       @subtask-click="openSubtask"
@@ -162,9 +159,10 @@ async function onSaved() {
 
     <TasksTaskModal
       :task="selectedTask"
-      :project-id="projectId"
       :open="showModal"
       :default-status="defaultStatus"
+      :default-customer-id="filters.customerId"
+      :default-feature-id="filters.featureId"
       @update:open="showModal = $event"
       @saved="onSaved"
     />

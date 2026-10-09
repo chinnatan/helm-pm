@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Subtask, Task, TaskStatus } from "~/types";
 import { TASK_STATUS_VALUES } from "~/types";
+import type { TaskFilters } from "~/composables/useTasks";
 import { VueDraggable } from "vue-draggable-plus";
 import { taskInvolvesUser } from "~/utils/taskPeople";
 
@@ -15,11 +16,11 @@ export type KanbanItem =
     };
 
 const props = defineProps<{
-  projectId: string;
+  filters?: TaskFilters;
   mineOnly?: boolean;
 }>();
 
-const { statuses, phaseFilterItems } = useTaskLabels();
+const { statuses } = useTaskLabels();
 const user = useSupabaseUser();
 const { t } = useI18n();
 const { confirm } = useConfirmDialog();
@@ -29,10 +30,10 @@ const {
   updateSubtaskStatus,
   deleteTask,
   deleteSubtask,
-  subscribeToProject,
+  subscribeToWorkspace,
   fetchTasks,
-} = useTasks(toRef(props, "projectId"));
-const { isBlocked } = useDependencies(toRef(props, "projectId"));
+} = useTasks(toRef(props, "filters"));
+const { isBlocked } = useDependencies();
 
 const emit = defineEmits<{
   "task-click": [task: Task];
@@ -46,7 +47,6 @@ const suppressClick = ref(false);
 
 type BlockedFilter = "all" | "hide" | "only";
 const blockedFilter = ref<BlockedFilter>("all");
-const phaseFilter = ref<string>("all");
 const blockedFilterItems = computed(() => [
   { label: t("tasks.blockedFilterAll"), value: "all" },
   { label: t("tasks.blockedFilterHide"), value: "hide" },
@@ -59,13 +59,11 @@ function itemBlocked(item: KanbanItem) {
 
 function emptyColumns(): Record<TaskStatus, KanbanItem[]> {
   return {
-    backlog: [],
+    inbox: [],
     todo: [],
     in_progress: [],
-    ready_for_test: [],
     testing: [],
     done: [],
-    release: [],
     cancelled: [],
   };
 }
@@ -77,9 +75,6 @@ function buildItems(): Record<TaskStatus, KanbanItem[]> {
   const uid = user.value?.id;
 
   for (const task of tasks.value) {
-    if (phaseFilter.value !== "all" && (task.phase ?? "none") !== phaseFilter.value) {
-      continue;
-    }
     const includeTask =
       !props.mineOnly || (uid ? taskInvolvesUser(task, uid) : false);
 
@@ -161,10 +156,6 @@ watch(blockedFilter, () => {
   if (!isDragging.value) syncFromServer();
 });
 
-watch(phaseFilter, () => {
-  if (!isDragging.value) syncFromServer();
-});
-
 function blockedCountIn(status: TaskStatus) {
   return (localColumns.value[status] ?? []).filter(itemBlocked).length;
 }
@@ -197,7 +188,7 @@ async function onDragEnd() {
 
   try {
     await Promise.all(pending);
-    await fetchTasks(props.projectId);
+    await fetchTasks();
   } finally {
     isDragging.value = false;
     syncFromServer();
@@ -226,7 +217,7 @@ async function handleDeleteTask(task: Task) {
   });
   if (!ok) return;
   await deleteTask(task.id);
-  await fetchTasks(props.projectId);
+  await fetchTasks();
 }
 
 async function handleDeleteSubtask(sub: Subtask) {
@@ -238,14 +229,14 @@ async function handleDeleteSubtask(sub: Subtask) {
   });
   if (!ok) return;
   await deleteSubtask(sub.id);
-  await fetchTasks(props.projectId);
+  await fetchTasks();
 }
 
 let unsubscribe: (() => void) | null = null;
 
 onMounted(() => {
-  unsubscribe = subscribeToProject(props.projectId, () => {
-    if (!isDragging.value) fetchTasks(props.projectId);
+  unsubscribe = subscribeToWorkspace(() => {
+    if (!isDragging.value) fetchTasks();
   });
 });
 
@@ -257,9 +248,6 @@ onUnmounted(() => {
 <template>
   <div class="space-y-3">
     <div class="flex flex-wrap items-center justify-end gap-2">
-      <UIcon name="i-lucide-tags" class="size-3.5 text-slate-400" />
-      <span class="text-xs text-slate-500">{{ t("tasks.phaseLabel") }}</span>
-      <USelect v-model="phaseFilter" :items="phaseFilterItems" size="xs" class="w-40" />
       <UIcon name="i-lucide-link-2" class="size-3.5 text-slate-400" />
       <span class="text-xs text-slate-500">{{ t("tasks.dependencies") }}</span>
       <USelect
@@ -273,7 +261,7 @@ onUnmounted(() => {
     <div class="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4">
     <div
       v-for="col in columns"
-      :key="`${projectId}-${col.value}`"
+      :key="col.value"
       class="flex w-[min(18rem,85vw)] shrink-0 snap-start flex-col rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
     >
       <div class="mb-3 flex items-center justify-between gap-2">
@@ -326,7 +314,7 @@ onUnmounted(() => {
           <TasksTaskCard
             v-if="item.kind === 'task'"
             :task="item.task"
-            :show-project="false"
+            :scoped-customer-id="filters?.customerId"
             @click="openTask(item.task)"
             @delete="handleDeleteTask"
           />

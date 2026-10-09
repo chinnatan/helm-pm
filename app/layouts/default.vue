@@ -24,8 +24,7 @@ onUnmounted(() => {
   desktopMq = null;
 });
 
-const { projectsHomePath } = useLastProject();
-const { isWorkspaceAdmin, fetchWorkspace } = useWorkspace();
+const { isWorkspaceAdmin, canManageMembers, fetchWorkspace } = useWorkspace();
 const { fetchMyProfile } = useProfile();
 
 onMounted(() => {
@@ -35,17 +34,20 @@ onMounted(() => {
 
 const navItems = computed(() => {
   const items = [
-    { label: t("nav.dashboard"), to: "/dashboard", match: "/dashboard", icon: "i-lucide-layout-dashboard" },
+    { label: t("nav.overview"), to: "/", match: "/", icon: "i-lucide-grid-3x3" },
+    { label: t("nav.tasks"), to: "/tasks/board", match: "/tasks", icon: "i-lucide-list-checks" },
     { label: t("nav.planner"), to: "/planner", match: "/planner", icon: "i-lucide-calendar-days" },
-    {
-      label: t("nav.projects"),
-      to: projectsHomePath.value,
-      match: "/projects",
-      icon: "i-lucide-folder-kanban",
-    },
     { label: t("nav.customers"), to: "/customers", match: "/customers", icon: "i-lucide-building-2" },
     { label: t("nav.team"), to: "/team", match: "/team", icon: "i-lucide-users" },
   ];
+  if (canManageMembers.value) {
+    items.push({
+      label: t("nav.features"),
+      to: "/settings/features",
+      match: "/settings/features",
+      icon: "i-lucide-puzzle",
+    });
+  }
   if (isWorkspaceAdmin.value) {
     items.push({
       label: t("nav.audit"),
@@ -63,6 +65,7 @@ async function signOut() {
 }
 
 function isActive(match: string) {
+  if (match === "/") return route.path === "/";
   return route.path === match || route.path.startsWith(`${match}/`);
 }
 
@@ -123,7 +126,6 @@ watch(
       <!-- Context switchers (scrollable) -->
       <div class="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 pb-3">
         <LayoutWorkspaceSwitcher />
-        <LayoutProjectSwitcher />
       </div>
 
       <!-- Footer (pinned) -->
@@ -208,7 +210,6 @@ watch(
 
           <div class="space-y-3 pt-3">
             <LayoutWorkspaceSwitcher @navigated="menuOpen = false" />
-            <LayoutProjectSwitcher @navigated="menuOpen = false" />
           </div>
         </nav>
 

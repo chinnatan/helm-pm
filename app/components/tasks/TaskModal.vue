@@ -5,16 +5,18 @@ import type {
   Task,
   TaskStatus,
   TaskPriority,
-  TaskPhase,
+  TaskType,
 } from "~/types";
-import { PRIORITY_DEFAULT_HOURS, isTaskClosed, suggestPhaseForStatus, TASK_PHASE_VALUES } from "~/types";
+import { PRIORITY_DEFAULT_HOURS, isTaskClosed, TASK_TYPE_VALUES } from "~/types";
 import { format, parseISO } from "date-fns";
 import { VueDraggable } from "vue-draggable-plus";
 
 const props = defineProps<{
   task?: Task | null;
-  projectId: string;
   open: boolean;
+  /** ค่าเริ่มต้นตอนสร้าง (เช่น มาจาก filter ของหน้า) */
+  defaultCustomerId?: string | null;
+  defaultFeatureId?: string | null;
   defaultStatus?: TaskStatus;
   defaultDueDate?: string;
 }>();
@@ -45,18 +47,15 @@ const { members, canManageMembers } = useWorkspace();
 const { confirm } = useConfirmDialog();
 const { labels, fetchLabels } = useLabels();
 const { templates, fetchTemplates, createTemplate } = useTaskTemplates();
-const projectIdRef = toRef(() => props.projectId);
-const { milestones, fetchMilestones } = useMilestones(projectIdRef);
 const { customers, fetchCustomers } = useCustomers();
-const { getProject, fetchProjects, projects } = useProjects();
-const { scheduleCapacityAlerts } = useCapacityAlerts();
+const { features, fetchFeatures } = useFeatures();
 const {
   addDependency,
   removeDependency,
   getDependsOn,
   getBlocks,
   wouldCreateCycle,
-} = useDependencies(projectIdRef);
+} = useDependencies();
 
 const form = reactive({
   title: "",
@@ -64,11 +63,11 @@ const form = reactive({
   parent_task_id: null as string | null,
   assignee_id: null as string | null,
   tester_id: null as string | null,
-  milestone_id: null as string | null,
+  feature_id: null as string | null,
   customer_id: null as string | null,
+  task_type: "feature" as TaskType,
   status: "todo" as TaskStatus,
   priority: "medium" as TaskPriority,
-  phase: null as TaskPhase | null,
   due_date: "",
   start_date: "",
   estimate_hours: "" as string,
@@ -94,20 +93,6 @@ const activeTab = ref("details");
 const loadingActivity = ref(false);
 
 const isEdit = computed(() => !!props.task);
-const phaseTouched = ref(false);
-
-watch(
-  () => form.status,
-  (status) => {
-    if (phaseTouched.value) return;
-    form.phase = suggestPhaseForStatus(status);
-  },
-);
-
-function onPhaseChange(value: TaskPhase | null) {
-  phaseTouched.value = true;
-  form.phase = value;
-}
 const isCreateAsSubtask = computed(
   () => !isEdit.value && !!form.parent_task_id,
 );
@@ -120,18 +105,16 @@ function setActiveTab(key: string) {
 }
 
 function hydrateFormFromTask(task: Task) {
-  phaseTouched.value = !!task.phase;
   form.title = task.title;
   form.description = task.description ?? "";
   form.parent_task_id = null;
   form.assignee_id = task.assignee_id;
   form.tester_id = task.tester_id;
-  form.milestone_id = task.milestone_id;
-  form.customer_id =
-    task.customer_id ?? getProject(props.projectId)?.customer_id ?? null;
+  form.feature_id = task.feature_id;
+  form.customer_id = task.customer_id;
+  form.task_type = task.task_type;
   form.status = task.status;
   form.priority = task.priority;
-  form.phase = task.phase ?? null;
   form.due_date = task.due_date ?? "";
   form.start_date = task.start_date ?? "";
   form.estimate_hours =
@@ -143,17 +126,16 @@ function hydrateFormFromTask(task: Task) {
 }
 
 function hydrateFormForCreate() {
-  phaseTouched.value = false;
   form.title = "";
   form.description = "";
   form.parent_task_id = null;
   form.assignee_id = null;
   form.tester_id = null;
-  form.milestone_id = null;
-  form.customer_id = getProject(props.projectId)?.customer_id ?? null;
+  form.feature_id = props.defaultFeatureId ?? null;
+  form.customer_id = props.defaultCustomerId ?? null;
+  form.task_type = "feature";
   form.status = props.defaultStatus ?? "todo";
   form.priority = "medium";
-  form.phase = null;
   form.due_date = props.defaultDueDate ?? "";
   form.start_date = "";
   form.estimate_hours = "";
@@ -175,16 +157,9 @@ async function loadSupportingData() {
   await Promise.all([
     fetchLabels(),
     fetchTemplates(),
-    fetchMilestones(),
+    fetchFeatures(),
     fetchCustomers(),
-    fetchProjects(),
   ]);
-  // Re-resolve customer default once projects are available
-  if (props.task && !props.task.customer_id && !form.customer_id) {
-    form.customer_id = getProject(props.projectId)?.customer_id ?? null;
-  } else if (!props.task && !form.customer_id) {
-    form.customer_id = getProject(props.projectId)?.customer_id ?? null;
-  }
 }
 
 const templateItems = computed(() =>
@@ -198,10 +173,8 @@ function applyTemplate(id: string | null | undefined) {
   form.description = template.description ?? "";
   form.status = template.status;
   form.priority = template.priority;
-  form.phase = template.phase;
   form.estimate_hours = template.estimate_hours == null ? "" : String(template.estimate_hours);
   form.label_ids = [...template.label_ids];
-  phaseTouched.value = true;
 }
 
 async function saveAsTemplate() {
@@ -213,7 +186,6 @@ async function saveAsTemplate() {
     description: form.description || null,
     status: form.status,
     priority: form.priority,
-    phase: form.phase,
     estimate_hours: parseEstimate(form.estimate_hours),
     label_ids: [...form.label_ids],
   });
@@ -255,13 +227,8 @@ const profileNameById = computed(() => {
   return map;
 });
 
-const milestoneTitleById = computed(() => {
-  const map = new Map<string, string>();
-  for (const ms of milestones.value) {
-    map.set(ms.id, ms.title);
-  }
-  return map;
-});
+const featureNameById = computed(() => new Map(features.value.map((f) => [f.id, f.name])));
+const customerNameById = computed(() => new Map(customers.value.map((c) => [c.id, formatCustomerLabel(c)])));
 
 function memberLabel(userId: string, jobRole: JobRole | null | undefined) {
   const member = members.value.find((m) => m.user_id === userId);
@@ -371,11 +338,11 @@ async function save() {
       description: form.description || undefined,
       assignee_id: form.assignee_id || null,
       tester_id: form.tester_id || null,
-      milestone_id: form.milestone_id || null,
+      feature_id: form.feature_id || null,
       customer_id: form.customer_id || null,
+      task_type: form.task_type,
       status: form.status,
       priority: form.priority,
-      phase: form.phase,
       due_date: form.due_date || null,
       start_date: form.start_date || null,
       estimate_hours,
@@ -396,16 +363,15 @@ async function save() {
     }
   } else {
     const { data } = await createTask({
-      project_id: props.projectId,
       title: form.title,
       description: form.description || undefined,
       assignee_id: form.assignee_id || null,
       tester_id: form.tester_id || null,
-      milestone_id: form.milestone_id || null,
+      feature_id: form.feature_id || null,
       customer_id: form.customer_id || null,
+      task_type: form.task_type,
       status: form.status,
       priority: form.priority,
-      phase: form.phase,
       due_date: form.due_date || null,
       start_date: form.start_date || null,
       estimate_hours,
@@ -418,7 +384,6 @@ async function save() {
   saving.value = false;
   emit("update:open", false);
   emit("saved");
-  scheduleCapacityAlerts({ projects: projects.value });
 }
 
 const deleting = ref(false);
@@ -438,7 +403,6 @@ async function handleDelete() {
   if (error) return;
   emit("update:open", false);
   emit("saved");
-  scheduleCapacityAlerts({ projects: projects.value });
 }
 
 const defaultEstimateHours = computed(
@@ -467,7 +431,6 @@ async function handleAddSubtask() {
   // คง field อื่นไว้เพื่อกรอกต่อเนื่อง ล้างเฉพาะ title
   newSubtask.title = "";
   syncSortedSubtasks();
-  scheduleCapacityAlerts({ projects: projects.value });
 }
 
 function onNewSubtaskPaste(event: ClipboardEvent) {
@@ -480,7 +443,6 @@ function onNewSubtaskPaste(event: ClipboardEvent) {
 
 async function onSubtaskAssignee(sub: Subtask, value: string | null) {
   await updateSubtask(sub.id, { assignee_id: value });
-  scheduleCapacityAlerts({ projects: projects.value });
 }
 
 async function onSubtaskTester(sub: Subtask, value: string | null) {
@@ -493,12 +455,10 @@ async function onSubtaskStartDate(sub: Subtask, value: string) {
 
 async function onSubtaskDueDate(sub: Subtask, value: string) {
   await updateSubtask(sub.id, { due_date: value || null });
-  scheduleCapacityAlerts({ projects: projects.value });
 }
 
 async function onSubtaskEstimate(sub: Subtask, value: string) {
   await updateSubtask(sub.id, { estimate_hours: parseEstimate(value) });
-  scheduleCapacityAlerts({ projects: projects.value });
 }
 
 async function handleDeleteSubtask(sub: Subtask) {
@@ -511,7 +471,6 @@ async function handleDeleteSubtask(sub: Subtask) {
   if (!ok) return;
   await deleteSubtask(sub.id);
   syncSortedSubtasks();
-  scheduleCapacityAlerts({ projects: projects.value });
 }
 
 async function onSubtasksReorder() {
@@ -537,8 +496,11 @@ function resolveActivityValue(field: string | null, value: string | null) {
   ) {
     return profileNameById.value.get(value) ?? value;
   }
-  if (field === "milestone_id") {
-    return milestoneTitleById.value.get(value) ?? value;
+  if (field === "feature_id") {
+    return featureNameById.value.get(value) ?? value;
+  }
+  if (field === "customer_id") {
+    return customerNameById.value.get(value) ?? value;
   }
   if (field === "task_id") {
     return tasks.value.find((t) => t.id === value)?.title ?? value;
@@ -585,13 +547,9 @@ const priorityItems = computed(() =>
   priorities.value.map((p) => ({ label: p.label, value: p.value })),
 );
 
-const phaseItems = computed(() => [
-  { label: t("tasks.phaseNone"), value: null },
-  ...TASK_PHASE_VALUES.map((p) => ({
-    label: t(`tasks.phase.${p.value}`),
-    value: p.value,
-  })),
-]);
+const taskTypeItems = computed(() =>
+  TASK_TYPE_VALUES.map((v) => ({ label: t(`tasks.type.${v}`), value: v })),
+);
 
 const developerItems = computed(() => [
   { label: t("tasks.unassigned"), value: null },
@@ -609,12 +567,9 @@ const testerItems = computed(() => [
   })),
 ]);
 
-const milestoneItems = computed(() => [
+const featureItems = computed(() => [
   { label: t("common.none"), value: null },
-  ...milestones.value.map((m) => ({
-    label: `${m.title} (${m.start_date || m.date} → ${m.due_date || m.date})`,
-    value: m.id,
-  })),
+  ...features.value.map((f) => ({ label: f.name, value: f.id })),
 ]);
 
 const customerItems = computed(() => [
@@ -780,13 +735,8 @@ watch(
             />
           </UFormField>
 
-          <UFormField v-if="!isCreateAsSubtask" :label="t('tasks.phaseLabel')">
-            <USelect
-              :model-value="form.phase"
-              :items="phaseItems"
-              class="w-full"
-              @update:model-value="(v) => onPhaseChange(v as TaskPhase | null)"
-            />
+          <UFormField v-if="!isCreateAsSubtask" :label="t('tasks.typeLabel')">
+            <USelect v-model="form.task_type" :items="taskTypeItems" class="w-full" />
           </UFormField>
 
           <UFormField :label="t('tasks.startDate')">
@@ -811,11 +761,11 @@ watch(
             />
           </UFormField>
 
-          <UFormField v-if="!isCreateAsSubtask" :label="t('projects.milestone')">
+          <UFormField v-if="!isCreateAsSubtask" :label="t('rollouts.feature')">
             <USelect
-              v-model="form.milestone_id"
-              :items="milestoneItems"
-              :placeholder="t('projects.selectMilestone')"
+              v-model="form.feature_id"
+              :items="featureItems"
+              :placeholder="t('common.none')"
               class="w-full"
             />
           </UFormField>

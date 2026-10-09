@@ -40,7 +40,7 @@ async function selectWorkspace(id: string) {
   }
 
   open.value = false;
-  await navigateTo("/projects");
+  await navigateTo("/");
   emit("navigated");
 }
 
@@ -66,7 +66,7 @@ async function handleCreate() {
 
   showCreate.value = false;
   newName.value = "";
-  await navigateTo("/projects");
+  await navigateTo("/");
   emit("navigated");
 }
 </script>

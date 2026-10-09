@@ -22,9 +22,8 @@ const PLANNER_SELECT = `
   *,
   profiles:assignee_id(id, email, full_name, avatar_url),
   tester:tester_id(id, email, full_name, avatar_url),
-  milestones:milestone_id(id, title, date, start_date, due_date),
+  features:feature_id(id, name, color),
   customers:customer_id(id, name),
-  projects!inner(id, name, color, customer_id, workspace_id),
   subtasks(${SUBTASK_SELECT}),
   task_labels(label_id, labels(*)),
   user_task_preferences!inner(*)
@@ -34,9 +33,8 @@ const TASK_SELECT = `
   *,
   profiles:assignee_id(id, email, full_name, avatar_url),
   tester:tester_id(id, email, full_name, avatar_url),
-  milestones:milestone_id(id, title, date, start_date, due_date),
+  features:feature_id(id, name, color),
   customers:customer_id(id, name),
-  projects!inner(id, name, color, customer_id, workspace_id),
   subtasks(${SUBTASK_SELECT}),
   task_labels(label_id, labels(*)),
   user_task_preferences(*)
@@ -68,7 +66,7 @@ export function usePlanner() {
       .from("tasks")
       .select(TASK_SELECT)
       .or(`assignee_id.eq.${uid},tester_id.eq.${uid}`)
-      .eq("projects.workspace_id", wsId)
+      .eq("workspace_id", wsId)
       .not("status", "in", closed);
 
     const { data: parentTasks } = await parentQuery;
@@ -90,7 +88,7 @@ export function usePlanner() {
         .from("tasks")
         .select(TASK_SELECT)
         .in("id", missingIds)
-        .eq("projects.workspace_id", wsId)
+        .eq("workspace_id", wsId)
         .not("status", "in", closed);
 
       for (const t of (extra ?? []) as unknown as Task[]) {
@@ -119,7 +117,7 @@ export function usePlanner() {
         .select(PLANNER_SELECT)
         .eq("user_task_preferences.is_pinned", true)
         .eq("user_task_preferences.user_id", uid)
-        .eq("projects.workspace_id", wsId)
+        .eq("workspace_id", wsId)
         .not("status", "in", `(${TASK_CLOSED_STATUSES.join(",")})`)
         .order("sort_order");
 

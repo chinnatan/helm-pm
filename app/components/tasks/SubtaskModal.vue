@@ -22,8 +22,6 @@ const { tasks, updateSubtask, deleteSubtask, setSubtaskLabels, fetchSubtaskActiv
 const { members, canManageMembers } = useWorkspace();
 const { confirm } = useConfirmDialog();
 const { labels, fetchLabels } = useLabels();
-const { projects } = useProjects();
-const { scheduleCapacityAlerts } = useCapacityAlerts();
 
 const form = reactive({
   title: "",
@@ -239,7 +237,6 @@ async function save() {
   saving.value = false;
   emit("update:open", false);
   emit("saved");
-  scheduleCapacityAlerts({ projects: projects.value });
 }
 
 async function handleDelete() {
@@ -257,7 +254,6 @@ async function handleDelete() {
   if (error) return;
   emit("update:open", false);
   emit("saved");
-  scheduleCapacityAlerts({ projects: projects.value });
 }
 
 function openParent() {

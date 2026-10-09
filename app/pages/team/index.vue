@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { InviteType, JobRole, MemberRole } from "~/types";
-import { DEFAULT_WEEKLY_CAPACITY_HOURS, JOB_ROLE_VALUES } from "~/types";
+import { JOB_ROLE_VALUES, TASK_CLOSED_STATUSES } from "~/types";
 import { addDays, format, parseISO } from "date-fns";
 
 definePageMeta({ middleware: "auth" });
@@ -14,7 +14,7 @@ const {
   canManageMembers,
   isWorkspaceAdmin,
 } = useWorkspace();
-const { projects, fetchProjects } = useProjects();
+const supabase = useSupabaseClient();
 const {
   invites,
   fetchInvites,
@@ -22,24 +22,27 @@ const {
   revokeInvite,
   inviteUrl,
 } = useWorkspaceInvites();
-const {
-  loading: capacityLoading,
-  fetchCapacityData,
-  memberRows,
-  workspaceSummary,
-  forwardWeekBuckets,
-  burnWeekBuckets,
-  avgWeeklyBurn,
-  runwayWeeks,
-  memberCapacity,
-} = useTeamCapacity();
-const { scheduleCapacityAlerts } = useCapacityAlerts();
+/** งานที่ยังเปิดและเลยกำหนด ต่อสมาชิก (assignee) */
+const taskCounts = ref<Record<string, { active: number; overdue: number }>>({});
 
-function baselineWeeklyFor(userId: string) {
-  return memberCapacity(userId) || DEFAULT_WEEKLY_CAPACITY_HOURS;
+async function fetchTaskCounts() {
+  if (!workspace.value) return;
+  const { data } = await supabase
+    .from("tasks")
+    .select("assignee_id, due_date")
+    .eq("workspace_id", workspace.value.id)
+    .not("assignee_id", "is", null)
+    .not("status", "in", `(${TASK_CLOSED_STATUSES.join(",")})`);
+
+  const today = format(new Date(), "yyyy-MM-dd");
+  const counts: typeof taskCounts.value = {};
+  for (const row of data ?? []) {
+    const c = (counts[row.assignee_id!] ??= { active: 0, overdue: 0 });
+    c.active += 1;
+    if (row.due_date && row.due_date < today) c.overdue += 1;
+  }
+  taskCounts.value = counts;
 }
-
-const activeTab = ref<"members" | "capacity">("capacity");
 
 const linkType = ref<InviteType>("open");
 const linkEmail = ref("");
@@ -57,15 +60,9 @@ watch(linkType, (type) => {
   if (type === "email") linkMaxUses.value = 1;
 });
 
-async function refreshCapacity() {
-  await fetchCapacityData();
-  scheduleCapacityAlerts({ projects: projects.value });
-}
-
 onMounted(async () => {
   await fetchWorkspace();
-  await fetchProjects();
-  await refreshCapacity();
+  await fetchTaskCounts();
   if (isWorkspaceAdmin.value) await fetchInvites();
 });
 
@@ -73,8 +70,7 @@ watch(
   () => workspace.value?.id,
   async (id, prev) => {
     if (id && prev && id !== prev) {
-      await fetchProjects();
-      await refreshCapacity();
+      await fetchTaskCounts();
       if (isWorkspaceAdmin.value) await fetchInvites();
     }
   },
@@ -84,8 +80,8 @@ watch(isWorkspaceAdmin, async (admin) => {
   if (admin) await fetchInvites();
 });
 
-function rowFor(userId: string) {
-  return memberRows.value.find((r) => r.userId === userId);
+function countsFor(userId: string) {
+  return taskCounts.value[userId] ?? { active: 0, overdue: 0 };
 }
 
 function resolveExpiresAt(): string | null {
@@ -183,15 +179,6 @@ async function handlePermissionRoleChange(memberId: string, role: unknown) {
   await updateMember(memberId, { role });
 }
 
-async function handleCapacityChange(memberId: string, raw: unknown) {
-  const n = typeof raw === "number" ? raw : Number(raw);
-  if (!Number.isFinite(n) || n < 8 || n > 60) return;
-  const current = members.value.find((m) => m.id === memberId)?.weekly_capacity_hours;
-  if (current != null && Number(current) === n) return;
-  await updateMember(memberId, { weekly_capacity_hours: n });
-  await refreshCapacity();
-}
-
 function inviteStatus(inv: {
   revoked_at: string | null;
   accepted_at: string | null;
@@ -258,10 +245,6 @@ const expiryOptions = computed(() => [
 
 const listedInvites = computed(() => invites.value);
 
-const tabItems = computed(() => [
-  { label: t("team.tabCapacity"), value: "capacity" as const },
-  { label: t("team.tabMembers"), value: "members" as const },
-]);
 </script>
 
 <template>
@@ -274,165 +257,7 @@ const tabItems = computed(() => [
       </p>
     </div>
 
-    <div class="mb-6 flex gap-2 border-b border-slate-200 pb-2">
-      <UButton
-        v-for="tab in tabItems"
-        :key="tab.value"
-        :variant="activeTab === tab.value ? 'solid' : 'ghost'"
-        color="neutral"
-        size="sm"
-        @click="activeTab = tab.value"
-      >
-        {{ tab.label }}
-      </UButton>
-    </div>
-
-    <template v-if="activeTab === 'capacity'">
-      <p class="mb-4 max-w-3xl text-sm text-slate-500">{{ t("capacity.hint") }}</p>
-
-      <div class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div class="rounded-xl border border-slate-200 bg-white p-4">
-          <p class="text-sm text-slate-500">{{ t("capacity.remainingHours") }}</p>
-          <p class="text-2xl font-bold text-slate-900">
-            {{ workspaceSummary.remainingHours }}
-            <span class="text-sm font-normal text-slate-400">{{ t("capacity.hoursUnit") }}</span>
-          </p>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-4">
-          <p class="text-sm text-slate-500">{{ t("capacity.activeTasks") }}</p>
-          <p class="text-2xl font-bold text-slate-900">{{ workspaceSummary.activeTaskCount }}</p>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-4">
-          <p class="text-sm text-slate-500">{{ t("capacity.teamThisWeek") }}</p>
-          <p class="text-2xl font-bold text-slate-900">{{ workspaceSummary.thisWeekPct }}%</p>
-          <p class="mt-0.5 text-xs text-slate-400">
-            {{ workspaceSummary.thisWeekHours }} / {{ workspaceSummary.teamCapacity }}
-            {{ t("capacity.hoursUnit") }}
-          </p>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-4">
-          <p class="text-sm text-slate-500">{{ t("capacity.overdue") }}</p>
-          <p class="text-2xl font-bold text-red-500">{{ workspaceSummary.overdueCount }}</p>
-        </div>
-      </div>
-
-      <div class="mb-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
-        <p class="text-sm text-slate-500">{{ t("capacity.avgBurn") }}</p>
-        <p class="text-xl font-semibold text-slate-900">
-          {{ avgWeeklyBurn }}
-          <span class="text-sm font-normal text-slate-400">{{ t("capacity.hoursUnit") }}</span>
-        </p>
-        <p v-if="runwayWeeks != null" class="mt-2 text-sm font-medium text-ocean-800">
-          {{ t("capacity.runway", { weeks: runwayWeeks }) }}
-        </p>
-        <p v-else class="mt-2 text-sm text-slate-400">{{ t("capacity.runwayUnknown") }}</p>
-        <p class="mt-1 text-xs text-slate-400">{{ t("capacity.runwayHint") }}</p>
-      </div>
-
-      <div class="mb-6 grid gap-4 lg:grid-cols-2">
-        <CapacityWeekChart
-          :title="t('capacity.weeklyLoad')"
-          :planned-label="t('capacity.thisWeek')"
-          :burn-label="t('capacity.burn')"
-          :buckets="forwardWeekBuckets"
-          mode="forward"
-        />
-        <CapacityWeekChart
-          :title="t('capacity.burnTitle')"
-          :planned-label="t('capacity.intake')"
-          :burn-label="t('capacity.burn')"
-          :buckets="burnWeekBuckets"
-          mode="burn"
-        >
-          <template #hint>
-            <p class="text-xs text-slate-400">{{ t("capacity.burnHint") }}</p>
-          </template>
-        </CapacityWeekChart>
-      </div>
-
-      <div class="mb-6">
-        <CapacityMonthSpreadsheet @saved="refreshCapacity" />
-      </div>
-
-      <div v-if="capacityLoading" class="text-sm text-slate-400">{{ t("common.loading") }}</div>
-
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div
-          v-for="row in memberRows"
-          :key="row.userId"
-          class="rounded-xl border border-slate-200 bg-white p-5"
-        >
-          <div class="mb-3 flex items-center gap-3">
-            <UserAvatar size="md" :name="row.name" />
-            <div class="min-w-0 flex-1">
-              <p class="truncate font-medium text-slate-900">{{ row.name }}</p>
-              <p class="text-xs text-slate-400">
-                {{ row.activeTaskCount }} {{ t("capacity.activeTasks").toLowerCase() }}
-                · {{ row.overdueCount }} {{ t("capacity.overdue").toLowerCase() }}
-              </p>
-            </div>
-          </div>
-
-          <UFormField
-            v-if="canManageMembers"
-            :label="t('capacity.weeklyCapacity')"
-            :hint="t('capacity.weeklyCapacityHint')"
-            class="mb-3"
-          >
-            <UInput
-              type="number"
-              min="8"
-              max="60"
-              step="1"
-              :model-value="baselineWeeklyFor(row.userId)"
-              class="w-full"
-              @update:model-value="(v) => handleCapacityChange(row.membershipId, v)"
-            />
-          </UFormField>
-          <p v-else class="mb-3 text-sm text-slate-500">
-            {{ t("capacity.weeklyCapacity") }}:
-            <span class="font-medium text-slate-800">
-              {{ baselineWeeklyFor(row.userId) }}
-            </span>
-            {{ t("capacity.hoursUnit") }}
-          </p>
-          <p class="mb-3 text-xs text-slate-400">
-            {{ t("capacity.thisWeekCap") }}:
-            <span class="font-medium text-slate-700">
-              {{ row.capacityHours }}{{ t("capacity.hoursUnit") }}
-            </span>
-          </p>
-
-          <div class="mb-3 grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <p class="text-slate-500">{{ t("capacity.remaining") }}</p>
-              <p class="font-semibold">
-                {{ row.remainingHours }} {{ t("capacity.hoursUnit") }}
-              </p>
-            </div>
-            <div v-if="row.unplannedCount > 0">
-              <p class="text-slate-500" :title="t('capacity.unplannedHint')">
-                {{ t("capacity.unplanned") }}
-              </p>
-              <p class="font-semibold text-amber-600">{{ row.unplannedCount }}</p>
-            </div>
-          </div>
-
-          <div class="space-y-3">
-            <CapacityLoadBar
-              :pct="row.thisWeekPct"
-              :label="`${t('capacity.thisWeek')} · ${row.thisWeekHours}${t('capacity.hoursUnit')}`"
-            />
-            <CapacityLoadBar
-              :pct="row.nextWeekPct"
-              :label="`${t('capacity.nextWeek')} · ${row.nextWeekHours}${t('capacity.hoursUnit')}`"
-            />
-          </div>
-        </div>
-      </div>
-    </template>
-
-    <template v-else>
+    <div>
       <!-- Invite links (admin) -->
       <div
         v-if="isWorkspaceAdmin"
@@ -632,18 +457,18 @@ const tabItems = computed(() => [
             <div>
               <p class="text-slate-500">{{ t("team.activeTasks") }}</p>
               <p class="text-lg font-semibold">
-                {{ rowFor(member.user_id)?.activeTaskCount ?? 0 }}
+                {{ countsFor(member.user_id).active }}
               </p>
             </div>
             <div>
               <p class="text-slate-500">{{ t("team.overdue") }}</p>
               <p class="text-lg font-semibold text-red-500">
-                {{ rowFor(member.user_id)?.overdueCount ?? 0 }}
+                {{ countsFor(member.user_id).overdue }}
               </p>
             </div>
           </div>
         </div>
       </div>
-    </template>
+    </div>
   </div>
 </template>

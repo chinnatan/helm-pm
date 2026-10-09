@@ -47,7 +47,7 @@ async function handleAccept() {
   }
 
   await fetchWorkspace();
-  await navigateTo("/projects");
+  await navigateTo("/");
 }
 
 function formatExpiry(iso?: string) {

@@ -74,7 +74,7 @@ async function handleDelete(task: import("~/types").Task) {
     <TasksTaskModal
       v-if="selectedTask"
       :task="selectedTask"
-      :project-id="selectedTask.project_id"
+      
       :open="showModal"
       @update:open="showModal = $event"
       @saved="fetchPlannerTasks"

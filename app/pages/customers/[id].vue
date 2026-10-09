@@ -1,17 +1,15 @@
 <script setup lang="ts">
-import type { Customer, Meeting, Requirement, Task } from "~/types";
-import { REQUIREMENT_STATUS_VALUES } from "~/types";
-import { format, parseISO } from "date-fns";
+import type { Customer, Task } from "~/types";
+import { ROLLOUT_STATUS_STYLE } from "~/utils/rollout";
 
 definePageMeta({ middleware: "auth" });
 
 const { t } = useI18n();
+const toast = useToast();
 const route = useRoute();
 const customerId = computed(() => route.params.id as string);
-const customerIdRef = toRef(() => route.params.id as string);
 
 const { fetchWorkspace, isWorkspaceAdmin } = useWorkspace();
-const { projects, fetchProjects } = useProjects();
 const {
   getCustomer,
   updateCustomer,
@@ -21,16 +19,10 @@ const {
   fetchOpenTasksForCustomer,
   fetchCustomers,
 } = useCustomers();
+const { features, fetchFeatures } = useFeatures();
+const { rollouts, fetchRollouts } = useRollouts();
+const { createTask } = useTasks();
 const { confirm } = useConfirmDialog();
-const { meetings, createMeeting, updateMeeting: updateMeetingApi, deleteMeeting: deleteMeetingApi, fetchMeetings } = useMeetings(customerIdRef);
-const {
-  requirements,
-  createRequirement,
-  updateRequirement,
-  deleteRequirement,
-  createTaskFromRequirement,
-  fetchRequirements,
-} = useRequirements(customerIdRef);
 
 const customer = ref<Customer | null>(null);
 const openTasks = ref<Task[]>([]);
@@ -44,109 +36,52 @@ const editForm = reactive({
   notes: "",
 });
 
-const showMeeting = ref(false);
-const meetingForm = reactive({
-  title: "",
-  met_at: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-  summary: "",
-});
-const savingMeeting = ref(false);
+const customerRollouts = computed(() =>
+  rollouts.value.filter((r) => r.customer_id === customerId.value),
+);
 
-const showEditMeeting = ref(false);
-const editingMeetingId = ref<string | null>(null);
-const editMeetingForm = reactive({
-  title: "",
-  met_at: "",
-  summary: "",
-});
-const savingEditMeeting = ref(false);
-
-const showRequirement = ref(false);
-const requirementForm = reactive({
-  title: "",
-  description: "",
-  meeting_id: null as string | null,
-});
-const savingRequirement = ref(false);
-
-const showEditRequirement = ref(false);
-const editingRequirementId = ref<string | null>(null);
-const editRequirementForm = reactive({
-  title: "",
-  description: "",
-  meeting_id: null as string | null,
-});
-const savingEditRequirement = ref(false);
-
-const showCreateTask = ref(false);
-const selectedRequirement = ref<Requirement | null>(null);
-const selectedProjectId = ref<string | undefined>(undefined);
-const creatingTask = ref(false);
-
-const { createTask } = useTasks();
 const showQuickTask = ref(false);
 const quickTask = reactive({
   title: "",
-  projectId: undefined as string | undefined,
+  feature_id: null as string | null,
   due_date: "",
 });
 const savingQuickTask = ref(false);
 
+const featureItems = computed(() => [
+  { label: t("common.none"), value: null },
+  ...features.value.map((f) => ({ label: f.name, value: f.id })),
+]);
+
 function openQuickTask() {
   quickTask.title = "";
-  quickTask.projectId = projectItems.value[0]?.value;
+  quickTask.feature_id = null;
   quickTask.due_date = "";
   showQuickTask.value = true;
 }
 
 async function handleQuickCreateTask() {
-  if (!quickTask.title.trim() || !quickTask.projectId) return;
+  if (!quickTask.title.trim()) return;
   savingQuickTask.value = true;
   const { error } = await createTask({
-    project_id: quickTask.projectId,
     title: quickTask.title.trim(),
     customer_id: customerId.value,
+    feature_id: quickTask.feature_id,
     due_date: quickTask.due_date || null,
   });
   savingQuickTask.value = false;
-  if (error) return;
+  if (error) {
+    toast.add({ title: error, color: "error" });
+    return;
+  }
   showQuickTask.value = false;
   openTasks.value = await fetchOpenTasksForCustomer(customerId.value);
 }
 
-const customerProjects = computed(() =>
-  projects.value.filter((p) => p.customer_id === customerId.value),
-);
-
-const projectItems = computed(() => {
-  const list =
-    customerProjects.value.length > 0 ? customerProjects.value : projects.value;
-  return list.map((p) => ({ label: p.name, value: p.id }));
-});
-
-const createTaskDialogTitle = computed(() => {
-  if (!customer.value) return t("customers.createAsTask");
-  return formatCustomerLabel(customer.value) || t("customers.createAsTask");
-});
-
-const meetingItems = computed(() => [
-  { label: t("common.none"), value: null },
-  ...meetings.value.map((m) => ({
-    label: `${m.title} (${formatMeetingDate(m.met_at)})`,
-    value: m.id,
-  })),
-]);
-
-const requirementStatusItems = computed(() =>
-  REQUIREMENT_STATUS_VALUES.map((s) => ({
-    label: t(`customers.requirementStatus.${s}`),
-    value: s,
-  })),
-);
-
 async function load() {
   loading.value = true;
-  await Promise.all([fetchWorkspace(), fetchProjects(), fetchCustomers()]);
+  await Promise.all([fetchWorkspace(), fetchCustomers()]);
+  await Promise.all([fetchFeatures(), fetchRollouts()]);
   customer.value = await getCustomer(customerId.value);
   if (customer.value) {
     editForm.name = customer.value.name;
@@ -155,7 +90,6 @@ async function load() {
     editForm.notes = customer.value.notes ?? "";
   }
   openTasks.value = await fetchOpenTasksForCustomer(customerId.value);
-  await Promise.all([fetchMeetings(), fetchRequirements()]);
   loading.value = false;
 }
 
@@ -205,120 +139,6 @@ async function handleDelete() {
   if (!ok) return;
   const { error } = await deleteCustomer(customer.value.id);
   if (!error) navigateTo("/customers");
-}
-
-async function handleCreateMeeting() {
-  if (!meetingForm.title.trim()) return;
-  savingMeeting.value = true;
-  await createMeeting({
-    title: meetingForm.title.trim(),
-    met_at: new Date(meetingForm.met_at).toISOString(),
-    summary: meetingForm.summary.trim() || null,
-  });
-  savingMeeting.value = false;
-  showMeeting.value = false;
-  meetingForm.title = "";
-  meetingForm.summary = "";
-  meetingForm.met_at = format(new Date(), "yyyy-MM-dd'T'HH:mm");
-}
-
-function openEditMeeting(meeting: Meeting) {
-  editingMeetingId.value = meeting.id;
-  editMeetingForm.title = meeting.title;
-  editMeetingForm.met_at = format(parseISO(meeting.met_at), "yyyy-MM-dd'T'HH:mm");
-  editMeetingForm.summary = meeting.summary ?? "";
-  showEditMeeting.value = true;
-}
-
-async function handleUpdateMeeting() {
-  if (!editingMeetingId.value || !editMeetingForm.title.trim()) return;
-  savingEditMeeting.value = true;
-  await updateMeetingApi(editingMeetingId.value, {
-    title: editMeetingForm.title.trim(),
-    met_at: new Date(editMeetingForm.met_at).toISOString(),
-    summary: editMeetingForm.summary.trim() || null,
-  });
-  savingEditMeeting.value = false;
-  showEditMeeting.value = false;
-  editingMeetingId.value = null;
-}
-
-async function handleDeleteMeeting(id: string) {
-  await deleteMeetingApi(id);
-}
-
-async function handleCreateRequirement() {
-  if (!requirementForm.title.trim()) return;
-  savingRequirement.value = true;
-  await createRequirement({
-    title: requirementForm.title.trim(),
-    description: requirementForm.description.trim() || null,
-    meeting_id: requirementForm.meeting_id,
-  });
-  savingRequirement.value = false;
-  showRequirement.value = false;
-  requirementForm.title = "";
-  requirementForm.description = "";
-  requirementForm.meeting_id = null;
-}
-
-function openEditRequirement(req: Requirement) {
-  editingRequirementId.value = req.id;
-  editRequirementForm.title = req.title;
-  editRequirementForm.description = req.description ?? "";
-  editRequirementForm.meeting_id = req.meeting_id ?? null;
-  showEditRequirement.value = true;
-}
-
-async function handleUpdateRequirement() {
-  if (!editingRequirementId.value || !editRequirementForm.title.trim()) return;
-  savingEditRequirement.value = true;
-  await updateRequirement(editingRequirementId.value, {
-    title: editRequirementForm.title.trim(),
-    description: editRequirementForm.description.trim() || null,
-    meeting_id: editRequirementForm.meeting_id,
-  });
-  savingEditRequirement.value = false;
-  showEditRequirement.value = false;
-  editingRequirementId.value = null;
-}
-
-async function handleDeleteRequirement(id: string) {
-  await deleteRequirement(id);
-}
-
-function openCreateTaskModal(req: Requirement) {
-  selectedRequirement.value = req;
-  selectedProjectId.value =
-    customerProjects.value[0]?.id ?? projects.value[0]?.id ?? undefined;
-  showCreateTask.value = true;
-}
-
-async function handleCreateTaskFromRequirement() {
-  if (!selectedRequirement.value || !selectedProjectId.value) return;
-  creatingTask.value = true;
-  await createTaskFromRequirement(
-    selectedRequirement.value.id,
-    selectedProjectId.value,
-  );
-  openTasks.value = await fetchOpenTasksForCustomer(customerId.value);
-  creatingTask.value = false;
-  showCreateTask.value = false;
-  selectedRequirement.value = null;
-}
-
-async function handleRequirementStatus(req: Requirement, status: string) {
-  await updateRequirement(req.id, {
-    status: status as Requirement["status"],
-  });
-}
-
-function formatMeetingDate(iso: string) {
-  try {
-    return format(parseISO(iso), "d MMM yyyy HH:mm");
-  } catch {
-    return iso;
-  }
 }
 </script>
 
@@ -415,6 +235,31 @@ function formatMeetingDate(iso: string) {
         </section>
 
         <div class="space-y-6 lg:col-span-2">
+          <!-- Rollouts -->
+          <section class="rounded-xl border border-slate-200 bg-white p-4">
+            <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+              {{ t("customers.rollouts") }}
+              <span class="ml-1 text-ocean-800">({{ customerRollouts.length }})</span>
+            </h2>
+            <ul v-if="customerRollouts.length" class="space-y-2">
+              <li
+                v-for="r in customerRollouts"
+                :key="r.id"
+                class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm"
+                :class="ROLLOUT_STATUS_STYLE[r.status]"
+              >
+                <span class="font-medium">{{ r.features?.name }}</span>
+                <span class="text-xs">
+                  {{ t(`rollouts.status.${r.status}`) }}
+                  <template v-if="r.commitments?.length">
+                    · {{ r.commitments.map((c) => c.month.slice(0, 7)).sort().join(", ") }}
+                  </template>
+                </span>
+              </li>
+            </ul>
+            <p v-else class="text-sm text-slate-400">{{ t("customers.noRollouts") }}</p>
+          </section>
+
           <!-- Open tasks -->
           <section class="rounded-xl border border-slate-200 bg-white p-4">
             <div class="mb-3 flex items-center justify-between gap-2">
@@ -422,9 +267,17 @@ function formatMeetingDate(iso: string) {
                 {{ t("customers.openTasks") }}
                 <span class="ml-1 text-ocean-800">({{ openTasks.length }})</span>
               </h2>
-              <UButton size="xs" icon="i-lucide-plus" @click="openQuickTask">
-                {{ t("customers.quickCreate") }}
-              </UButton>
+              <div class="flex items-center gap-2">
+                <NuxtLink
+                  :to="{ path: '/tasks/board', query: { customer: customerId } }"
+                  class="text-xs font-medium text-ocean-800 hover:underline"
+                >
+                  {{ t("customers.viewProject") }}
+                </NuxtLink>
+                <UButton size="xs" icon="i-lucide-plus" @click="openQuickTask">
+                  {{ t("customers.quickCreate") }}
+                </UButton>
+              </div>
             </div>
             <ul v-if="openTasks.length" class="divide-y divide-slate-100">
               <li
@@ -435,325 +288,31 @@ function formatMeetingDate(iso: string) {
                 <div class="min-w-0">
                   <p class="truncate text-sm font-medium text-slate-800">{{ task.title }}</p>
                   <p class="text-xs text-slate-500">
-                    {{ task.projects?.name }} · {{ t(`status.${task.status}`) }}
+                    {{ task.features?.name }}<template v-if="task.features"> · </template>{{ t(`status.${task.status}`) }}
                   </p>
                 </div>
                 <NuxtLink
-                  :to="`/projects/${task.project_id}/board`"
+                  :to="{ path: '/tasks/board', query: { task: task.id } }"
                   class="shrink-0 text-xs font-medium text-ocean-800 hover:underline"
                 >
-                  {{ t("customers.viewProject") }}
+                  {{ t("customers.openTask") }}
                 </NuxtLink>
               </li>
             </ul>
             <p v-else class="text-sm text-slate-400">{{ t("customers.noOpenTasks") }}</p>
           </section>
-
-          <!-- Meetings -->
-          <section class="rounded-xl border border-slate-200 bg-white p-4">
-            <div class="mb-3 flex items-center justify-between gap-2">
-              <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                {{ t("customers.meetings") }}
-              </h2>
-              <UButton size="xs" icon="i-lucide-plus" @click="showMeeting = true">
-                {{ t("customers.addMeeting") }}
-              </UButton>
-            </div>
-            <ul v-if="meetings.length" class="space-y-3">
-              <li
-                v-for="meeting in meetings"
-                :key="meeting.id"
-                class="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5"
-              >
-                <div class="flex items-start justify-between gap-2">
-                  <p class="font-medium text-slate-800">{{ meeting.title }}</p>
-                  <div class="flex shrink-0 items-center gap-1">
-                    <span class="text-xs text-slate-500">
-                      {{ formatMeetingDate(meeting.met_at) }}
-                    </span>
-                    <UButton
-                      size="xs"
-                      variant="ghost"
-                      color="neutral"
-                      icon="i-lucide-pencil"
-                      :aria-label="t('customers.editMeeting')"
-                      @click="openEditMeeting(meeting)"
-                    />
-                    <UButton
-                      size="xs"
-                      variant="ghost"
-                      color="error"
-                      icon="i-lucide-trash-2"
-                      :aria-label="t('common.delete')"
-                      @click="handleDeleteMeeting(meeting.id)"
-                    />
-                  </div>
-                </div>
-                <RichTextContent
-                  v-if="meeting.summary"
-                  class="mt-1 text-slate-600"
-                  :content="meeting.summary"
-                  :clamp-lines="5"
-                />
-              </li>
-            </ul>
-            <p v-else class="text-sm text-slate-400">{{ t("customers.noMeetings") }}</p>
-          </section>
-
-          <!-- Requirements -->
-          <section class="rounded-xl border border-slate-200 bg-white p-4">
-            <div class="mb-3 flex items-center justify-between gap-2">
-              <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
-                {{ t("customers.requirements") }}
-              </h2>
-              <UButton size="xs" icon="i-lucide-plus" @click="showRequirement = true">
-                {{ t("customers.addRequirement") }}
-              </UButton>
-            </div>
-            <ul v-if="requirements.length" class="space-y-3">
-              <li
-                v-for="req in requirements"
-                :key="req.id"
-                class="rounded-lg border border-slate-100 px-3 py-2.5"
-              >
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div class="min-w-0">
-                    <p class="font-medium text-slate-800">{{ req.title }}</p>
-                    <RichTextContent
-                      v-if="req.description"
-                      class="mt-0.5 text-slate-600"
-                      :content="req.description"
-                    />
-                    <p v-if="req.meetings" class="mt-1 text-xs text-slate-400">
-                      {{ t("customers.fromMeeting") }}: {{ req.meetings.title }}
-                    </p>
-                  </div>
-                  <div class="flex shrink-0 flex-wrap items-center gap-2">
-                    <USelect
-                      :model-value="req.status"
-                      :items="requirementStatusItems"
-                      size="sm"
-                      class="w-36"
-                      @update:model-value="(v) => handleRequirementStatus(req, String(v))"
-                    />
-                    <UButton
-                      v-if="!req.task_id"
-                      size="xs"
-                      variant="outline"
-                      @click="openCreateTaskModal(req)"
-                    >
-                      {{ t("customers.createAsTask") }}
-                    </UButton>
-                    <UBadge v-else color="success" variant="subtle" size="sm">
-                      {{ t("customers.linkedTask") }}
-                    </UBadge>
-                    <UButton
-                      size="xs"
-                      variant="ghost"
-                      color="neutral"
-                      icon="i-lucide-pencil"
-                      :aria-label="t('customers.editRequirement')"
-                      @click="openEditRequirement(req)"
-                    />
-                    <UButton
-                      size="xs"
-                      variant="ghost"
-                      color="error"
-                      icon="i-lucide-trash-2"
-                      :aria-label="t('common.delete')"
-                      @click="handleDeleteRequirement(req.id)"
-                    />
-                  </div>
-                </div>
-              </li>
-            </ul>
-            <p v-else class="text-sm text-slate-400">{{ t("customers.noRequirements") }}</p>
-          </section>
         </div>
       </div>
     </template>
-
-    <UModal v-model:open="showMeeting" :title="t('customers.addMeeting')">
-      <template #body>
-        <div class="space-y-4">
-          <UFormField :label="t('customers.meetingTitle')" required>
-            <UInput v-model="meetingForm.title" class="w-full" />
-          </UFormField>
-          <UFormField :label="t('customers.metAt')">
-            <UInput v-model="meetingForm.met_at" type="datetime-local" class="w-full" />
-          </UFormField>
-          <UFormField :label="t('customers.summary')">
-            <RichTextEditor v-model="meetingForm.summary" :rows="3" variant="full" />
-          </UFormField>
-        </div>
-      </template>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UButton variant="ghost" color="neutral" @click="showMeeting = false">
-            {{ t("common.cancel") }}
-          </UButton>
-          <UButton
-            :loading="savingMeeting"
-            :disabled="!meetingForm.title.trim()"
-            @click="handleCreateMeeting"
-          >
-            {{ t("common.create") }}
-          </UButton>
-        </div>
-      </template>
-    </UModal>
-
-    <UModal v-model:open="showEditMeeting" :title="t('customers.editMeeting')">
-      <template #body>
-        <div class="space-y-4">
-          <UFormField :label="t('customers.meetingTitle')" required>
-            <UInput v-model="editMeetingForm.title" class="w-full" />
-          </UFormField>
-          <UFormField :label="t('customers.metAt')">
-            <UInput v-model="editMeetingForm.met_at" type="datetime-local" class="w-full" />
-          </UFormField>
-          <UFormField :label="t('customers.summary')">
-            <RichTextEditor v-model="editMeetingForm.summary" :rows="3" variant="full" />
-          </UFormField>
-        </div>
-      </template>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UButton variant="ghost" color="neutral" @click="showEditMeeting = false">
-            {{ t("common.cancel") }}
-          </UButton>
-          <UButton
-            :loading="savingEditMeeting"
-            :disabled="!editMeetingForm.title.trim()"
-            @click="handleUpdateMeeting"
-          >
-            {{ t("common.save") }}
-          </UButton>
-        </div>
-      </template>
-    </UModal>
-
-    <UModal v-model:open="showRequirement" :title="t('customers.addRequirement')">
-      <template #body>
-        <div class="space-y-4">
-          <UFormField :label="t('customers.requirementTitle')" required>
-            <UInput v-model="requirementForm.title" class="w-full" />
-          </UFormField>
-          <UFormField :label="t('customers.requirementDescription')">
-            <RichTextEditor v-model="requirementForm.description" :rows="3" variant="full" />
-          </UFormField>
-          <UFormField :label="t('customers.linkMeeting')">
-            <USelect
-              v-model="requirementForm.meeting_id"
-              :items="meetingItems"
-              class="w-full"
-            />
-          </UFormField>
-        </div>
-      </template>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UButton variant="ghost" color="neutral" @click="showRequirement = false">
-            {{ t("common.cancel") }}
-          </UButton>
-          <UButton
-            :loading="savingRequirement"
-            :disabled="!requirementForm.title.trim()"
-            @click="handleCreateRequirement"
-          >
-            {{ t("common.create") }}
-          </UButton>
-        </div>
-      </template>
-    </UModal>
-
-    <UModal v-model:open="showEditRequirement" :title="t('customers.editRequirement')">
-      <template #body>
-        <div class="space-y-4">
-          <UFormField :label="t('customers.requirementTitle')" required>
-            <UInput v-model="editRequirementForm.title" class="w-full" />
-          </UFormField>
-          <UFormField :label="t('customers.requirementDescription')">
-            <RichTextEditor v-model="editRequirementForm.description" :rows="3" variant="full" />
-          </UFormField>
-          <UFormField :label="t('customers.linkMeeting')">
-            <USelect
-              v-model="editRequirementForm.meeting_id"
-              :items="meetingItems"
-              class="w-full"
-            />
-          </UFormField>
-        </div>
-      </template>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UButton variant="ghost" color="neutral" @click="showEditRequirement = false">
-            {{ t("common.cancel") }}
-          </UButton>
-          <UButton
-            :loading="savingEditRequirement"
-            :disabled="!editRequirementForm.title.trim()"
-            @click="handleUpdateRequirement"
-          >
-            {{ t("common.save") }}
-          </UButton>
-        </div>
-      </template>
-    </UModal>
-
-    <UModal v-model:open="showCreateTask" :title="createTaskDialogTitle">
-      <template #body>
-        <div class="space-y-4">
-          <p class="text-xs font-medium uppercase tracking-wide text-slate-400">
-            {{ t("customers.createAsTask") }}
-          </p>
-          <p class="text-sm text-slate-600">
-            {{ selectedRequirement?.title }}
-          </p>
-          <UFormField :label="t('customers.selectProject')" required>
-            <USelect
-              v-model="selectedProjectId"
-              :items="projectItems"
-              :placeholder="t('customers.selectProject')"
-              class="w-full"
-            />
-          </UFormField>
-        </div>
-      </template>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UButton variant="ghost" color="neutral" @click="showCreateTask = false">
-            {{ t("common.cancel") }}
-          </UButton>
-          <UButton
-            :loading="creatingTask"
-            :disabled="!selectedProjectId"
-            @click="handleCreateTaskFromRequirement"
-          >
-            {{ t("common.create") }}
-          </UButton>
-        </div>
-      </template>
-    </UModal>
 
     <UModal v-model:open="showQuickTask" :title="t('customers.quickCreate')">
       <template #body>
         <div class="space-y-4">
           <UFormField :label="t('tasks.title')" required>
-            <UInput
-              v-model="quickTask.title"
-              :placeholder="t('tasks.titlePlaceholder')"
-              class="w-full"
-              @keyup.enter="handleQuickCreateTask"
-            />
+            <UInput v-model="quickTask.title" class="w-full" />
           </UFormField>
-          <UFormField :label="t('customers.selectProject')" required>
-            <USelect
-              v-model="quickTask.projectId"
-              :items="projectItems"
-              :placeholder="t('customers.selectProject')"
-              class="w-full"
-            />
+          <UFormField :label="t('rollouts.feature')">
+            <USelect v-model="quickTask.feature_id" :items="featureItems" class="w-full" />
           </UFormField>
           <UFormField :label="t('tasks.dueDate')">
             <UInput v-model="quickTask.due_date" type="date" class="w-full" />
@@ -762,14 +321,8 @@ function formatMeetingDate(iso: string) {
       </template>
       <template #footer>
         <div class="flex justify-end gap-2">
-          <UButton variant="ghost" color="neutral" @click="showQuickTask = false">
-            {{ t("common.cancel") }}
-          </UButton>
-          <UButton
-            :loading="savingQuickTask"
-            :disabled="!quickTask.title.trim() || !quickTask.projectId"
-            @click="handleQuickCreateTask"
-          >
+          <UButton variant="ghost" color="neutral" @click="showQuickTask = false">{{ t("common.cancel") }}</UButton>
+          <UButton :loading="savingQuickTask" :disabled="!quickTask.title.trim()" @click="handleQuickCreateTask">
             {{ t("common.create") }}
           </UButton>
         </div>
