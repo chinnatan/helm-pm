@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { createTask, deleteTask, readContext, taskCard } from "./helpers";
 
-const boardUrl = () => `/projects/${readContext().projectId}/board`;
+const boardUrl = () => "/tasks/board";
 const stamp = Date.now();
 const titleA = `E2E dep A ${stamp}`;
 const titleB = `E2E dep B ${stamp}`;
@@ -10,8 +10,8 @@ let idB = "";
 
 test("เพิ่ม dependency ผ่าน UI แล้ว badge blocked ปรากฏบนงานที่รอ", async ({ page }) => {
   const ctx = readContext();
-  idA = await createTask(ctx.accessToken, ctx.projectId, titleA);
-  idB = await createTask(ctx.accessToken, ctx.projectId, titleB);
+  idA = await createTask(ctx.accessToken, ctx.workspaceId, titleA);
+  idB = await createTask(ctx.accessToken, ctx.workspaceId, titleB);
 
   await page.goto(boardUrl());
   await taskCard(page, titleB).click();
