@@ -78,117 +78,6 @@ export interface Database {
         };
         Relationships: [];
       };
-      member_month_capacities: {
-        Row: {
-          id: string;
-          workspace_id: string;
-          user_id: string;
-          month_start: string;
-          hours: number;
-          updated_at: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          workspace_id: string;
-          user_id: string;
-          month_start: string;
-          hours: number;
-          updated_at?: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          workspace_id?: string;
-          user_id?: string;
-          month_start?: string;
-          hours?: number;
-          updated_at?: string;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      workspace_month_calendars: {
-        Row: {
-          id: string;
-          workspace_id: string;
-          month_start: string;
-          working_days: number | null;
-          holiday_days: number;
-          meeting_days: number;
-          company_event_days: number;
-          leave_days: number;
-          hours_per_day: number;
-          notes: string | null;
-          updated_at: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          workspace_id: string;
-          month_start: string;
-          working_days?: number | null;
-          holiday_days?: number;
-          meeting_days?: number;
-          company_event_days?: number;
-          leave_days?: number;
-          hours_per_day?: number;
-          notes?: string | null;
-          updated_at?: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          workspace_id?: string;
-          month_start?: string;
-          working_days?: number | null;
-          holiday_days?: number;
-          meeting_days?: number;
-          company_event_days?: number;
-          leave_days?: number;
-          hours_per_day?: number;
-          notes?: string | null;
-          updated_at?: string;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      projects: {
-        Row: {
-          id: string;
-          workspace_id: string;
-          name: string;
-          description: string | null;
-          color: string;
-          customer_id: string | null;
-          owner_id: string | null;
-          created_at: string;
-          archived_at: string | null;
-        };
-        Insert: {
-          id?: string;
-          workspace_id: string;
-          name: string;
-          description?: string | null;
-          color?: string;
-          customer_id?: string | null;
-          owner_id?: string | null;
-          created_at?: string;
-          archived_at?: string | null;
-        };
-        Update: {
-          id?: string;
-          workspace_id?: string;
-          name?: string;
-          description?: string | null;
-          color?: string;
-          customer_id?: string | null;
-          owner_id?: string | null;
-          created_at?: string;
-          archived_at?: string | null;
-        };
-        Relationships: [];
-      };
       customers: {
         Row: {
           id: string;
@@ -220,72 +109,6 @@ export interface Database {
           contact_email?: string | null;
           notes?: string | null;
           status?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      meetings: {
-        Row: {
-          id: string;
-          customer_id: string;
-          title: string;
-          met_at: string;
-          summary: string | null;
-          created_by: string | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          customer_id: string;
-          title: string;
-          met_at?: string;
-          summary?: string | null;
-          created_by?: string | null;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          customer_id?: string;
-          title?: string;
-          met_at?: string;
-          summary?: string | null;
-          created_by?: string | null;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      requirements: {
-        Row: {
-          id: string;
-          customer_id: string;
-          meeting_id: string | null;
-          title: string;
-          description: string | null;
-          status: string;
-          task_id: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          customer_id: string;
-          meeting_id?: string | null;
-          title: string;
-          description?: string | null;
-          status?: string;
-          task_id?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          customer_id?: string;
-          meeting_id?: string | null;
-          title?: string;
-          description?: string | null;
-          status?: string;
-          task_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -324,7 +147,6 @@ export interface Database {
           description: string | null;
           priority: string;
           status: string;
-          phase: string | null;
           estimate_hours: number | null;
           label_ids: string[];
           created_at: string;
@@ -338,7 +160,6 @@ export interface Database {
           description?: string | null;
           priority?: string;
           status?: string;
-          phase?: string | null;
           estimate_hours?: number | null;
           label_ids?: string[];
           created_at?: string;
@@ -352,28 +173,166 @@ export interface Database {
           description?: string | null;
           priority?: string;
           status?: string;
-          phase?: string | null;
           estimate_hours?: number | null;
           label_ids?: string[];
           updated_at?: string;
         };
         Relationships: [];
       };
+      customer_share_links: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          customer_id: string;
+          token: string;
+          expires_at: string;
+          revoked_at: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          customer_id: string;
+          token?: string;
+          expires_at: string;
+          revoked_at?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          expires_at?: string;
+          revoked_at?: string | null;
+        };
+        Relationships: [];
+      };
+      features: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          name: string;
+          color: string;
+          sort_order: number;
+          archived_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          name: string;
+          color?: string;
+          sort_order?: number;
+          archived_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          workspace_id?: string;
+          name?: string;
+          color?: string;
+          sort_order?: number;
+          archived_at?: string | null;
+        };
+        Relationships: [];
+      };
+      rollouts: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          customer_id: string;
+          feature_id: string;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          customer_id: string;
+          feature_id: string;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          workspace_id?: string;
+          customer_id?: string;
+          feature_id?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      commitments: {
+        Row: {
+          id: string;
+          rollout_id: string;
+          month: string;
+          target_status: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          rollout_id: string;
+          month: string;
+          target_status?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          rollout_id?: string;
+          month?: string;
+          target_status?: string;
+        };
+        Relationships: [];
+      };
+      commitment_reschedules: {
+        Row: {
+          id: string;
+          commitment_id: string;
+          from_month: string;
+          to_month: string;
+          reason: string;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          commitment_id: string;
+          from_month: string;
+          to_month: string;
+          reason: string;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          from_month?: string;
+          to_month?: string;
+          reason?: string;
+          created_by?: string | null;
+        };
+        Relationships: [];
+      };
       tasks: {
         Row: {
           id: string;
-          project_id: string;
+          workspace_id: string;
+          feature_id: string | null;
+          task_type: string;
+          response_status: string | null;
+          response_text: string | null;
+          customer_visible: boolean;
+          requested_on: string;
           assignee_id: string | null;
           tester_id: string | null;
-          milestone_id: string | null;
           customer_id: string | null;
           created_by: string | null;
           title: string;
           description: string | null;
           status: string;
           priority: string;
-          phase: string | null;
-          phase_order: number;
           due_date: string | null;
           start_date: string | null;
           estimate_hours: number | null;
@@ -383,18 +342,21 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          project_id: string;
+          workspace_id: string;
+          feature_id?: string | null;
+          task_type?: string;
+          response_status?: string | null;
+          response_text?: string | null;
+          customer_visible?: boolean;
+          requested_on?: string;
           assignee_id?: string | null;
           tester_id?: string | null;
-          milestone_id?: string | null;
           customer_id?: string | null;
           created_by?: string | null;
           title: string;
           description?: string | null;
           status?: string;
           priority?: string;
-          phase?: string | null;
-          phase_order?: number;
           due_date?: string | null;
           start_date?: string | null;
           estimate_hours?: number | null;
@@ -404,18 +366,21 @@ export interface Database {
         };
         Update: {
           id?: string;
-          project_id?: string;
+          workspace_id?: string;
+          feature_id?: string | null;
+          task_type?: string;
+          response_status?: string | null;
+          response_text?: string | null;
+          customer_visible?: boolean;
+          requested_on?: string;
           assignee_id?: string | null;
           tester_id?: string | null;
-          milestone_id?: string | null;
           customer_id?: string | null;
           created_by?: string | null;
           title?: string;
           description?: string | null;
           status?: string;
           priority?: string;
-          phase?: string | null;
-          phase_order?: number;
           due_date?: string | null;
           start_date?: string | null;
           estimate_hours?: number | null;
@@ -589,42 +554,6 @@ export interface Database {
           id?: string;
           task_id?: string;
           depends_on_task_id?: string;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-      milestones: {
-        Row: {
-          id: string;
-          project_id: string;
-          title: string;
-          date: string;
-          start_date: string;
-          due_date: string;
-          status: string;
-          phase: string | null;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          project_id: string;
-          title: string;
-          date?: string;
-          start_date: string;
-          due_date: string;
-          status?: string;
-          phase?: string | null;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          project_id?: string;
-          title?: string;
-          date?: string;
-          start_date?: string;
-          due_date?: string;
-          status?: string;
-          phase?: string | null;
           created_at?: string;
         };
         Relationships: [];
@@ -815,6 +744,10 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      get_customer_share: {
+        Args: { p_token: string };
+        Returns: Json;
+      };
       create_workspace: {
         Args: { ws_name: string };
         Returns: string;

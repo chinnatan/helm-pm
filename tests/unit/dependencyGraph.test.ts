@@ -67,13 +67,6 @@ describe("blockedBy / isBlocked", () => {
     expect(graphIsBlocked(deps, tasks, "X")).toBe(false);
   });
 
-  it("งาน released ไม่บล็อก", () => {
-    const tasks = byId(task("X", "todo"), task("P", "release"));
-    const deps = [dep("X", "P")];
-    expect(graphBlockedBy(deps, tasks, "X")).toEqual([]);
-    expect(graphIsBlocked(deps, tasks, "X")).toBe(false);
-  });
-
   it("งาน cancelled ไม่บล็อก", () => {
     const tasks = byId(task("X", "todo"), task("P", "cancelled"));
     const deps = [dep("X", "P")];
@@ -84,7 +77,7 @@ describe("blockedBy / isBlocked", () => {
   it("ถูกบล็อกโดยหลายงานพร้อมกัน คืนครบทุกงาน", () => {
     const P1 = task("P1", "todo");
     const P2 = task("P2", "in_progress");
-    const tasks = byId(task("X", "backlog"), P1, P2);
+    const tasks = byId(task("X", "inbox"), P1, P2);
     const deps = [dep("X", "P1"), dep("X", "P2")];
     expect(graphBlockedBy(deps, tasks, "X").map((t) => t.id)).toEqual(["P1", "P2"]);
   });
@@ -92,7 +85,7 @@ describe("blockedBy / isBlocked", () => {
   it("ผสม done + เปิดอยู่ คืนเฉพาะที่ยังเปิด", () => {
     const P1 = task("P1", "done");
     const P2 = task("P2", "todo");
-    const tasks = byId(task("X", "backlog"), P1, P2);
+    const tasks = byId(task("X", "inbox"), P1, P2);
     const deps = [dep("X", "P1"), dep("X", "P2")];
     expect(graphBlockedBy(deps, tasks, "X").map((t) => t.id)).toEqual(["P2"]);
   });

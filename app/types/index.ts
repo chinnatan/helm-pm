@@ -1,12 +1,19 @@
 export type TaskStatus =
-  | "backlog"
+  | "inbox"
   | "todo"
   | "in_progress"
-  | "ready_for_test"
   | "testing"
   | "done"
-  | "release"
   | "cancelled";
+export type TaskType = "feature" | "bug" | "infra" | "customer-request";
+export type ResponseStatus = "accepted" | "deferred" | "rejected";
+export type RolloutStatus =
+  | "planned"
+  | "developing"
+  | "testing"
+  | "production"
+  | "cancelled";
+export type CommitmentTargetStatus = "developing" | "testing" | "production";
 export type TaskPriority = "low" | "medium" | "high" | "urgent";
 export type MemberRole = "admin" | "manager" | "member" | "viewer";
 export type JobRole = "developer" | "tester" | "designer" | "pm" | "other";
@@ -19,89 +26,6 @@ export const TASK_CARD_DENSITY_VALUES: TaskCardDensity[] = [
   "standard",
   "detailed",
 ];
-export type RequirementStatus = "open" | "in_progress" | "done" | "cancelled";
-export type MilestoneStatus = "planned" | "in_progress" | "done" | "cancelled";
-export type TaskPhase =
-  | "requirements"
-  | "analysis"
-  | "design"
-  | "development"
-  | "testing"
-  | "deployment"
-  | "done";
-
-export interface TaskPhaseMeta {
-  value: TaskPhase;
-  label: string;
-  icon: string;
-  color: string;
-  order: number;
-}
-
-export const TASK_PHASE_VALUES: TaskPhaseMeta[] = [
-  {
-    value: "requirements",
-    label: "เก็บความต้องการ",
-    icon: "i-lucide-clipboard-list",
-    color: "#8b5cf6",
-    order: 1,
-  },
-  {
-    value: "analysis",
-    label: "วิเคราะห์",
-    icon: "i-lucide-search",
-    color: "#6366f1",
-    order: 2,
-  },
-  {
-    value: "design",
-    label: "ออกแบบ",
-    icon: "i-lucide-palette",
-    color: "#3b82f6",
-    order: 3,
-  },
-  {
-    value: "development",
-    label: "พัฒนา",
-    icon: "i-lucide-code",
-    color: "#10b981",
-    order: 4,
-  },
-  {
-    value: "testing",
-    label: "ทดสอบ",
-    icon: "i-lucide-bug",
-    color: "#f59e0b",
-    order: 5,
-  },
-  {
-    value: "deployment",
-    label: "Deploy",
-    icon: "i-lucide-rocket",
-    color: "#ef4444",
-    order: 6,
-  },
-  {
-    value: "done",
-    label: "เสร็จสิ้น",
-    icon: "i-lucide-check-circle",
-    color: "#6b7280",
-    order: 7,
-  },
-];
-
-export const TASK_PHASE_ORDER: Record<TaskPhase, number> = TASK_PHASE_VALUES.reduce(
-  (acc, p) => {
-    acc[p.value] = p.order;
-    return acc;
-  },
-  {} as Record<TaskPhase, number>,
-);
-
-export function taskPhaseMeta(phase: TaskPhase | null | undefined): TaskPhaseMeta | undefined {
-  return TASK_PHASE_VALUES.find((p) => p.value === phase);
-}
-
 export const JOB_ROLE_VALUES: JobRole[] = [
   "developer",
   "tester",
@@ -111,51 +35,38 @@ export const JOB_ROLE_VALUES: JobRole[] = [
 ];
 
 export const TASK_STATUS_VALUES: TaskStatus[] = [
-  "backlog",
+  "inbox",
   "todo",
   "in_progress",
-  "ready_for_test",
   "testing",
   "done",
-  "release",
   "cancelled",
 ];
 
+export const TASK_TYPE_VALUES: TaskType[] = ["feature", "bug", "infra", "customer-request"];
+
+export const RESPONSE_STATUS_VALUES: ResponseStatus[] = ["accepted", "deferred", "rejected"];
+
+export const ROLLOUT_STATUS_VALUES: RolloutStatus[] = [
+  "planned",
+  "developing",
+  "testing",
+  "production",
+  "cancelled",
+];
+
+export const COMMITMENT_TARGET_STATUS_VALUES: CommitmentTargetStatus[] = [
+  "developing",
+  "testing",
+  "production",
+];
+
 /** Statuses that mean the task is no longer active work */
-export const TASK_CLOSED_STATUSES: TaskStatus[] = ["done", "release", "cancelled"];
+export const TASK_CLOSED_STATUSES: TaskStatus[] = ["done", "cancelled"];
 
 export function isTaskClosed(status: TaskStatus) {
   return TASK_CLOSED_STATUSES.includes(status);
 }
-
-/** Phase auto-suggestion when the user moves status but no phase is set yet */
-export const PHASE_BY_STATUS: Partial<Record<TaskStatus, TaskPhase>> = {
-  in_progress: "development",
-  ready_for_test: "testing",
-  testing: "testing",
-  done: "done",
-  release: "done",
-};
-
-export function suggestPhaseForStatus(status: TaskStatus): TaskPhase | null {
-  return PHASE_BY_STATUS[status] ?? null;
-}
-
-export const REQUIREMENT_STATUS_VALUES: RequirementStatus[] = [
-  "open",
-  "in_progress",
-  "done",
-  "cancelled",
-];
-
-export const MILESTONE_STATUS_VALUES: MilestoneStatus[] = [
-  "planned",
-  "in_progress",
-  "done",
-  "cancelled",
-];
-
-export const MILESTONE_CLOSED_STATUSES: MilestoneStatus[] = ["done", "cancelled"];
 
 export interface NotificationPreferences {
   web_push_enabled?: boolean;
@@ -204,31 +115,6 @@ export interface WorkspaceMember {
   profiles?: Profile;
 }
 
-export interface MemberMonthCapacity {
-  id: string;
-  workspace_id: string;
-  user_id: string;
-  month_start: string;
-  hours: number;
-  updated_at: string;
-  created_at: string;
-}
-
-export interface WorkspaceMonthCalendar {
-  id: string;
-  workspace_id: string;
-  month_start: string;
-  working_days: number | null;
-  holiday_days: number;
-  meeting_days: number;
-  company_event_days: number;
-  leave_days: number;
-  hours_per_day: number;
-  notes: string | null;
-  updated_at: string;
-  created_at: string;
-}
-
 /** Default effort (hours) when task.estimate_hours is null */
 export const PRIORITY_DEFAULT_HOURS: Record<TaskPriority, number> = {
   low: 2,
@@ -236,18 +122,6 @@ export const PRIORITY_DEFAULT_HOURS: Record<TaskPriority, number> = {
   high: 6,
   urgent: 8,
 };
-
-export const DEFAULT_WEEKLY_CAPACITY_HOURS = 32;
-
-export function effectiveTaskHours(task: {
-  estimate_hours?: number | null;
-  priority: TaskPriority;
-}): number {
-  if (task.estimate_hours != null && task.estimate_hours > 0) {
-    return Number(task.estimate_hours);
-  }
-  return PRIORITY_DEFAULT_HOURS[task.priority] ?? PRIORITY_DEFAULT_HOURS.medium;
-}
 
 export type InviteType = "open" | "email";
 export type InvitePreviewStatus =
@@ -320,18 +194,76 @@ export interface Customer {
   updated_at: string;
 }
 
-export interface Project {
+export interface Feature {
   id: string;
   workspace_id: string;
   name: string;
-  description: string | null;
   color: string;
-  customer_id: string | null;
-  owner_id: string | null;
-  created_at: string;
+  sort_order: number;
   archived_at: string | null;
-  customers?: Pick<Customer, "id" | "name"> | null;
-  owner?: Pick<Profile, "id" | "email" | "full_name" | "avatar_url"> | null;
+  created_at: string;
+}
+
+export interface Rollout {
+  id: string;
+  workspace_id: string;
+  customer_id: string;
+  feature_id: string;
+  status: RolloutStatus;
+  created_at: string;
+  updated_at: string;
+  customers?: Pick<Customer, "id" | "name" | "company"> | null;
+  features?: Pick<Feature, "id" | "name" | "color"> | null;
+  commitments?: Commitment[];
+}
+
+export interface Commitment {
+  id: string;
+  rollout_id: string;
+  /** วันแรกของเดือน (YYYY-MM-01) */
+  month: string;
+  target_status: CommitmentTargetStatus;
+  created_at: string;
+  commitment_reschedules?: CommitmentReschedule[];
+}
+
+export interface CommitmentReschedule {
+  id: string;
+  commitment_id: string;
+  from_month: string;
+  to_month: string;
+  reason: string;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface CustomerShareLink {
+  id: string;
+  workspace_id: string;
+  customer_id: string;
+  token: string;
+  expires_at: string;
+  revoked_at: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface CustomerShare {
+  status: "valid" | "not_found";
+  expires_at?: string;
+  customer?: { name: string; company: string | null };
+  rollouts?: {
+    feature: string;
+    status: RolloutStatus;
+    commitments: { month: string; target_status: CommitmentTargetStatus }[];
+  }[];
+  requests?: {
+    title: string;
+    feature: string | null;
+    response_status: ResponseStatus | null;
+    response_text: string | null;
+    requested_on: string;
+  }[];
 }
 
 export interface Label {
@@ -349,39 +281,30 @@ export interface TaskTemplate {
   description: string | null;
   priority: TaskPriority;
   status: TaskStatus;
-  phase: TaskPhase | null;
   estimate_hours: number | null;
   label_ids: string[];
   created_at: string;
   updated_at: string;
 }
 
-export interface Milestone {
-  id: string;
-  project_id: string;
-  title: string;
-  date: string;
-  start_date: string;
-  due_date: string;
-  status: MilestoneStatus;
-  phase?: TaskPhase | null;
-  created_at: string;
-}
-
 export interface Task {
   id: string;
-  project_id: string;
+  workspace_id: string;
+  feature_id: string | null;
+  task_type: TaskType;
+  /** คำตอบต่อคำขอลูกค้า (เฉพาะ task_type customer-request); null = ยังไม่ตอบ */
+  response_status: ResponseStatus | null;
+  response_text: string | null;
+  customer_visible: boolean;
+  requested_on: string;
   assignee_id: string | null;
   tester_id: string | null;
-  milestone_id: string | null;
   customer_id: string | null;
   created_by: string | null;
   title: string;
   description: string | null;
   status: TaskStatus;
   priority: TaskPriority;
-  phase?: TaskPhase | null;
-  phase_order?: number;
   due_date: string | null;
   start_date: string | null;
   estimate_hours: number | null;
@@ -390,9 +313,8 @@ export interface Task {
   updated_at: string;
   profiles?: Profile;
   tester?: Profile;
-  milestones?: Pick<Milestone, "id" | "title" | "date" | "start_date" | "due_date"> | null;
+  features?: Pick<Feature, "id" | "name" | "color"> | null;
   customers?: Pick<Customer, "id" | "name"> | null;
-  projects?: Project;
   subtasks?: Subtask[];
   task_labels?: { labels: Label }[];
   user_task_preferences?: UserTaskPreference[];
@@ -453,29 +375,6 @@ export interface TaskDependency {
   depends_on_task_id: string;
 }
 
-export interface Meeting {
-  id: string;
-  customer_id: string;
-  title: string;
-  met_at: string;
-  summary: string | null;
-  created_by: string | null;
-  created_at: string;
-}
-
-export interface Requirement {
-  id: string;
-  customer_id: string;
-  meeting_id: string | null;
-  title: string;
-  description: string | null;
-  status: RequirementStatus;
-  task_id: string | null;
-  created_at: string;
-  updated_at: string;
-  meetings?: Pick<Meeting, "id" | "title" | "met_at"> | null;
-}
-
 export interface Notification {
   id: string;
   user_id: string;
@@ -504,7 +403,7 @@ export const TASK_PRIORITY_META: { value: TaskPriority; color: string }[] = [
   { value: "urgent", color: "error" },
 ];
 
-export const PROJECT_COLORS = [
+export const FEATURE_COLORS = [
   "#0B6E7A",
   "#085560",
   "#0e7490",

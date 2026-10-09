@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import type { Task } from "~/types";
-import { taskPhaseMeta } from "~/types";
 import { format, parseISO } from "date-fns";
 
 const props = defineProps<{
   task: Task;
-  showProject?: boolean;
+  /** หน้าที่กรองตามลูกค้าอยู่แล้ว — ซ่อนชื่อลูกค้าซ้ำ */
+  scopedCustomerId?: string | null;
+  /** แสดงปุ่ม pin (My Planner) */
+  pinnable?: boolean;
   draggable?: boolean;
 }>();
 
 const cardContext = computed(() => ({
-  showProject: props.showProject !== false,
+  scopedCustomerId: props.scopedCustomerId,
 }));
 
 const { display } = useTaskCardDisplay(() => props.task, cardContext);
@@ -28,7 +30,6 @@ const { priorityMeta } = useTaskLabels();
 const { canManageMembers } = useWorkspace();
 
 const priority = computed(() => priorityMeta(props.task.priority));
-const phaseMeta = computed(() => taskPhaseMeta(props.task.phase));
 
 const blockedTasks = computed(() => blockedBy(props.task.id));
 const isBlocked = computed(() => blockedTasks.value.length > 0);
@@ -98,7 +99,7 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
           @click.stop="emit('delete', task)"
         />
         <UButton
-          v-if="showProject !== false"
+          v-if="pinnable"
           :icon="isPinned ? 'i-lucide-pin' : 'i-lucide-pin-off'"
           variant="ghost"
           color="neutral"
@@ -108,12 +109,9 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
       </div>
     </div>
 
-    <div v-if="showProject && task.projects" class="mb-2 flex items-center gap-1.5">
-      <span
-        class="h-2 w-2 rounded-full"
-        :style="{ backgroundColor: task.projects.color }"
-      />
-      <span class="text-xs text-slate-500">{{ task.projects.name }}</span>
+    <div v-if="display.showFeature && task.features" class="mb-2 flex items-center gap-1.5">
+      <span class="h-2 w-2 rounded-full" :style="{ backgroundColor: task.features.color }" />
+      <span class="text-xs text-slate-500">{{ task.features.name }}</span>
     </div>
 
     <div
@@ -129,14 +127,17 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
         {{ priority?.label }}
       </UBadge>
 
+      <UBadge v-if="task.task_type !== 'feature'" color="neutral" variant="subtle" size="xs">
+        {{ t(`tasks.type.${task.task_type}`) }}
+      </UBadge>
       <UBadge
-        v-if="display.showPhase && phaseMeta"
+        v-if="task.task_type === 'customer-request'"
+        :color="task.response_status ? 'success' : 'warning'"
         variant="subtle"
         size="xs"
-        :style="{ backgroundColor: phaseMeta.color + '20', color: phaseMeta.color }"
+        data-testid="response-badge"
       >
-        <UIcon :name="phaseMeta.icon" class="size-3" />
-        {{ t(`tasks.phase.${phaseMeta.value}`) }}
+        {{ task.response_status ? t(`response.status.${task.response_status}`) : t("response.unanswered") }}
       </UBadge>
 
       <span v-if="dueDateLabel" class="text-xs text-slate-500">
@@ -146,15 +147,6 @@ function personName(profile?: { full_name?: string | null; email?: string } | nu
       <span v-if="subtaskProgress" class="text-xs text-slate-400">
         ✓ {{ subtaskProgress }}
       </span>
-
-      <UBadge
-        v-if="display.showMilestone && task.milestones"
-        color="warning"
-        variant="subtle"
-        size="xs"
-      >
-        {{ task.milestones.title }}
-      </UBadge>
 
       <template v-if="display.showLabels">
         <UBadge

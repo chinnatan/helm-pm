@@ -7,7 +7,7 @@ test.describe("login flow", () => {
 
   test("login ด้วย email+password ผ่าน UI form แล้วเข้าระบบได้", async ({ page }) => {
     await loginViaUI(page, E2E_EMAIL, E2E_PASSWORD);
-    await expect(page).toHaveURL(/\/(planner|projects|dashboard|team|audit|customers|invite)/);
+    await expect(page).not.toHaveURL(/\/login/);
   });
 
   test("login ผิดพลาด — แสดง alert error และค้างที่หน้า login", async ({ page }) => {

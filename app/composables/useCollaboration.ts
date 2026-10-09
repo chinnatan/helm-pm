@@ -1,4 +1,4 @@
-import type { Comment, Milestone, MilestoneStatus, Task, TaskDependency, Notification, Attachment } from "~/types";
+import type { Comment, Task, TaskDependency, Notification, Attachment } from "~/types";
 import { isTaskClosed } from "~/types";
 import {
   graphWouldCreateCycle,
@@ -56,7 +56,7 @@ export function useComments(
     if (mentions) {
       const { data: taskRow } = await supabase
         .from("tasks")
-        .select("project_id")
+        .select("workspace_id")
         .eq("id", taskId.value)
         .single();
 
@@ -75,7 +75,7 @@ export function useComments(
             type: "mention",
             message: `${user.value.email} mentioned you in a comment`,
             metadata: {
-              ...(taskRow?.project_id ? { project_id: taskRow.project_id } : {}),
+              ...(taskRow?.workspace_id ? { workspace_id: taskRow.workspace_id } : {}),
               ...(sid ? { subtask_id: sid } : {}),
             },
           });
@@ -91,85 +91,6 @@ export function useComments(
   });
 
   return { comments, fetchComments, addComment };
-}
-
-export function useMilestones(projectId: Ref<string | undefined>) {
-  const supabase = useSupabaseClient();
-  const milestones = ref<Milestone[]>([]);
-
-  async function fetchMilestones() {
-    if (!projectId.value) return;
-
-    const { data } = await supabase
-      .from("milestones")
-      .select("*")
-      .eq("project_id", projectId.value)
-      .order("start_date");
-
-    milestones.value = (data ?? []) as Milestone[];
-  }
-
-  async function createMilestone(
-    title: string,
-    startDate: string,
-    dueDate: string,
-    status: MilestoneStatus = "planned",
-  ) {
-    if (!projectId.value) return;
-
-    const { data, error } = await supabase
-      .from("milestones")
-      .insert({
-        project_id: projectId.value,
-        title,
-        start_date: startDate,
-        due_date: dueDate,
-        date: dueDate,
-        status,
-      })
-      .select()
-      .single();
-
-    if (!error && data) milestones.value.push(data as Milestone);
-    return { data, error: error?.message };
-  }
-
-  async function updateMilestone(
-    id: string,
-    updates: {
-      title?: string;
-      start_date?: string;
-      due_date?: string;
-      status?: MilestoneStatus;
-    },
-  ) {
-    const payload = {
-      ...updates,
-      ...(updates.due_date ? { date: updates.due_date } : {}),
-    };
-
-    const { data, error } = await supabase
-      .from("milestones")
-      .update(payload)
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (!error && data) {
-      const idx = milestones.value.findIndex((m) => m.id === id);
-      if (idx >= 0) milestones.value[idx] = data as Milestone;
-    }
-    return { data, error: error?.message };
-  }
-
-  async function deleteMilestone(id: string) {
-    await supabase.from("milestones").delete().eq("id", id);
-    milestones.value = milestones.value.filter((m) => m.id !== id);
-  }
-
-  watch(projectId, fetchMilestones, { immediate: true });
-
-  return { milestones, fetchMilestones, createMilestone, updateMilestone, deleteMilestone };
 }
 
 /**
@@ -228,30 +149,31 @@ export function useDependencyGraph() {
 
 export type DependencyErrorCode = "self" | "closed" | "circular";
 
-export function useDependencies(projectId: Ref<string | undefined>) {
+export function useDependencies() {
+  const { workspace } = useWorkspace();
   const supabase = useSupabaseClient();
   const { t } = useI18n();
   const graph = useDependencyGraph();
   const dependencies = graph.dependencies;
 
   async function fetchDependencies() {
-    if (!projectId.value) {
+    if (!workspace.value) {
       dependencies.value = [];
       return;
     }
 
-    const { data: projectTasks } = await supabase
+    const { data: workspaceTasks } = await supabase
       .from("tasks")
       .select("id")
-      .eq("project_id", projectId.value);
+      .eq("workspace_id", workspace.value.id);
 
-    const taskIds = (projectTasks ?? []).map((t) => t.id);
+    const taskIds = (workspaceTasks ?? []).map((t) => t.id);
     if (taskIds.length === 0) {
       dependencies.value = [];
       return;
     }
 
-    // every dep row has its task_id within the project, so one query covers both directions
+    // every dep row has its task_id within the workspace, so one query covers both directions
     const { data } = await supabase
       .from("task_dependencies")
       .select("*")
@@ -284,7 +206,7 @@ export function useDependencies(projectId: Ref<string | undefined>) {
     await fetchDependencies();
   }
 
-  watch(projectId, fetchDependencies, { immediate: true });
+  watch(() => workspace.value?.id, fetchDependencies, { immediate: true });
 
   return {
     dependencies,

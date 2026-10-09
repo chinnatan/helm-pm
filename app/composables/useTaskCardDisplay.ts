@@ -1,31 +1,9 @@
 import type { Task, TaskCardDensity } from "~/types";
 
 export type TaskCardDisplayContext = {
-  showProject?: boolean;
-  projectCustomerId?: string | null;
+  /** หน้าที่กรองตามลูกค้าอยู่แล้ว — ไม่ต้องแสดงชื่อลูกค้าซ้ำใน density standard */
+  scopedCustomerId?: string | null;
 };
-
-export function resolveProjectCustomerId(
-  task: Task,
-  projectCustomerId?: string | null,
-): string | null | undefined {
-  if (projectCustomerId !== undefined) return projectCustomerId;
-  return task.projects?.customer_id ?? null;
-}
-
-/** Smart customer visibility (method 1). */
-export function shouldShowCustomerSmart(
-  task: Task,
-  context: TaskCardDisplayContext,
-): boolean {
-  if (!task.customers?.name || !task.customer_id) return false;
-
-  if (context.showProject) return true;
-
-  const projectCustomerId = resolveProjectCustomerId(task, context.projectCustomerId);
-  if (!projectCustomerId) return true;
-  return task.customer_id !== projectCustomerId;
-}
 
 export function shouldShowCustomerForDensity(
   task: Task,
@@ -33,16 +11,14 @@ export function shouldShowCustomerForDensity(
   context: TaskCardDisplayContext,
 ): boolean {
   if (density === "compact") return false;
-  if (density === "detailed") {
-    return Boolean(task.customers?.name && task.customer_id);
-  }
-  return shouldShowCustomerSmart(task, context);
+  if (!task.customers?.name || !task.customer_id) return false;
+  if (density === "detailed") return true;
+  return task.customer_id !== context.scopedCustomerId;
 }
 
 export type TaskCardDisplayFlags = {
   showCustomer: boolean;
-  showMilestone: boolean;
-  showPhase: boolean;
+  showFeature: boolean;
   showLabels: boolean;
   showSubtaskList: boolean;
   showPeople: boolean;
@@ -53,38 +29,14 @@ export function taskCardDisplayFlags(
   density: TaskCardDensity,
   context: TaskCardDisplayContext,
 ): TaskCardDisplayFlags {
-  const showCustomer = shouldShowCustomerForDensity(task, density, context);
-
-  switch (density) {
-    case "compact":
-      return {
-        showCustomer,
-        showMilestone: false,
-        showPhase: false,
-        showLabels: false,
-        showSubtaskList: false,
-        showPeople: false,
-      };
-    case "detailed":
-      return {
-        showCustomer,
-        showMilestone: true,
-        showPhase: true,
-        showLabels: true,
-        showSubtaskList: true,
-        showPeople: true,
-      };
-    case "standard":
-    default:
-      return {
-        showCustomer,
-        showMilestone: true,
-        showPhase: true,
-        showLabels: true,
-        showSubtaskList: true,
-        showPeople: true,
-      };
-  }
+  const compact = density === "compact";
+  return {
+    showCustomer: shouldShowCustomerForDensity(task, density, context),
+    showFeature: !compact,
+    showLabels: !compact,
+    showSubtaskList: !compact,
+    showPeople: !compact,
+  };
 }
 
 export function useTaskCardDisplay(
@@ -92,21 +44,10 @@ export function useTaskCardDisplay(
   context: MaybeRefOrGetter<TaskCardDisplayContext> = {},
 ) {
   const { taskCardDensity } = useProfile();
-  const { getProject } = useProjects();
 
-  const display = computed(() => {
-    const t = toValue(task);
-    const ctx = toValue(context);
-    const projectCustomerId =
-      ctx.projectCustomerId !== undefined
-        ? ctx.projectCustomerId
-        : (getProject(t.project_id)?.customer_id ?? t.projects?.customer_id ?? null);
-
-    return taskCardDisplayFlags(t, taskCardDensity.value, {
-      ...ctx,
-      projectCustomerId,
-    });
-  });
+  const display = computed(() =>
+    taskCardDisplayFlags(toValue(task), taskCardDensity.value, toValue(context)),
+  );
 
   return { display, taskCardDensity };
 }

@@ -9,7 +9,7 @@ const error = ref("");
 const timedOut = ref(false);
 
 async function goApp() {
-  await navigateTo("/planner", { replace: true });
+  await navigateTo("/", { replace: true });
 }
 
 onMounted(async () => {

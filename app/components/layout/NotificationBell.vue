@@ -11,13 +11,8 @@ async function onNotificationClick(n: Notification) {
   await markRead(n.id);
   open.value = false;
 
-  const meta = n.metadata as { project_id?: string } | null | undefined;
-  const projectId = meta?.project_id;
-
-  if (projectId && n.task_id) {
-    await navigateTo(`/projects/${projectId}/board?task=${n.task_id}`);
-  } else if (projectId) {
-    await navigateTo(`/projects/${projectId}`);
+  if (n.task_id) {
+    await navigateTo(`/tasks/board?task=${n.task_id}`);
   }
 }
 

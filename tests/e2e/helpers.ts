@@ -9,7 +9,6 @@ export const CONTEXT_FILE = `${AUTH_DIR}/context.json`;
 export const E2E_EMAIL = "e2e@helm.local";
 export const E2E_PASSWORD = "E2ePass!12345";
 export const E2E_WORKSPACE = "E2E Workspace";
-export const E2E_PROJECT = "E2E Project";
 
 export function supabaseLocal() {
   const { E2E_SUPABASE_URL, E2E_SUPABASE_KEY, E2E_SUPABASE_SECRET_KEY } = process.env;
@@ -104,36 +103,86 @@ async function rest<T = any>(token: string, path: string, init?: RequestInit): P
   ) as Promise<T>;
 }
 
-export async function ensureProject(token: string): Promise<string> {
+export async function ensureWorkspace(token: string): Promise<string> {
   // RLS จำกัด workspaces ให้เหลือเฉพาะที่ member อยู่ — ตัวแรก = ของ user นี้จาก trigger
   // (หมายเหตุ: gotrue admin API ไม่เก็บ `data` ลง raw_user_meta_data → workspace ได้ชื่อ default "My Workspace")
   const ws = await rest<{ id: string }[]>(token, "workspaces?select=id&order=created_at.asc&limit=1");
   const workspace = ws[0];
   if (!workspace) throw new Error("ไม่พบ workspace ของ user — trigger สร้าง workspace ทำงานหรือไม่?");
-  const found = await rest<{ id: string }[]>(
-    token,
-    `projects?select=id&workspace_id=eq.${workspace.id}&name=eq.${encodeURIComponent(E2E_PROJECT)}&limit=1`,
-  );
-  if (found.length && found[0]) return found[0].id;
-  const [project] = await rest<{ id: string }[]>(token, "projects", {
+  return workspace.id;
+}
+
+async function insertOne(token: string, table: string, row: Record<string, unknown>): Promise<string> {
+  const [created] = await rest<{ id: string }[]>(token, table, {
     method: "POST",
     headers: { prefer: "return=representation" },
-    body: JSON.stringify({ workspace_id: workspace.id, name: E2E_PROJECT }),
+    body: JSON.stringify(row),
   });
-  if (!project) throw new Error("สร้าง project ไม่สำเร็จ");
-  return project.id;
+  if (!created) throw new Error(`สร้าง ${table} ไม่สำเร็จ`);
+  return created.id;
+}
+
+export const createCustomer = (token: string, workspaceId: string, name: string) =>
+  insertOne(token, "customers", { workspace_id: workspaceId, name, company: name });
+
+export const createFeature = (token: string, workspaceId: string, name: string) =>
+  insertOne(token, "features", { workspace_id: workspaceId, name });
+
+export const createRollout = (
+  token: string,
+  workspaceId: string,
+  customerId: string,
+  featureId: string,
+  status = "developing",
+) => insertOne(token, "rollouts", { workspace_id: workspaceId, customer_id: customerId, feature_id: featureId, status });
+
+export const createCommitment = (token: string, rolloutId: string, month: string) =>
+  insertOne(token, "commitments", { rollout_id: rolloutId, month });
+
+export async function deleteTasksByTitle(token: string, workspaceId: string, fragment: string): Promise<void> {
+  await fetch(
+    `${sb.url}/rest/v1/tasks?workspace_id=eq.${workspaceId}&title=like.${encodeURIComponent(`*${fragment}*`)}`,
+    { method: "DELETE", headers: { apikey: sb.key, authorization: `Bearer ${token}` } },
+  );
+}
+
+export async function listShareTokens(token: string, customerId: string): Promise<string[]> {
+  const rows = await rest<{ token: string }[]>(
+    token,
+    `customer_share_links?select=token&customer_id=eq.${customerId}&revoked_at=is.null&order=created_at.desc`,
+  );
+  return rows.map((r) => r.token);
+}
+
+export async function myUserId(token: string): Promise<string> {
+  const res = await fetch(`${sb.url}/auth/v1/user`, { headers: { apikey: sb.key, authorization: `Bearer ${token}` } });
+  return ((await json(res)) as { id: string }).id;
+}
+
+export async function pinTask(token: string, userId: string, taskId: string, sortOrder = 0): Promise<void> {
+  await rest(token, "user_task_preferences", {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId, task_id: taskId, is_pinned: true, sort_order: sortOrder }),
+  });
+}
+
+export async function deleteRows(token: string, table: string, id: string): Promise<void> {
+  await fetch(`${sb.url}/rest/v1/${table}?id=eq.${id}`, {
+    method: "DELETE",
+    headers: { apikey: sb.key, authorization: `Bearer ${token}` },
+  });
 }
 
 export async function createTask(
   token: string,
-  projectId: string,
+  workspaceId: string,
   title: string,
   fields: Record<string, unknown> = {},
 ): Promise<string> {
   const [task] = await rest<{ id: string }[]>(token, "tasks", {
     method: "POST",
     headers: { prefer: "return=representation" },
-    body: JSON.stringify({ project_id: projectId, title, ...fields }),
+    body: JSON.stringify({ workspace_id: workspaceId, title, ...fields }),
   });
   if (!task) throw new Error("สร้าง task ไม่สำเร็จ");
   return task.id;
@@ -147,7 +196,7 @@ export async function deleteTask(token: string, id: string): Promise<void> {
 }
 
 export interface E2EContext {
-  projectId: string;
+  workspaceId: string;
   accessToken: string;
 }
 

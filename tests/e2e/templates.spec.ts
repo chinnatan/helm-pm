@@ -1,15 +1,14 @@
 import { expect, test } from "@playwright/test";
-import { readContext, taskCard } from "./helpers";
+import { taskCard } from "./helpers";
 
-const context = readContext();
-const boardUrl = () => `/projects/${context.projectId}/board`;
+const boardUrl = () => "/tasks/board";
 const title = `Template source ${Date.now()}`;
 const templateTitle = `Template ${Date.now()}`;
 
 test.describe.configure({ mode: "serial" });
 
 test("save a task as a template and manage it", async ({ page }) => {
-  await page.goto(boardUrl());
+  await page.goto(boardUrl(), { waitUntil: "networkidle" });
   await page.getByTestId("add-task").click();
   await page.getByTestId("task-title").fill(title);
   await page.getByTestId("task-save").click();
@@ -25,7 +24,7 @@ test("save a task as a template and manage it", async ({ page }) => {
 });
 
 test("delete the template", async ({ page }) => {
-  await page.goto(boardUrl());
+  await page.goto(boardUrl(), { waitUntil: "networkidle" });
   await page.getByTestId("template-manage").click();
   const templateInput = page.locator(`input[data-testid="template-title"][value="${templateTitle}"]`);
   const item = templateInput.locator("xpath=ancestor::*[@data-testid='template-item']");

@@ -4,6 +4,10 @@ const route = useRoute();
 const { t, locale, setLocale } = useI18n();
 
 const menuOpen = ref(false);
+const quickCaptureOpen = ref(false);
+
+// c = จดงานด่วน (Nuxt UI ไม่ trigger คีย์ลัดขณะพิมพ์ในช่อง input)
+defineShortcuts({ c: () => (quickCaptureOpen.value = true) });
 const isDesktop = ref(
   import.meta.client ? window.matchMedia("(min-width: 768px)").matches : false,
 );
@@ -24,9 +28,12 @@ onUnmounted(() => {
   desktopMq = null;
 });
 
-const { projectsHomePath } = useLastProject();
-const { isWorkspaceAdmin, fetchWorkspace } = useWorkspace();
+const { isWorkspaceAdmin, canManageMembers, fetchWorkspace } = useWorkspace();
 const { fetchMyProfile } = useProfile();
+const { inboxCount, fetchInboxCount } = useInboxCount();
+const { workspace } = useWorkspace();
+
+watch([() => workspace.value?.id, () => route.fullPath], () => void fetchInboxCount(), { immediate: true });
 
 onMounted(() => {
   fetchWorkspace();
@@ -35,17 +42,20 @@ onMounted(() => {
 
 const navItems = computed(() => {
   const items = [
-    { label: t("nav.dashboard"), to: "/dashboard", match: "/dashboard", icon: "i-lucide-layout-dashboard" },
+    { label: t("nav.overview"), to: "/", match: "/", icon: "i-lucide-grid-3x3" },
+    { label: t("nav.tasks"), to: "/tasks/board", match: "/tasks", icon: "i-lucide-list-checks", badge: inboxCount.value || undefined },
     { label: t("nav.planner"), to: "/planner", match: "/planner", icon: "i-lucide-calendar-days" },
-    {
-      label: t("nav.projects"),
-      to: projectsHomePath.value,
-      match: "/projects",
-      icon: "i-lucide-folder-kanban",
-    },
     { label: t("nav.customers"), to: "/customers", match: "/customers", icon: "i-lucide-building-2" },
     { label: t("nav.team"), to: "/team", match: "/team", icon: "i-lucide-users" },
   ];
+  if (canManageMembers.value) {
+    items.push({
+      label: t("nav.features"),
+      to: "/settings/features",
+      match: "/settings/features",
+      icon: "i-lucide-puzzle",
+    });
+  }
   if (isWorkspaceAdmin.value) {
     items.push({
       label: t("nav.audit"),
@@ -63,6 +73,7 @@ async function signOut() {
 }
 
 function isActive(match: string) {
+  if (match === "/") return route.path === "/";
   return route.path === match || route.path.startsWith(`${match}/`);
 }
 
@@ -84,10 +95,10 @@ watch(
 </script>
 
 <template>
-  <div class="flex h-dvh overflow-hidden bg-slate-50">
+  <div class="flex h-dvh overflow-hidden bg-slate-50 print:h-auto print:overflow-visible">
     <!-- Desktop sidebar -->
     <aside
-      class="hidden w-60 shrink-0 flex-col border-r border-slate-200 bg-white md:flex"
+      class="hidden w-60 shrink-0 flex-col border-r border-slate-200 bg-white md:flex print:hidden"
     >
       <!-- Header -->
       <div class="shrink-0 flex items-center justify-between border-b border-slate-200 px-5 py-4">
@@ -117,13 +128,15 @@ watch(
         >
           <UIcon :name="item.icon" class="h-4 w-4" />
           {{ item.label }}
+          <UBadge v-if="item.badge" color="warning" variant="subtle" size="xs" class="ml-auto" data-testid="inbox-badge">
+            {{ item.badge }}
+          </UBadge>
         </NuxtLink>
       </nav>
 
       <!-- Context switchers (scrollable) -->
       <div class="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 pb-3">
         <LayoutWorkspaceSwitcher />
-        <LayoutProjectSwitcher />
       </div>
 
       <!-- Footer (pinned) -->
@@ -153,7 +166,7 @@ watch(
     <div class="flex min-h-0 min-w-0 flex-1 flex-col">
       <!-- Mobile top bar -->
       <header
-        class="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden"
+        class="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden print:hidden"
       >
         <div class="flex items-center gap-2">
           <UButton
@@ -176,7 +189,7 @@ watch(
         <LayoutNotificationBell v-if="!isDesktop" />
       </header>
 
-      <main class="min-h-0 flex-1 overflow-auto">
+      <main class="min-h-0 flex-1 overflow-auto print:overflow-visible">
         <slot />
       </main>
     </div>
@@ -204,11 +217,13 @@ watch(
           >
             <UIcon :name="item.icon" class="h-4 w-4" />
             {{ item.label }}
+            <UBadge v-if="item.badge" color="warning" variant="subtle" size="xs" class="ml-auto">
+              {{ item.badge }}
+            </UBadge>
           </button>
 
           <div class="space-y-3 pt-3">
             <LayoutWorkspaceSwitcher @navigated="menuOpen = false" />
-            <LayoutProjectSwitcher @navigated="menuOpen = false" />
           </div>
         </nav>
 
@@ -235,6 +250,16 @@ watch(
         </div>
       </template>
     </USlideover>
+
+    <UButton
+      icon="i-lucide-zap"
+      class="fixed bottom-4 right-4 z-40 rounded-full shadow-lg print:hidden"
+      size="lg"
+      :aria-label="t('quickCapture.title')"
+      data-testid="quick-capture-open"
+      @click="quickCaptureOpen = true"
+    />
+    <TasksQuickCaptureModal v-model:open="quickCaptureOpen" @saved="fetchInboxCount" />
 
     <ConfirmDialog />
   </div>
