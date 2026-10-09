@@ -31,3 +31,7 @@ reports/
 test-results/
 playwright-report/
 tests/e2e/.auth/
+
+# Database backups (ห้าม commit)
+backups/
+supabase/.temp/start-secrets/
