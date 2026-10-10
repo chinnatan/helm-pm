@@ -52,3 +52,17 @@ Task ผูกกับ Customer และ/หรือ Feature ได้ไม�
 
 **Quick capture**:
 การจดข้อความสั้น ๆ เพื่อแปลงเป็น Task ภายหลัง โดยไม่ต้องกรอกฟอร์มเต็ม
+
+**Member**:
+ผู้ใช้ที่อยู่ใน Workspace หนึ่ง มี permission role (admin, manager, member, viewer) และ job role แยกกัน
+_Avoid_: User (กำกวมกับบัญชีผู้ใช้)
+
+**Remove**:
+การนำ Member ออกจากทีม (Workspace) โดย admin เท่านั้น ไม่ใช่การลบบัญชีผู้ใช้ งานที่เขารับผิดชอบต้องโอนหรือปล่อยว่างก่อน ห้ามนำ admin คนสุดท้ายออก
+_Avoid_: Delete user, Kick
+
+**Leave**:
+การที่ Member ออกจากทีมด้วยตัวเอง ใช้กฎเดียวกับ Remove
+
+**Former member**:
+คนที่เคยเป็น Member แล้วถูก Remove หรือ Leave ประวัติเดิม (คอมเมนต์ กิจกรรมของ Task) แสดงเป็น "อดีตสมาชิก"
