@@ -250,3 +250,37 @@ export function saveContext(ctx: E2EContext): void {
 export function readContext(): E2EContext {
   return JSON.parse(readFileSync(CONTEXT_FILE, "utf8")) as E2EContext;
 }
+
+/** สร้าง user ใหม่แล้วเพิ่มเป็น member ของ workspace (service key ข้าม RLS) — คืน user id */
+export async function addExtraMember(workspaceId: string, email: string, role = "member"): Promise<string> {
+  const user = await json(
+    await fetch(`${sb.url}/auth/v1/admin/users`, {
+      method: "POST",
+      headers: { apikey: sb.secret, authorization: `Bearer ${sb.secret}`, "content-type": "application/json" },
+      body: JSON.stringify({ email, password: E2E_PASSWORD, email_confirm: true }),
+    }),
+  );
+  await json(
+    await fetch(`${sb.url}/rest/v1/workspace_members`, {
+      method: "POST",
+      headers: { apikey: sb.secret, authorization: `Bearer ${sb.secret}`, "content-type": "application/json" },
+      body: JSON.stringify({ workspace_id: workspaceId, user_id: user.id, role }),
+    }),
+  );
+  return user.id as string;
+}
+
+export async function deleteAuthUser(userId: string): Promise<void> {
+  await fetch(`${sb.url}/auth/v1/admin/users/${userId}`, {
+    method: "DELETE",
+    headers: { apikey: sb.secret, authorization: `Bearer ${sb.secret}` },
+  });
+}
+
+export async function taskAssignee(token: string, taskId: string): Promise<{ assignee_id: string | null; status: string }> {
+  const [row] = await rest<{ assignee_id: string | null; status: string }[]>(
+    token,
+    `tasks?select=assignee_id,status&id=eq.${taskId}`,
+  );
+  return row!;
+}

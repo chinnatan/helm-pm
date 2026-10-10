@@ -756,6 +756,14 @@ export interface Database {
         Args: { ws_id: string };
         Returns: string;
       };
+      remove_workspace_member: {
+        Args: {
+          p_workspace_id: string;
+          p_user_id: string;
+          p_transfer_to?: string | null;
+        };
+        Returns: number;
+      };
       create_workspace_invite: {
         Args: {
           p_workspace_id: string;

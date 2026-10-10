@@ -193,6 +193,25 @@ export function useWorkspace() {
     return { error: error?.message };
   }
 
+  /** Remove (admin) or Leave (self). transferTo = null → leave work unassigned. */
+  async function removeMember(userId: string, transferTo: string | null = null) {
+    if (!workspace.value) return { error: "No workspace" };
+    const { error } = await supabase.rpc("remove_workspace_member", {
+      p_workspace_id: workspace.value.id,
+      p_user_id: userId,
+      p_transfer_to: transferTo,
+    });
+    if (error) return { error: error.message };
+
+    if (userId === user.value?.id) {
+      clearWorkspaceCaches();
+      await fetchWorkspace();
+    } else {
+      await fetchMembers();
+    }
+    return { error: null };
+  }
+
   return {
     workspace,
     workspaces,
@@ -207,6 +226,7 @@ export function useWorkspace() {
     setActiveWorkspace,
     createWorkspace,
     updateMember,
+    removeMember,
     clearWorkspaceCaches,
   };
 }

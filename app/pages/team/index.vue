@@ -11,6 +11,8 @@ const {
   members,
   fetchWorkspace,
   updateMember,
+  removeMember,
+  workspaces,
   canManageMembers,
   isWorkspaceAdmin,
 } = useWorkspace();
@@ -88,6 +90,59 @@ watch(isWorkspaceAdmin, async (admin) => {
 
 function countsFor(userId: string) {
   return taskCounts.value[userId] ?? { active: 0, overdue: 0 };
+}
+
+const user = useSupabaseUser();
+type TeamMember = (typeof members.value)[number];
+const removeTarget = ref<TeamMember | null>(null);
+const transferTo = ref("none");
+const removing = ref(false);
+const removeError = ref("");
+
+const adminCount = computed(() => members.value.filter((m) => m.role === "admin").length);
+
+function canRemove(member: TeamMember) {
+  const isSelf = member.user_id === user.value?.id;
+  if (member.role === "admin" && adminCount.value <= 1) return false;
+  // ออกจาก workspace เดียวที่มี = ไม่เหลือที่ทำงาน
+  if (isSelf) return workspaces.value.length > 1;
+  return isWorkspaceAdmin.value;
+}
+
+const transferItems = computed(() => [
+  { label: t("team.transferNone"), value: "none" },
+  ...members.value
+    .filter((m) => m.user_id !== removeTarget.value?.user_id && m.role !== "viewer")
+    .map((m) => ({
+      label: m.profiles?.full_name || m.profiles?.email || m.user_id,
+      value: m.user_id,
+    })),
+]);
+
+function openRemove(member: TeamMember) {
+  removeTarget.value = member;
+  transferTo.value = "none";
+  removeError.value = "";
+}
+
+async function confirmRemove() {
+  const target = removeTarget.value;
+  if (!target) return;
+  removing.value = true;
+  removeError.value = "";
+  const { error } = await removeMember(
+    target.user_id,
+    transferTo.value === "none" ? null : transferTo.value,
+  );
+  removing.value = false;
+  if (error) {
+    removeError.value = error.includes("last admin")
+      ? t("team.lastAdmin")
+      : t("team.removeFailed", { error });
+    return;
+  }
+  removeTarget.value = null;
+  await fetchTaskCounts();
 }
 
 function resolveExpiresAt(): string | null {
@@ -475,7 +530,7 @@ const listedInvites = computed(() => invites.value);
             />
           </UFormField>
 
-          <div class="flex gap-4 text-sm">
+          <div class="flex items-end gap-4 text-sm">
             <div>
               <p class="text-slate-500">{{ t("team.activeTasks") }}</p>
               <p class="text-lg font-semibold">
@@ -488,9 +543,76 @@ const listedInvites = computed(() => invites.value);
                 {{ countsFor(member.user_id).overdue }}
               </p>
             </div>
+            <UButton
+              v-if="canRemove(member)"
+              class="ml-auto"
+              size="xs"
+              color="error"
+              variant="ghost"
+              data-testid="remove-member"
+              @click="openRemove(member)"
+            >
+              {{
+                member.user_id === user?.id
+                  ? t("team.leaveTeam")
+                  : t("team.removeMember")
+              }}
+            </UButton>
           </div>
         </div>
       </div>
     </div>
+
+    <UModal
+      :open="!!removeTarget"
+      :title="
+        removeTarget?.user_id === user?.id
+          ? t('team.leaveTitle')
+          : t('team.removeTitle', {
+              name: removeTarget?.profiles?.full_name || removeTarget?.profiles?.email || '',
+            })
+      "
+      @update:open="(v) => { if (!v) removeTarget = null }"
+    >
+      <template #body>
+        <div v-if="removeTarget" class="space-y-3 text-sm">
+          <p class="text-slate-600">
+            {{
+              countsFor(removeTarget.user_id).active > 0
+                ? t("team.removeHint", { count: countsFor(removeTarget.user_id).active })
+                : t("team.removeNoWork")
+            }}
+          </p>
+          <UFormField :label="t('team.transferTo')">
+            <USelect
+              v-model="transferTo"
+              :items="transferItems"
+              class="w-full"
+              data-testid="transfer-select"
+            />
+          </UFormField>
+          <p v-if="removeError" class="text-red-600">{{ removeError }}</p>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UButton variant="ghost" color="neutral" @click="removeTarget = null">
+            {{ t("common.cancel") }}
+          </UButton>
+          <UButton
+            color="error"
+            :loading="removing"
+            data-testid="remove-confirm"
+            @click="confirmRemove"
+          >
+            {{
+              removeTarget?.user_id === user?.id
+                ? t("team.leaveConfirm")
+                : t("team.removeConfirm")
+            }}
+          </UButton>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>

@@ -32,7 +32,7 @@ async function submit() {
           :email="comment.profiles?.email"
         />
         <span class="text-sm font-medium text-slate-800">
-          {{ comment.profiles?.full_name || comment.profiles?.email }}
+          {{ comment.profiles?.full_name || comment.profiles?.email || t("team.formerMember") }}
         </span>
         <span class="text-xs text-slate-400">
           {{ toLocaleString(comment.created_at) }}

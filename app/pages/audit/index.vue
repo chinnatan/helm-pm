@@ -137,7 +137,7 @@ function formatWhen(iso: string) {
                 {{
                   row.profiles?.full_name ||
                     row.profiles?.email ||
-                    t("audit.system")
+                    (row.actor_id ? t("team.formerMember") : t("audit.system"))
                 }}
               </td>
               <td class="px-4 py-3">{{ actionLabel(row.action) }}</td>

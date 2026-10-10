@@ -1136,7 +1136,7 @@ watch(
             class="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm"
           >
             <span class="font-medium">
-              {{ log.profiles?.full_name || log.profiles?.email || t("common.system") }}
+              {{ log.profiles?.full_name || log.profiles?.email || (log.user_id ? t("team.formerMember") : t("common.system")) }}
             </span>
             <span class="text-slate-600">
               <template v-if="log.subtask_id">
