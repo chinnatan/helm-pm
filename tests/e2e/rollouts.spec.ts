@@ -57,3 +57,24 @@ test("งานที่ไม่ผูกลูกค้า/ฟีเจอร�
   await page.goto("/");
   await expect(page.getByText(/open tasks are not linked/)).toBeVisible();
 });
+
+test("ลบ Rollout จาก panel: dialog ยืนยันต้องอยู่เหนือ slideover และกดได้", async ({ page }) => {
+  const delCustomer = `E2E Del Cust ${stamp}`;
+  const delFeature = `E2E Del Feat ${stamp}`;
+  const customer = await createCustomer(ctx.accessToken, ctx.workspaceId, delCustomer);
+  const feature = await createFeature(ctx.accessToken, ctx.workspaceId, delFeature);
+  const rollout = await createRollout(ctx.accessToken, ctx.workspaceId, customer, feature);
+
+  try {
+    await page.goto("/");
+    await page.getByRole("button", { name: delFeature }).click();
+    await page.getByRole("button", { name: "Delete rollout" }).click();
+    await page.getByTestId("confirm-ok").click();
+
+    await expect(page.getByRole("button", { name: delFeature })).toHaveCount(0);
+  } finally {
+    await deleteRows(ctx.accessToken, "rollouts", rollout);
+    await deleteRows(ctx.accessToken, "features", feature);
+    await deleteRows(ctx.accessToken, "customers", customer);
+  }
+});
