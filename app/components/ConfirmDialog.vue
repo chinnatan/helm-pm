@@ -35,7 +35,7 @@ const iconWrapClass = computed(() => {
   <UModal
     v-model:open="open"
     :title="title"
-    :ui="{ content: 'sm:max-w-md' }"
+    :ui="{ overlay: 'z-[60]', content: 'z-[60] sm:max-w-md' }"
   >
     <template #body>
       <div class="flex gap-3">

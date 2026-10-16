@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Rollout } from "~/types";
 import { rolloutKey } from "~/composables/useRollouts";
+import { ROLLOUT_STATUS_VALUES } from "~/types";
 import { ROLLOUT_STATUS_STYLE, addMonths } from "~/utils/rollout";
 
 const props = defineProps<{
@@ -60,12 +61,28 @@ function cell(rowRollouts: Rollout[], col: string) {
   );
 }
 
+/** คอลัมน์เดือน = สถานะที่สัญญาไว้ของเดือนนั้น, คอลัมน์ "none" = Rollout status */
+function chipStatus(r: Rollout, col: string) {
+  return r.commitments?.find((c) => c.month === col)?.target_status ?? r.status;
+}
+
 function openCount(r: Rollout) {
   return props.openCounts[rolloutKey(r.customer_id, r.feature_id)] ?? 0;
 }
 </script>
 
 <template>
+  <div>
+    <ul class="mb-2 flex flex-wrap gap-2 text-xs">
+      <li
+        v-for="s in ROLLOUT_STATUS_VALUES"
+        :key="s"
+        class="rounded border px-2 py-0.5"
+        :class="ROLLOUT_STATUS_STYLE[s]"
+      >
+        {{ t(`rollouts.status.${s}`) }}
+      </li>
+    </ul>
   <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
     <table class="w-full min-w-[56rem] border-collapse text-sm">
       <thead>
@@ -89,8 +106,8 @@ function openCount(r: Rollout) {
                 :key="r.id"
                 type="button"
                 class="flex items-center justify-between gap-2 rounded-md border px-2 py-1 text-left text-xs font-medium transition-shadow hover:shadow"
-                :class="ROLLOUT_STATUS_STYLE[r.status]"
-                :title="t(`rollouts.status.${r.status}`)"
+                :class="ROLLOUT_STATUS_STYLE[chipStatus(r, col)]"
+                :title="t(`rollouts.status.${chipStatus(r, col)}`)"
                 @click="emit('select', r.id)"
               >
                 <span class="truncate">{{ chipLabel(r) }}</span>
@@ -103,5 +120,6 @@ function openCount(r: Rollout) {
         </tr>
       </tbody>
     </table>
+  </div>
   </div>
 </template>
