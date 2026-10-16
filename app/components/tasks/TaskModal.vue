@@ -45,6 +45,7 @@ const {
   fetchActivity,
 } = useTasks();
 const { members, canManageMembers } = useWorkspace();
+const toast = useToast();
 const { confirm } = useConfirmDialog();
 const { labels, fetchLabels } = useLabels();
 const { templates, fetchTemplates, createTemplate } = useTaskTemplates();
@@ -363,9 +364,9 @@ async function save() {
   const estimate_hours = parseEstimate(form.estimate_hours);
 
   if (isEdit.value && props.task) {
-    await updateTask(props.task.id, {
+    const { error } = await updateTask(props.task.id, {
       title: form.title,
-      description: form.description || undefined,
+      description: form.description || null,
       assignee_id: form.assignee_id || null,
       tester_id: form.tester_id || null,
       feature_id: form.feature_id || null,
@@ -378,6 +379,11 @@ async function save() {
       start_date: form.start_date || null,
       estimate_hours,
     });
+    if (error) {
+      toast.add({ title: error, color: "error" });
+      saving.value = false;
+      return;
+    }
     await setTaskLabels(props.task.id, form.label_ids);
   } else if (form.parent_task_id) {
     const { data, error } = await addSubtask(form.parent_task_id, form.title, {

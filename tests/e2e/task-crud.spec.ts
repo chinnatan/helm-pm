@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { taskCard } from "./helpers";
+import { createTask, deleteTask, readContext, taskCard } from "./helpers";
 
 const boardUrl = () => "/tasks/board";
 const stamp = Date.now();
@@ -35,4 +35,27 @@ test("ลบ task แล้วหายจาก Kanban", async ({ page }) => {
 
   await page.goto(boardUrl(), { waitUntil: "networkidle" });
   await expect(taskCard(page, editedTitle)).toBeHidden();
+});
+
+test("ลบคำอธิบายจนว่างแล้วบันทึก ต้องว่างหลัง reload", async ({ page }) => {
+  const ctx = readContext();
+  const title = `E2E desc ${stamp}`;
+  const id = await createTask(ctx.accessToken, ctx.workspaceId, title, { description: "ข้อความเดิม" });
+
+  try {
+    await page.goto(boardUrl(), { waitUntil: "networkidle" });
+    await taskCard(page, title).click();
+    const editor = page.locator(".ProseMirror").first();
+    await expect(editor).toContainText("ข้อความเดิม");
+    await editor.click();
+    await page.keyboard.press("ControlOrMeta+A");
+    await page.keyboard.press("Delete");
+    await page.getByTestId("task-save").click();
+
+    await page.goto(boardUrl(), { waitUntil: "networkidle" });
+    await taskCard(page, title).click();
+    await expect(page.locator(".ProseMirror").first()).not.toContainText("ข้อความเดิม");
+  } finally {
+    await deleteTask(ctx.accessToken, id);
+  }
 });
