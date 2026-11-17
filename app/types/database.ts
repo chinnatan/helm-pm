@@ -328,6 +328,7 @@ export interface Database {
           assignee_id: string | null;
           tester_id: string | null;
           customer_id: string | null;
+          external_key: string | null;
           created_by: string | null;
           title: string;
           description: string | null;
@@ -352,6 +353,7 @@ export interface Database {
           assignee_id?: string | null;
           tester_id?: string | null;
           customer_id?: string | null;
+          external_key?: string | null;
           created_by?: string | null;
           title: string;
           description?: string | null;
@@ -376,6 +378,7 @@ export interface Database {
           assignee_id?: string | null;
           tester_id?: string | null;
           customer_id?: string | null;
+          external_key?: string | null;
           created_by?: string | null;
           title?: string;
           description?: string | null;

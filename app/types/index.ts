@@ -300,6 +300,8 @@ export interface Task {
   assignee_id: string | null;
   tester_id: string | null;
   customer_id: string | null;
+  /** รหัสงานจาก Vault (อ่านอย่างเดียว); null = สร้างใน Helm */
+  external_key: string | null;
   created_by: string | null;
   title: string;
   description: string | null;

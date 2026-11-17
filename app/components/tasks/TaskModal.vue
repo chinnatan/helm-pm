@@ -698,6 +698,16 @@ watch(
       </div>
 
       <div v-if="activeTab === 'details' || !isEdit" class="space-y-4">
+        <UBadge
+          v-if="isEdit && task?.external_key"
+          color="neutral"
+          variant="subtle"
+          icon="i-lucide-link"
+          :title="t('tasks.externalKeyHint')"
+          data-testid="task-external-key"
+        >
+          {{ task.external_key }}
+        </UBadge>
         <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
           <div class="flex flex-col gap-4 lg:min-h-[600px]">
             <UFormField v-if="!isEdit" :label="t('templates.select')">

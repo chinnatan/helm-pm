@@ -273,6 +273,7 @@
   },
   "tasks": {
     "editTask": "แก้ไขงาน",
+    "externalKeyHint": "มาจาก Vault — แก้รหัสในไฟล์ Vault",
     "newTask": "งานใหม่",
     "newSubtask": "งานย่อยใหม่",
     "title": "ชื่องาน",

@@ -273,6 +273,7 @@
   },
   "tasks": {
     "editTask": "Edit Task",
+    "externalKeyHint": "From Vault — edit the key in the vault file",
     "newTask": "New Task",
     "newSubtask": "New Subtask",
     "title": "Title",
