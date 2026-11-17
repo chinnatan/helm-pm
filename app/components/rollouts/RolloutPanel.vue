@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Commitment, CommitmentTargetStatus, RolloutStatus, Task } from "~/types";
 import { COMMITMENT_TARGET_STATUS_VALUES, ROLLOUT_STATUS_VALUES, TASK_CLOSED_STATUSES } from "~/types";
-import { ROLLOUT_STATUS_STYLE, monthInputToStart } from "~/utils/rollout";
+import { ROLLOUT_STATUS_STYLE, commitmentWarnings, monthInputToStart } from "~/utils/rollout";
 
 const props = defineProps<{ rolloutId: string | null }>();
 const open = defineModel<boolean>("open", { required: true });
@@ -60,9 +60,25 @@ watch(
   { immediate: true },
 );
 
+const today = new Date();
+const overdueMonths = computed(
+  () => new Set(commitmentWarnings(rollout.value ?? { status: "planned" }, today).filter((w) => w.kind === "overdue").map((w) => w.month)),
+);
+/** เตือนถอยหลัง: จำลองรายการ Commitment หลังเพิ่ม/เลื่อน แล้วดูว่าเดือนนั้นถูกเตือนไหม */
+function regressesAt(month: string, target: CommitmentTargetStatus, excludeId?: string) {
+  const start = monthInputToStart(month);
+  if (!rollout.value || !start) return false;
+  const others = commitments.value.filter((c) => c.id !== excludeId);
+  return commitmentWarnings(
+    { status: "planned", commitments: [...others, { month: start, target_status: target }] },
+    today,
+  ).some((w) => w.month === start && w.kind === "regression");
+}
+
 // ---- เพิ่ม commitment
 const newMonth = ref("");
 const newTarget = ref<CommitmentTargetStatus>("production");
+const addRegresses = computed(() => regressesAt(newMonth.value, newTarget.value));
 async function addCommitment() {
   if (!rollout.value || !newMonth.value) return;
   const { error } = await createCommitment(rollout.value.id, monthInputToStart(newMonth.value), newTarget.value);
@@ -141,6 +157,9 @@ async function removeRollout() {
                   >
                     {{ t(`rollouts.status.${c.target_status}`) }}
                   </span>
+                  <p v-if="overdueMonths.has(c.month)" class="mt-1 text-xs text-amber-700">
+                    {{ t("rollouts.warning.overdue") }}
+                  </p>
                 </div>
                 <div v-if="canManage" class="flex shrink-0 gap-1">
                   <UButton size="xs" variant="ghost" color="neutral" icon="i-lucide-calendar-clock" :aria-label="t('rollouts.reschedule')" @click="startReschedule(c)" />
@@ -151,6 +170,9 @@ async function removeRollout() {
               <div v-if="rescheduling === c.id" class="mt-3 space-y-2 border-t border-slate-100 pt-3">
                 <UInput v-model="reschedule.month" type="month" class="w-full" />
                 <UInput v-model="reschedule.reason" :placeholder="t('rollouts.rescheduleReason')" class="w-full" />
+                <p v-if="regressesAt(reschedule.month, c.target_status, c.id)" class="text-xs text-amber-700">
+                  {{ t("rollouts.warning.regression") }}
+                </p>
                 <div class="flex justify-end gap-2">
                   <UButton size="xs" variant="ghost" color="neutral" @click="rescheduling = null">{{ t("common.cancel") }}</UButton>
                   <UButton size="xs" :disabled="!reschedule.reason.trim() || !reschedule.month" @click="submitReschedule(c)">
@@ -167,10 +189,13 @@ async function removeRollout() {
             </li>
           </ul>
 
-          <div v-if="canManage" class="mt-3 flex gap-2">
-            <UInput v-model="newMonth" type="month" class="flex-1" />
-            <USelect v-model="newTarget" :items="targetItems" class="w-36" />
-            <UButton :disabled="!newMonth" icon="i-lucide-plus" :aria-label="t('common.add')" @click="addCommitment" />
+          <div v-if="canManage" class="mt-3">
+            <div class="flex gap-2">
+              <UInput v-model="newMonth" type="month" class="flex-1" />
+              <USelect v-model="newTarget" :items="targetItems" class="w-36" />
+              <UButton :disabled="!newMonth" icon="i-lucide-plus" :aria-label="t('common.add')" @click="addCommitment" />
+            </div>
+            <p v-if="addRegresses" class="mt-1 text-xs text-amber-700">{{ t("rollouts.warning.regression") }}</p>
           </div>
         </section>
 

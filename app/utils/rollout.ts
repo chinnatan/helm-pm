@@ -1,4 +1,4 @@
-import type { RolloutStatus } from "~/types";
+import type { CommitmentTargetStatus, RolloutStatus } from "~/types";
 
 /** class ครบทั้งสตริงเพื่อให้ Tailwind JIT เห็น */
 export const ROLLOUT_STATUS_STYLE: Record<RolloutStatus, string> = {
@@ -25,6 +25,41 @@ export function monthInputToStart(value: string) {
 export function toMonthStart(date: string | Date) {
   const d = typeof date === "string" ? new Date(date) : date;
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+export type CommitmentWarning = { month: string; kind: "regression" | "overdue" };
+
+const STATUS_RANK: Record<RolloutStatus, number> = {
+  planned: 0,
+  developing: 1,
+  testing: 2,
+  production: 3,
+  cancelled: -1,
+};
+
+/**
+ * คำเตือนของ Commitment (เตือนอย่างเดียว ไม่บล็อก):
+ * - regression: Target status ของเดือนนั้นต่ำกว่าเดือนก่อนหน้า
+ * - overdue: เดือนที่สัญญาผ่านไปแล้ว แต่ Rollout status ยังต่ำกว่า Target status
+ * Rollout ที่ cancelled ไม่มีคำเตือน
+ */
+export function commitmentWarnings(
+  rollout: { status: RolloutStatus; commitments?: { month: string; target_status: CommitmentTargetStatus }[] },
+  today: string | Date,
+): CommitmentWarning[] {
+  if (rollout.status === "cancelled") return [];
+  const currentMonth = toMonthStart(today);
+  const sorted = [...(rollout.commitments ?? [])].sort((a, b) => a.month.localeCompare(b.month));
+  const warnings: CommitmentWarning[] = [];
+  sorted.forEach((c, i) => {
+    const prev = sorted[i - 1];
+    if (prev && STATUS_RANK[c.target_status] < STATUS_RANK[prev.target_status]) {
+      warnings.push({ month: c.month, kind: "regression" });
+    } else if (c.month < currentMonth && STATUS_RANK[rollout.status] < STATUS_RANK[c.target_status]) {
+      warnings.push({ month: c.month, kind: "overdue" });
+    }
+  });
+  return warnings;
 }
 
 export type ShareRollout = {

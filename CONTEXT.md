@@ -17,10 +17,13 @@ _Avoid_: Client
 _Avoid_: Delivery
 
 **Rollout status**:
-สถานะของ Rollout ที่ผู้ใช้ตั้งเอง (ไม่คำนวณจาก Task): planned → developing → testing → production หรือ cancelled
+สถานะ "ปัจจุบัน" ของ Rollout ที่ผู้ใช้ตั้งเอง (ไม่คำนวณจาก Task และไม่เปลี่ยนอัตโนมัติเมื่อถึงเดือนที่สัญญา): planned → developing → testing → production หรือ cancelled
 
 **Commitment**:
 คำสัญญาต่อลูกค้าว่า Rollout ใดจะอยู่สถานะใดในเดือนใด (หน่วยหยาบระดับเดือน) แยกจากแผนวันที่ภายในของ Task 1 Commitment = 1 Rollout ต่อ 1 เดือน ข้อย่อยคือ Task การเลื่อนเดือนเก็บประวัติ (เดือนเดิม → ใหม่ พร้อมเหตุผล) Commitment แทน Milestone เดิมทั้งหมด
+
+**Target status**:
+สถานะที่ Commitment สัญญาไว้สำหรับเดือนนั้น (developing, testing หรือ production) ต่างจาก Rollout status ที่เป็นสถานะปัจจุบัน Rollout หนึ่งมีหลาย Commitment ได้ และ Target status ควรไล่ขึ้นตามเดือน (ไม่ถอยหลัง) Rollout ที่ cancelled ไม่ถือว่ามีสถานะที่สัญญาไว้อีกต่อไป
 
 **Inbox**:
 Task ที่ได้จาก Quick capture และยังไม่ถูกผูก Customer/Feature ใช้จัดโครงทีหลัง Quick capture รับแท็ก inline เช่น `#SJC #change_control` เพื่อผูกอัตโนมัติ

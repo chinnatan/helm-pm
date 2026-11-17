@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addMonths, groupShareTimeline, monthInputToStart, toMonthStart } from "../../app/utils/rollout";
+import { addMonths, commitmentWarnings, groupShareTimeline, monthInputToStart, toMonthStart } from "../../app/utils/rollout";
 
 describe("addMonths", () => {
   it("บวก/ลบเดือนและข้ามปี", () => {
@@ -55,5 +55,40 @@ describe("groupShareTimeline", () => {
 
   it("ไม่มี Rollout คืนอาร์เรย์ว่าง", () => {
     expect(groupShareTimeline([])).toEqual([]);
+  });
+});
+
+describe("commitmentWarnings", () => {
+  const today = "2026-10-15T00:00:00";
+  const c = (month: string, target_status: "developing" | "testing" | "production") => ({ month, target_status });
+
+  it("ไล่ขึ้นปกติ ไม่มีคำเตือน", () => {
+    const commitments = [c("2026-11-01", "developing"), c("2027-01-01", "production")];
+    expect(commitmentWarnings({ status: "developing", commitments }, today)).toEqual([]);
+  });
+
+  it("เดือนหลังต่ำกว่าเดือนก่อน = regression ที่เดือนหลัง", () => {
+    const commitments = [c("2026-11-01", "production"), c("2027-01-01", "developing")];
+    expect(commitmentWarnings({ status: "developing", commitments }, today)).toEqual([
+      { month: "2027-01-01", kind: "regression" },
+    ]);
+  });
+
+  it("เดือนที่สัญญาผ่านไปแล้วแต่ Rollout status ยังต่ำกว่า = overdue", () => {
+    const commitments = [c("2026-08-01", "production")];
+    expect(commitmentWarnings({ status: "testing", commitments }, today)).toEqual([
+      { month: "2026-08-01", kind: "overdue" },
+    ]);
+    expect(commitmentWarnings({ status: "production", commitments }, today)).toEqual([]);
+  });
+
+  it("เดือนปัจจุบันยังไม่ถือว่าเกินกำหนด", () => {
+    const commitments = [c("2026-10-01", "production")];
+    expect(commitmentWarnings({ status: "developing", commitments }, today)).toEqual([]);
+  });
+
+  it("cancelled ไม่มีคำเตือน", () => {
+    const commitments = [c("2026-08-01", "production"), c("2026-09-01", "developing")];
+    expect(commitmentWarnings({ status: "cancelled", commitments }, today)).toEqual([]);
   });
 });

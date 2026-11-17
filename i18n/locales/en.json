@@ -471,6 +471,10 @@
     "openTasks": "Open tasks",
     "noOpenTasks": "No open tasks",
     "unlinkedTasks": "{n} open tasks are not linked to a customer or feature",
+    "warning": {
+      "overdue": "Past due: the rollout hasn't reached the promised status",
+      "regression": "Status goes backwards compared with the earlier month"
+    },
     "status": {
       "planned": "Planned",
       "developing": "Developing",

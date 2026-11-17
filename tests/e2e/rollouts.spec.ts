@@ -8,13 +8,18 @@ import {
   deleteRows,
   readContext,
 } from "./helpers";
-import { toMonthStart } from "../../app/utils/rollout";
+import { addMonths, toMonthStart } from "../../app/utils/rollout";
 
 const ctx = readContext();
 const stamp = Date.now();
 const customerName = `E2E Cust ${stamp}`;
 const featureName = `E2E Feat ${stamp}`;
 const ids: Record<string, string> = {};
+// เดือนต้องอยู่ในช่วง 6 เดือนที่ matrix แสดง ไม่งั้นชิปหลุดจอและเทสต่อไปหาไม่เจอ
+const rescheduledMonth = addMonths(toMonthStart(new Date()), 1);
+const laterMonth = addMonths(toMonthStart(new Date()), 2);
+const monthText = (m: string) =>
+  new Date(`${m}T00:00:00`).toLocaleDateString("en", { month: "long", year: "numeric" });
 
 test.describe.configure({ mode: "serial" });
 
@@ -42,7 +47,7 @@ test("เลื่อนเดือน Commitment ต้องมีเหต�
   await page.goto("/");
   await page.getByRole("button", { name: featureName }).click();
   await page.getByLabel("Reschedule").click();
-  await page.locator('input[type="month"]').first().fill("2030-01");
+  await page.locator('input[type="month"]').first().fill(rescheduledMonth.slice(0, 7));
 
   const save = page.getByRole("button", { name: "Save" });
   await expect(save).toBeDisabled();
@@ -50,6 +55,20 @@ test("เลื่อนเดือน Commitment ต้องมีเหต�
   await save.click();
 
   await expect(page.getByText("Customer asked to wait")).toBeVisible();
+});
+
+test("เพิ่ม Commitment ที่สถานะถอยหลังต้องเห็นคำเตือนแต่ยังบันทึกได้", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: featureName }).first().click();
+
+  // ต่อจากเทสก่อนหน้า: Commitment production ถูกเลื่อนไปเดือนหน้า
+  await page.locator('input[type="month"]').last().fill(laterMonth.slice(0, 7));
+  await page.getByRole("combobox").last().click();
+  await page.getByRole("option", { name: "Developing" }).click();
+  await expect(page.getByText("Status goes backwards")).toBeVisible();
+
+  await page.getByRole("button", { name: "Add" }).click();
+  await expect(page.getByText(monthText(laterMonth))).toBeVisible();
 });
 
 test("งานที่ไม่ผูกลูกค้า/ฟีเจอร์ถูกนับเป็น 'ยังไม่ผูก'", async ({ page }) => {

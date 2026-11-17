@@ -2,7 +2,7 @@
 import type { Rollout } from "~/types";
 import { rolloutKey } from "~/composables/useRollouts";
 import { ROLLOUT_STATUS_VALUES } from "~/types";
-import { ROLLOUT_STATUS_STYLE, addMonths } from "~/utils/rollout";
+import { ROLLOUT_STATUS_STYLE, addMonths, commitmentWarnings } from "~/utils/rollout";
 
 const props = defineProps<{
   rollouts: Rollout[];
@@ -63,7 +63,13 @@ function cell(rowRollouts: Rollout[], col: string) {
 
 /** คอลัมน์เดือน = สถานะที่สัญญาไว้ของเดือนนั้น, คอลัมน์ "none" = Rollout status */
 function chipStatus(r: Rollout, col: string) {
+  if (r.status === "cancelled") return r.status;
   return r.commitments?.find((c) => c.month === col)?.target_status ?? r.status;
+}
+
+const today = new Date();
+function chipWarning(r: Rollout, col: string) {
+  return commitmentWarnings(r, today).find((w) => w.month === col)?.kind;
 }
 
 function openCount(r: Rollout) {
@@ -107,10 +113,13 @@ function openCount(r: Rollout) {
                 type="button"
                 class="flex items-center justify-between gap-2 rounded-md border px-2 py-1 text-left text-xs font-medium transition-shadow hover:shadow"
                 :class="ROLLOUT_STATUS_STYLE[chipStatus(r, col)]"
-                :title="t(`rollouts.status.${chipStatus(r, col)}`)"
+                :title="chipWarning(r, col) ? t(`rollouts.warning.${chipWarning(r, col)}`) : t(`rollouts.status.${chipStatus(r, col)}`)"
                 @click="emit('select', r.id)"
               >
-                <span class="truncate">{{ chipLabel(r) }}</span>
+                <span class="flex min-w-0 items-center gap-1">
+                  <UIcon v-if="chipWarning(r, col)" name="i-lucide-triangle-alert" class="h-3 w-3 shrink-0 text-amber-600" />
+                  <span class="truncate">{{ chipLabel(r) }}</span>
+                </span>
                 <span v-if="openCount(r)" class="shrink-0 rounded bg-white/70 px-1 text-[10px]">
                   {{ openCount(r) }}
                 </span>
