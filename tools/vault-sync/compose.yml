@@ -1,0 +1,18 @@
+# run from tools/vault-sync:  docker compose up -d --build
+# one-off runs:  docker compose run --rm vault-sync --dry-run
+services:
+  vault-sync:
+    build:
+      context: ../..
+      dockerfile: tools/vault-sync/Dockerfile
+    image: helm-vault-sync
+    restart: unless-stopped
+    env_file: .env
+    # must match the owner of the vault files (see docs/runbooks/vault-sync.md)
+    user: "${SYNC_UID:-1000}:${SYNC_GID:-1000}"
+    volumes:
+      - ${VAULT_HOST_DIR:?set VAULT_HOST_DIR in .env}/ลูกค้า:/vault/ลูกค้า:rw
+      - ./aliases.json:/config/aliases.json:ro
+      - vault-sync-state:/state
+volumes:
+  vault-sync-state:

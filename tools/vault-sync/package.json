@@ -1,0 +1,17 @@
+{
+  "name": "helm-vault-sync",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun src/cli.ts",
+    "once": "bun src/cli.ts --once",
+    "dry-run": "bun src/cli.ts --dry-run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}
