@@ -69,3 +69,13 @@ _Avoid_: Delete user, Kick
 
 **Former member**:
 คนที่เคยเป็น Member แล้วถูก Remove หรือ Leave ประวัติเดิม (คอมเมนต์ กิจกรรมของ Task) แสดงเป็น "อดีตสมาชิก"
+
+**Vault**:
+โฟลเดอร์ Obsidian `my-work` ที่ทีมใช้เขียนเอกสารวางแผนงานลูกค้า (Plan, Task, Use Case) เป็นที่นิยามงาน ส่วน Helm เป็นที่ติดตามความเคลื่อนไหวของงาน
+
+**External key**:
+รหัสงานที่มาจาก Vault (เช่น `T-CC-01`) เก็บแยกจากชื่อ Task ใน Helm และไม่ซ้ำกันในหนึ่ง Workspace ใช้เป็นกุญแจจับคู่ Task ของ Helm กับไฟล์ Task ใน Vault Task ที่ไม่มี External key คือ Task ที่ไม่ได้มาจาก Vault
+
+**Vault sync**:
+การซิงก์ Task ระหว่าง Vault กับ Helm โดยแบ่งเจ้าของตามฟิลด์: Vault เป็นเจ้าของ "นิยามงาน" (รหัส, ชื่อ, ลำดับก่อน-หลัง) Helm เป็นเจ้าของ "ความเคลื่อนไหว" (Task status, ผู้รับผิดชอบ, กำหนดเสร็จ) ครอบคลุมเฉพาะ Task ไม่รวม Requirement, Use Case และ Plan
+_Avoid_: Import, Export (ซิงก์สองทิศ)
