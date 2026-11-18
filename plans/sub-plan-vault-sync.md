@@ -111,3 +111,13 @@
 | Docker Desktop (macOS) | ไม่ส่ง fsevents เข้า bind mount → ใช้ poll |
 | Helm priority | มี low/medium/high/urgent อยู่แล้ว · รอ scale ใหม่ (Critical/High) ค่อยแมป — ไม่อยู่ใน plan นี้ |
 | ไฟล์ที่กระทบ | `supabase/migrations/036_*`, `tools/vault-sync/*` (ใหม่), `app/components/tasks/*` (badge), `docs/runbooks/vault-sync.md`, `CONTEXT.md`, `docs/adr/0003-*` (เขียนแล้ว) |
+
+---
+
+## Phase 6: ลดรูป (ไม่มี poller/Docker)
+
+- [x] `cli.ts` รันรอบเดียวแล้วจบ ลบ loop, `--once`, `POLL_INTERVAL_SEC`; script `sync` ใน `package.json` (แทน `start`/`once`)
+- [x] ลบ `Dockerfile`, `Dockerfile.dockerignore`, `compose.yml` และ env ของ Docker ใน `.env.example` (เพิ่ม `VAULT_DIR`)
+- [x] ตัด `renderSyncLog` และ `Helm Sync Log.md` (ดูผลรันใน output แทน) — เก็บ `Helm Tasks.md` เพราะยังใช้จริงใน README ของ Plan, `สถานะลูกค้า.md`, skill `plan-customer` และ agent `customer-planner`
+- [x] เขียน runbook ใหม่, แก้ Consequences ใน ADR 0003 เป็น "รันมือตอนปล่อยงาน"
+- หมายเหตุ: ใน Vault ยังมีไฟล์ `ลูกค้า/Helm Sync Log.md` ค้างจากรอบเก่า ให้ผู้ใช้ลบเอง · ข้อความ Phase 3 (Docker) ด้านบนเป็นประวัติ ไม่ใช้แล้ว

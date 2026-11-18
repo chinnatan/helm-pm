@@ -177,7 +177,6 @@ describe("cycle", () => {
     const txt = readFileSync(tp, "utf8");
     expect(txt).toContain("| T-A-01 | ชื่องาน T-A-01 | คุณแม็ก | ทดสอบ | 2026-11-02 | 🔴 เลยกำหนด 14 วัน |");
     expect(txt).toContain("synced: 2026-11-16 09:00");
-    expect(readFileSync(join(vault, "ลูกค้า", "Helm Sync Log.md"), "utf8")).toContain("push");
     old(tp);
     old(join(dir, "T-A-01 x.md"));
     await runCycle(ctx(f.store, { now: new Date("2026-11-16T09:05:00") }));

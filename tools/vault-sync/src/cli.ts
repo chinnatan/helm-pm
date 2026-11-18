@@ -1,4 +1,4 @@
-// bun tools/vault-sync/src/cli.ts [--once] [--dry-run]
+// bun tools/vault-sync/src/cli.ts [--dry-run] [--seed]  (one cycle, then exit)
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { makeClient, supabaseStore } from "./store";
@@ -11,7 +11,6 @@ const need = (k: string) => process.env[k] || (console.error(`ต้องตั
 
 const vaultDir = need("VAULT_DIR");
 const store = supabaseStore(makeClient(need("SUPABASE_URL"), need("SUPABASE_SERVICE_KEY")), need("WORKSPACE_ID"));
-const interval = Number(process.env.POLL_INTERVAL_SEC || 60) * 1000;
 const stateDir = process.env.STATE_DIR || join(import.meta.dirname, "..", ".state");
 const aliasFile = process.env.ALIAS_FILE || join(import.meta.dirname, "..", "aliases.json");
 const config: Config = existsSync(aliasFile)
@@ -51,7 +50,3 @@ async function once() {
 }
 
 await once();
-while (!args.has("--once") && !dryRun && !seed) {
-  await new Promise((r) => setTimeout(r, interval));
-  await once();
-}

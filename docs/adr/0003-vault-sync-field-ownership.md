@@ -1,6 +1,6 @@
 # แบ่งเจ้าของข้อมูล Task ระหว่าง Vault กับ Helm ตามฟิลด์
 
-Vault sync ให้ Vault เป็นเจ้าของนิยามงาน (External key, ชื่อ, depends_on) และ Helm เป็นเจ้าของความเคลื่อนไหว (status, assignee, due date) ซิงก์สองทิศแบบ "เจ้าของฟิลด์ชนะ" ไม่ merge ตัวซิงก์เป็น container เดียวที่ poll ทั้งสองฝั่ง และแก้เฉพาะบรรทัด frontmatter ของฟิลด์ที่ Helm เป็นเจ้าของ
+Vault sync ให้ Vault เป็นเจ้าของนิยามงาน (External key, ชื่อ, depends_on) และ Helm เป็นเจ้าของความเคลื่อนไหว (status, assignee, due date) ซิงก์สองทิศแบบ "เจ้าของฟิลด์ชนะ" ไม่ merge ตัวซิงก์เป็นคำสั่งเดียว (`bun run sync`) ที่รันมือตอนปล่อยงานและอ่านทั้งสองฝั่ง และแก้เฉพาะบรรทัด frontmatter ของฟิลด์ที่ Helm เป็นเจ้าของ
 
 ## Considered Options
 
@@ -13,4 +13,4 @@ Vault sync ให้ Vault เป็นเจ้าของนิยามง�
 - `status` ในไฟล์ Task เป็นค่าที่ซิงก์มาจาก Helm ห้ามแก้มือ (ต้องแก้ข้อ 7 ของ skill `plan-customer`)
 - รหัสงานคือกุญแจจับคู่ การเปลี่ยนรหัสในไฟล์ = Task ใหม่ ตัวเก่าค้างใน Helm
 - ลบไฟล์ใน Vault ไม่ลบ Task ใน Helm (ตั้ง cancelled) และกลับกัน (ตั้ง superseded)
-- ต้องรันตัวซิงก์เพียงเครื่องเดียว เพราะ Vault กระจายด้วย Syncthing และมี conflict copy อยู่แล้ว
+- รันมือตอนปล่อยงาน (ไม่มี poller/Docker) และรันทีละเครื่อง เพราะ Vault กระจายด้วย Syncthing และมี conflict copy อยู่แล้ว

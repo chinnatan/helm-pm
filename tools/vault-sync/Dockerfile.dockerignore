@@ -1,4 +1,0 @@
-*
-!tools/vault-sync/package.json
-!tools/vault-sync/bun.lock
-!tools/vault-sync/src

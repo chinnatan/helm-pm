@@ -3,8 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "bun src/cli.ts",
-    "once": "bun src/cli.ts --once",
+    "sync": "bun src/cli.ts",
     "dry-run": "bun src/cli.ts --dry-run",
     "typecheck": "tsc --noEmit"
   },

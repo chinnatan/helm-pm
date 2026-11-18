@@ -140,34 +140,6 @@ ${rows.join("\n")}
 `;
 }
 
-export function renderSyncLog(r: Report, now: Date): string {
-  const list = (xs: string[]) => (xs.length ? xs.map((x) => `- ${x}`).join("\n") : "- ไม่มี");
-  return `---
-type: generated
-source: vault-sync
-synced: ${localDateTime(now)}
-tags: [helm, sync, generated]
----
-
-# Helm Sync Log
-
-> [!warning] ไฟล์นี้ถูกสร้างอัตโนมัติจากตัวซิงก์ (รอบล่าสุด) อย่าแก้ไขมือ
-
-- เวลา: ${localDateTime(now)}
-- Vault → Helm (push): ${r.pushed} รายการ
-- Helm → Vault (pull): ${r.pulled} ไฟล์
-
-## Error
-${list(r.errors)}
-
-## Warning
-${list(r.warnings)}
-
-## การเปลี่ยนแปลง
-${list(r.actions)}
-`;
-}
-
 const stripSynced = (s: string) => s.replace(/^synced: .*$/m, "");
 
 /** write only when content (ignoring the `synced:` timestamp) changed */
@@ -327,6 +299,5 @@ export async function runCycle(ctx: Ctx): Promise<Report> {
   for (const e of helmDeleted) r.knownKeys.delete(e.id);
   const root = join(ctx.vaultDir, "ลูกค้า");
   writeGenerated(join(root, "Helm Tasks.md"), renderHelmTasks(live, cmap, ctx.now), ctx, r);
-  writeGenerated(join(root, "Helm Sync Log.md"), renderSyncLog(r, ctx.now), ctx, r);
   return r;
 }
